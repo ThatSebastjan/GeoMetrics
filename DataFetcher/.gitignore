@@ -1,3 +1,5 @@
 node_modules/
-parcel_data/
+land_lot_data/
+land_lot_data_backup/
+flood_data/
 tmp.json

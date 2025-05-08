@@ -6,6 +6,7 @@
 */
 
 import fetch from "node-fetch";
+import chalk from "chalk";
 
 
 
@@ -16,6 +17,13 @@ export class Loggable {
     static ERROR = 1;
     static NONE = 0;
 
+    static LEVEL_COLORS = [
+        () => {},
+        chalk.red,
+        chalk.yellow,
+        chalk.blue,
+    ];
+
 
     constructor(log_level, tag="LOG"){
         this.log_level = log_level;
@@ -25,7 +33,7 @@ export class Loggable {
 
     log(level, ...args){
         if(level >= this.log_level){
-            console.log(`[${this.tag}]`, ...args);
+            console.log(Loggable.LEVEL_COLORS[level](`[${this.tag}]`), ...args);
         };
     };
 };
@@ -102,6 +110,21 @@ class MapService extends Loggable {
 
         this.parent_instance = parent_instance;
         this.service_url = `/rest/services/${folder}/${service_name}/MapServer/${service_layer}`;
+
+        this.info = null;
+    };
+
+
+    //Get MapService info
+    async get_info(){
+        try {
+            const req = await fetch(`${this.parent_instance.base_url}${this.service_url}/?f=json`);
+            return (this.info = await req.json());
+        }
+        catch(err){
+            this.log(Loggable.DEBUG, "get_info failed with error:", err);
+            return null;
+        };
     };
 
 
@@ -126,6 +149,7 @@ class MapService extends Loggable {
             "returnZ": "false",
             "returnM": "false",
             "returnDistinctValues": "false",
+            "resultOffset": 0,
             "resultRecordCount": "",
             "returnExtentOnly": "false",
             "sqlFormat": "none",
@@ -139,18 +163,59 @@ class MapService extends Loggable {
         };
 
 
+        const feature_list = [];
+        let query_offset = 0;
+        let query_chunked = false;
+
         try {
-            const url = `${this.parent_instance.base_url}${this.service_url}/query`;
 
-            const data = new FormData();
-            for(let prop in default_props){ data.append(prop, default_props[prop]); };
+            //Query all data
+            while(true){
 
-            const req = await fetch(url, {
-                method: "POST",
-                body: data
-            });
+                const url = `${this.parent_instance.base_url}${this.service_url}/query`;
 
-            return await req.json();
+                default_props.resultOffset = query_offset;
+
+                const data = new FormData();
+                for(let prop in default_props){ data.append(prop, default_props[prop]); };
+
+                const req = await fetch(url, {
+                    method: "POST",
+                    body: data
+                });
+
+                const resp = await req.json();
+
+                if(resp.exceededTransferLimit && (query_offset == 0)){
+                    query_chunked = true;
+                }
+                else if(!resp.exceededTransferLimit && !query_chunked){
+                    return resp; //Single request
+                };
+
+
+                //Need an id property for filtering out unique features
+                if(resp.features.length != 0){
+                    const p1 = resp.features[0];
+
+                    if(!p1.hasOwnProperty("id") && !(p1.properties && p1.properties.hasOwnProperty("OBJECTID"))){
+                        throw new Error("Feature must have id or properties.OBJECTID property!");
+                    };
+                };
+
+                const unique = resp.features.filter((e) => feature_list.findIndex(f => f.id == e.id) == -1); //Sometimes one feature is present in 2 offset requests...
+                feature_list.push(...unique);
+
+                //Last request - no more data
+                if(query_chunked && !resp.exceededTransferLimit){
+                    resp.features = feature_list;
+                    return resp;
+                };
+
+                //Increment query offset
+                query_offset += resp.features.length;
+                this.log(Loggable.DEBUG, "query_offset:", query_offset);
+            };
         }
         catch(err){
             this.log(Loggable.DEBUG, "query failed with error:", err);
