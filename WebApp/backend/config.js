@@ -6,7 +6,7 @@ module.exports = {
 	
 	
 	//DB config
-	dbURL: "mongodb://127.0.0.1/TEST",
+	dbURL: "mongodb://mongodb/TEST",
 	
 	
 	//Session storage config
