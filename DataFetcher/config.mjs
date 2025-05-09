@@ -19,6 +19,9 @@ export default {
         obmocje_pogostih_poplav: 4016,
         obmocje_redkih_poplav: 4017,
         obmocje_zelo_redkih_katastrofalnih_poplav: 4018,
+
+        // DRSV/Ogrozena_obmocja
+        plazljiva_obmocja: 4402
     },
 
 

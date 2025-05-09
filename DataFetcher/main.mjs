@@ -13,9 +13,14 @@ const ensure_exists_dir = (path) => {
 };
 
 
+const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+
+
 const log_info = (...args) => console.log(chalk.blueBright("[INFO]"), ...args);
 const log_succcess = (...args) => console.log(chalk.green("[OK]"), ...args);
 const log_error = (...args) => console.log(chalk.red("[ERROR]"), ...args);
+const log_warning = (...args) => console.log(chalk.yellowBright("[WARNING]"), ...args);
 
     
 const gen_chunk_bounds = (x_counter, y_counter, bbox, num_x_chunks, num_y_chunks) => {
@@ -62,6 +67,37 @@ const gen_chunk_subchild_bounds = (x_counter, y_counter, bbox, num_x_chunks, num
 */
 
 
+const remove_duplicates = (data_folder_name) => {
+    ensure_exists_dir(`./${data_folder_name}/unique`);
+    log_info("Removing duplicates (overlaps between multiple grid cells)");
+
+    const id_map = {};
+    const files = fs.readdirSync(`./${data_folder_name}/`).filter(e => path.parse(e).ext == ".json");
+    
+    for(let i = 0; i < files.length; i++){
+        const data = JSON.parse(fs.readFileSync(`./${data_folder_name}/${files[i]}`, "utf8"));
+    
+        const new_data = data.filter(e => !id_map[e.id]);
+        new_data.forEach(e => id_map[e.id] = true);
+        fs.writeFileSync(`./${data_folder_name}/unique/${files[i]}`, JSON.stringify(new_data));
+    
+        log_info(`Processed ${i + 1} / ${files.length} chunks`);
+    };
+    
+    fs.writeFileSync(`./${data_folder_name}/ids.txt`, Object.keys(id_map).join(",\n"));
+    log_succcess("Unique id count:", Object.keys(id_map).length);
+
+
+    //Remove original data and move unique to its place
+    files.forEach(f => {
+        fs.rmSync(`./${data_folder_name}/${f}`);
+        fs.renameSync(`./${data_folder_name}/unique/${f}`, `./${data_folder_name}/${f}`);
+    });
+
+    fs.rmdirSync(`./${data_folder_name}/unique/`);
+};
+
+
 
 
 const land_lot_update = async () => {
@@ -105,25 +141,7 @@ const land_lot_update = async () => {
     };
 
 
-    //Remove duplicates
-    ensure_exists_dir("./land_lot_data/unique");
-    log_info("Removing duplicates (overlaps between multiple grid cells)");
-
-    const id_map = {};
-    const land_lot_files = fs.readdirSync("./land_lot_data/").filter(e => path.parse(e).ext == ".json");
-    
-    for(let i = 0; i < land_lot_files.length; i++){
-        const data = JSON.parse(fs.readFileSync(`./land_lot_data/${land_lot_files[i]}`, "utf8"));
-    
-        const new_data = data.filter(e => !id_map[e.id]);
-        new_data.forEach(e => id_map[e.id] = true);
-        fs.writeFileSync(`./land_lot_data/unique/${land_lot_files[i]}`, JSON.stringify(new_data));
-    
-        log_info(`Processed ${i + 1} / ${land_lot_files.length} chunks`);
-    };
-    
-    fs.writeFileSync("./land_lot_data/unique/ids.txt", Object.keys(id_map).join(",\n"));
-    log_succcess("Unique land lot count:", Object.keys(id_map).length);
+    remove_duplicates("land_lot_data");
 };
 
 
@@ -179,6 +197,97 @@ const flood_areas_update = async () => {
 
 
 
+const land_slides_update = async () => {
+
+    log_warning("NOTE: Land slide data query is slow...");
+
+
+    const num_x_chunks = 128;
+    const num_y_chunks = 128;
+
+    const land_slide_service = new ArcGis.MapService(arc_gis, "DRSV", "Ogrozena_obmocja", config.service_layers.plazljiva_obmocja);
+
+    const grab_layer_data = async (x_counter, y_counter) => {
+
+        const test = await land_slide_service.query({
+            geometry: {
+                rings:[ gen_chunk_bounds(x_counter, y_counter, config.SI_BBOX, num_x_chunks, num_y_chunks) ],
+            },
+            geometryType: "esriGeometryPolygon",
+            outFields: "OBJECTID,OPIS_GRID",
+            inSR: ArcGis.WKID.Slovenia,
+            outSR: ArcGis.WKID.WGS,
+        });
+
+        return test.features;
+    };
+
+
+    ensure_exists_dir("./land_slide_data/");
+    log_info(`Querying land slide data in ${num_x_chunks * num_y_chunks} chunks`);
+
+
+    //Grab data in paralel (rows)
+    for(let y_counter = 0; y_counter < num_y_chunks; y_counter++){
+
+        try {
+        
+            log_info(`Querying land slide row ${y_counter + 1} / ${num_y_chunks}`);
+
+            const promises = new Array(num_x_chunks).fill().map((e, x_counter) => grab_layer_data(x_counter, y_counter));
+            const results = await Promise.all(promises);
+
+            fs.writeFileSync(`./land_slide_data/chunk_${y_counter}.json`, JSON.stringify(results.flat()));
+            log_succcess(`Grabbed land slide data chunk ${y_counter + 1}`);
+        }
+        catch(err){
+            if(err.code == "ETIMEDOUT"){
+                log_error(`Query for row ${y_counter + 1} timed out. Retrying`);
+                y_counter--;
+
+                await delay(5000);
+            };
+        };
+    };
+
+
+    remove_duplicates("land_slide_data");
+
+
+    //Seperate different types based on description
+    const files = fs.readdirSync("./land_slide_data/").filter(e => e.includes("chunk") && path.parse(e).ext == ".json").map(e => `./land_slide_data/${e}`);
+
+    const type_map = {};
+
+    for(let i = 0; i < files.length; i++){
+        const data = JSON.parse(fs.readFileSync(files[i], "utf8"));
+
+        data.forEach(e => {
+            const type = e.properties.OPIS_GRID;
+
+            if(!type_map[type]){
+                type_map[type] = [];
+            };
+
+            type_map[type].push(e);
+        });
+
+        log_info(`Differentiating: ${i + 1} / ${files.length}`);
+    };
+
+    Object.keys(type_map).forEach(key => {
+        const normalized = key.split(" ").join("_").toLowerCase();
+        log_info(`Saving ${normalized}`);
+
+        fs.writeFileSync(`./land_slide_data/${normalized}.json`, JSON.stringify(type_map[key]));
+    });
+
+    //Remove chunk files
+    files.forEach(f => fs.rmSync(f));
+};
+
+
+
 
 
 const main = async (args) => {
@@ -209,9 +318,12 @@ const main = async (args) => {
             await flood_areas_update();
         break;
 
+        case "land_slides":
+            await land_slides_update();
+        break;
+
         default:
             return console.log(`Invalid argument: ${args[0]}`);
-
     };
 
 

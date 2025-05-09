@@ -166,8 +166,9 @@ class MapService extends Loggable {
         const feature_list = [];
         let query_offset = 0;
         let query_chunked = false;
+        let get_id = null;
 
-        try {
+        //try {
 
             //Query all data
             while(true){
@@ -195,15 +196,21 @@ class MapService extends Loggable {
 
 
                 //Need an id property for filtering out unique features
-                if(resp.features.length != 0){
+                if((resp.features.length != 0) && (get_id == null)){
                     const p1 = resp.features[0];
 
-                    if(!p1.hasOwnProperty("id") && !(p1.properties && p1.properties.hasOwnProperty("OBJECTID"))){
+                    if(p1.hasOwnProperty("id")){
+                        get_id = (obj) => obj.id;
+                    }
+                    else if(p1.properties && p1.properties.hasOwnProperty("OBJECTID")){
+                        get_id = (obj) => obj.properties.OBJECTID;
+                    }
+                    else {
                         throw new Error("Feature must have id or properties.OBJECTID property!");
                     };
                 };
 
-                const unique = resp.features.filter((e) => feature_list.findIndex(f => f.id == e.id) == -1); //Sometimes one feature is present in 2 offset requests...
+                const unique = resp.features.filter((e) => feature_list.findIndex(f => get_id(f) == get_id(e)) == -1); //Sometimes one feature is present in 2 offset requests...
                 feature_list.push(...unique);
 
                 //Last request - no more data
@@ -216,11 +223,11 @@ class MapService extends Loggable {
                 query_offset += resp.features.length;
                 this.log(Loggable.DEBUG, "query_offset:", query_offset);
             };
-        }
+        /*}
         catch(err){
             this.log(Loggable.DEBUG, "query failed with error:", err);
             return null;
-        };
+        };*/
     };
 
 };
