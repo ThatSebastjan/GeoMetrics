@@ -1,6 +1,4 @@
 node_modules/
-land_lot_data/
-land_lot_data_backup/
-flood_data/
-land_slide_data/
+data/
 tmp.json
+dev-exclude/

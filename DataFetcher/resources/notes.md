@@ -47,9 +47,7 @@ https://geohub.gov.si/ags/rest/services/TEMELJNE_VSEBINE/GH_ZK_KO/MapServer/1460
 ```
 
 total num. parcel: 5815251
-
-5815251 - 5812164 = 3087
-
+saved num. parcel: 5812367
 
 
 #### World Geodetic System (used by maps)

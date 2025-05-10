@@ -68,33 +68,40 @@ const gen_chunk_subchild_bounds = (x_counter, y_counter, bbox, num_x_chunks, num
 
 
 const remove_duplicates = (data_folder_name) => {
-    ensure_exists_dir(`./${data_folder_name}/unique`);
+    ensure_exists_dir(`./data/${data_folder_name}/unique`);
     log_info("Removing duplicates (overlaps between multiple grid cells)");
 
     const id_map = {};
-    const files = fs.readdirSync(`./${data_folder_name}/`).filter(e => path.parse(e).ext == ".json");
+    const files = fs.readdirSync(`./data/${data_folder_name}/`).filter(e => path.parse(e).ext == ".json");
     
     for(let i = 0; i < files.length; i++){
-        const data = JSON.parse(fs.readFileSync(`./${data_folder_name}/${files[i]}`, "utf8"));
-    
-        const new_data = data.filter(e => !id_map[e.id]);
-        new_data.forEach(e => id_map[e.id] = true);
-        fs.writeFileSync(`./${data_folder_name}/unique/${files[i]}`, JSON.stringify(new_data));
-    
+        const data = JSON.parse(fs.readFileSync(`./data/${data_folder_name}/${files[i]}`, "utf8"));
+        const unique_data = [];
+
+        for(let e_idx = 0; e_idx < data.length; e_idx++){
+            const entry = data[e_idx];
+
+            if(!id_map[entry.id]){
+                id_map[entry.id] = true;
+                unique_data.push(entry);
+            };
+        };
+
+        fs.writeFileSync(`./data/${data_folder_name}/unique/${files[i]}`, JSON.stringify(unique_data));
         log_info(`Processed ${i + 1} / ${files.length} chunks`);
     };
     
-    fs.writeFileSync(`./${data_folder_name}/ids.txt`, Object.keys(id_map).join(",\n"));
+    fs.writeFileSync(`./data/${data_folder_name}/ids.txt`, Object.keys(id_map).join(",\n"));
     log_succcess("Unique id count:", Object.keys(id_map).length);
 
 
     //Remove original data and move unique to its place
     files.forEach(f => {
-        fs.rmSync(`./${data_folder_name}/${f}`);
-        fs.renameSync(`./${data_folder_name}/unique/${f}`, `./${data_folder_name}/${f}`);
+        fs.rmSync(`./data/${data_folder_name}/${f}`);
+        fs.renameSync(`./data/${data_folder_name}/unique/${f}`, `./data/${data_folder_name}/${f}`);
     });
 
-    fs.rmdirSync(`./${data_folder_name}/unique/`);
+    fs.rmdirSync(`./data/${data_folder_name}/unique/`);
 };
 
 
@@ -124,7 +131,7 @@ const land_lot_update = async () => {
     };
 
 
-    ensure_exists_dir("./land_lot_data/");
+    ensure_exists_dir("./data/land_lot_data/");
     log_info(`Querying land lot data in ${num_x_chunks * num_y_chunks} chunks`);
 
 
@@ -136,7 +143,7 @@ const land_lot_update = async () => {
         const promises = new Array(num_x_chunks).fill().map((e, x_counter) => grab_layer_data(x_counter, y_counter));
         const results = await Promise.all(promises);
 
-        fs.writeFileSync(`./land_lot_data/chunk_${y_counter}.json`, JSON.stringify(results.flat()));
+        fs.writeFileSync(`./data/land_lot_data/chunk_${y_counter}.json`, JSON.stringify(results.flat()));
         log_succcess(`Grabbed land lot chunk ${y_counter+1}`);
     };
 
@@ -149,7 +156,7 @@ const land_lot_update = async () => {
 
 const flood_areas_update = async () => {
 
-    ensure_exists_dir("./flood_data/");
+    ensure_exists_dir("./data/flood_data/");
 
 
     const query_layer_data = (service) => {
@@ -171,7 +178,7 @@ const flood_areas_update = async () => {
     const rare_floods_service = new ArcGis.MapService(arc_gis, "DRSV", "Zun", config.service_layers.obmocje_redkih_poplav);
     const rare_floods = await query_layer_data(rare_floods_service);
     
-    fs.writeFileSync("./flood_data/rare_floods.json", JSON.stringify(rare_floods.features));
+    fs.writeFileSync("./data/flood_data/rare_floods.json", JSON.stringify(rare_floods.features));
     log_succcess(`Rare flood area count: ${rare_floods.features.length}`);
 
 
@@ -181,7 +188,7 @@ const flood_areas_update = async () => {
     const common_floods_service = new ArcGis.MapService(arc_gis, "DRSV", "Zun", config.service_layers.obmocje_pogostih_poplav);
     const common_floods = await query_layer_data(common_floods_service);
     
-    fs.writeFileSync("./flood_data/common_floods.json", JSON.stringify(common_floods.features));
+    fs.writeFileSync("./data/flood_data/common_floods.json", JSON.stringify(common_floods.features));
     log_succcess(`Common flood area count: ${common_floods.features.length}`);
 
 
@@ -191,7 +198,7 @@ const flood_areas_update = async () => {
     const rc_floods_service = new ArcGis.MapService(arc_gis, "DRSV", "Zun", config.service_layers.obmocje_zelo_redkih_katastrofalnih_poplav);
     const rc_floods = await query_layer_data(rc_floods_service);
     
-    fs.writeFileSync("./flood_data/rare_catastrophic_floods.json", JSON.stringify(rc_floods.features));
+    fs.writeFileSync("./data/flood_data/rare_catastrophic_floods.json", JSON.stringify(rc_floods.features));
     log_succcess(`Very rare, catastrophic flood area count: ${rc_floods.features.length}`);
 };
 
@@ -223,7 +230,7 @@ const land_slides_update = async () => {
     };
 
 
-    ensure_exists_dir("./land_slide_data/");
+    ensure_exists_dir("./data/land_slide_data/");
     log_info(`Querying land slide data in ${num_x_chunks * num_y_chunks} chunks`);
 
 
@@ -237,7 +244,7 @@ const land_slides_update = async () => {
             const promises = new Array(num_x_chunks).fill().map((e, x_counter) => grab_layer_data(x_counter, y_counter));
             const results = await Promise.all(promises);
 
-            fs.writeFileSync(`./land_slide_data/chunk_${y_counter}.json`, JSON.stringify(results.flat()));
+            fs.writeFileSync(`./data/land_slide_data/chunk_${y_counter}.json`, JSON.stringify(results.flat()));
             log_succcess(`Grabbed land slide data chunk ${y_counter + 1}`);
         }
         catch(err){
@@ -255,7 +262,7 @@ const land_slides_update = async () => {
 
 
     //Seperate different types based on description
-    const files = fs.readdirSync("./land_slide_data/").filter(e => e.includes("chunk") && path.parse(e).ext == ".json").map(e => `./land_slide_data/${e}`);
+    const files = fs.readdirSync("./data/land_slide_data/").filter(e => e.includes("chunk") && path.parse(e).ext == ".json").map(e => `./data/land_slide_data/${e}`);
 
     const type_map = {};
 
@@ -279,11 +286,64 @@ const land_slides_update = async () => {
         const normalized = key.split(" ").join("_").toLowerCase();
         log_info(`Saving ${normalized}`);
 
-        fs.writeFileSync(`./land_slide_data/${normalized}.json`, JSON.stringify(type_map[key]));
+        fs.writeFileSync(`./data/land_slide_data/${normalized}.json`, JSON.stringify(type_map[key]));
     });
 
     //Remove chunk files
     files.forEach(f => fs.rmSync(f));
+};
+
+
+
+const land_use_update = async () => {
+
+    const num_x_chunks = 128;
+    const num_y_chunks = 128;
+
+    const gerk_service = new ArcGis.MapService(arc_gis, "TEMELJNE_VSEBINE", "GH_MKGP_GERK_RABA", config.service_layers.gerk);
+
+    const grab_layer_data = async (x_counter, y_counter) => {
+
+        const test = await gerk_service.query({
+            geometry: {
+                rings:[ gen_chunk_bounds(x_counter, y_counter, config.SI_BBOX, num_x_chunks, num_y_chunks) ],
+            },
+            geometryType: "esriGeometryPolygon",
+            outFields: "OBJECTID,GERK_PID,RABA_ID,Z_AVG,NAGIB_AVG",
+            inSR: ArcGis.WKID.Slovenia,
+            outSR: ArcGis.WKID.WGS,
+        });
+
+        return test.features;
+    };
+
+
+    ensure_exists_dir("./data/land_use_data/");
+    log_info(`Querying land use data in ${num_x_chunks * num_y_chunks} chunks`);
+
+
+    //Grab data in paralel (rows)
+    for(let y_counter = 0; y_counter < num_y_chunks; y_counter++){
+
+        try {
+            log_info(`Querying land use row ${y_counter + 1} / ${num_y_chunks}`);
+
+            const promises = new Array(num_x_chunks).fill().map((e, x_counter) => grab_layer_data(x_counter, y_counter));
+            const results = await Promise.all(promises);
+
+            fs.writeFileSync(`./data/land_use_data/chunk_${y_counter}.json`, JSON.stringify(results.flat()));
+            log_succcess(`Grabbed land use chunk ${y_counter+1}`);
+
+        }
+        catch(err){
+            log_error(`Query for row ${y_counter + 1} failed. Retrying`);
+            y_counter--;
+            await delay(5000);
+        };
+    };
+
+
+    remove_duplicates("land_use_data");
 };
 
 
@@ -294,7 +354,7 @@ const main = async (args) => {
 
     if(args.length != 1){
         console.log("Invalid usage!");
-        console.log("Usage: main.mjs <land_lots | floods | land_slides>")
+        console.log("Usage: main.mjs <land_lots | floods | land_slides | land_use>")
     };
 
 
@@ -320,6 +380,10 @@ const main = async (args) => {
 
         case "land_slides":
             await land_slides_update();
+        break;
+
+        case "land_use":
+            await land_use_update();
         break;
 
         default:

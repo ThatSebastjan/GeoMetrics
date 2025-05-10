@@ -21,7 +21,10 @@ export default {
         obmocje_zelo_redkih_katastrofalnih_poplav: 4018,
 
         // DRSV/Ogrozena_obmocja
-        plazljiva_obmocja: 4402
+        plazljiva_obmocja: 4402,
+
+        // TEMELJNE_VSEBINE/GH_MKGP_GERK_RABA
+        gerk: 1550,
     },
 
 
