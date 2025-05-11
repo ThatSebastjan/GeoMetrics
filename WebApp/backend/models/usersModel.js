@@ -1,9 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const Schema = mongoose.Schema;
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+
 
 const userSchema = new Schema({
     'username': String,
@@ -13,7 +11,6 @@ const userSchema = new Schema({
     'profileImage': {
         filename: String,
         path: String,
-        contentType: String,
         uploadDate: Date
     }
 });

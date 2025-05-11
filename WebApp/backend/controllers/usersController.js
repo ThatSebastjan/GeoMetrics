@@ -1,14 +1,12 @@
 const UserModel = require('../models/usersModel.js');
 const jwt = require('jsonwebtoken');
 const config = require('../config.js');
-const upload = require('../utils/fileUpload.js');
 const path = require('path');
 const fs = require('fs');
 
 const DEFAULT_PROFILE_IMAGE = {
     filename: 'default-avatar.png',
     path: '/default-avatar.png',
-    contentType: 'image/png'
 };
 
 /**
@@ -219,17 +217,6 @@ exports.updateProfile = async (req, res) => {
     }
 };
 
-
-exports.getUserById = async (userId) => {
-    try {
-        return await UserModel.findById(userId);
-
-    } catch (error) {
-        console.error("Error fetching user by ID:", error);
-        throw error;
-    }
-};
-
 // profile picture logic
 exports.uploadProfileImage = async (req, res) => {
     try {
@@ -257,7 +244,6 @@ exports.uploadProfileImage = async (req, res) => {
         user.profileImage = {
             filename: req.file.filename,
             path: `/uploads/profiles/${req.file.filename}`,
-            contentType: req.file.mimetype,
             uploadDate: new Date()
         };
 
@@ -294,7 +280,7 @@ exports.deleteProfileImage = async (req, res) => {
         }
 
         // Remove profile image data from user
-        user.profileImage = undefined;
+        user.profileImage = null;
         await user.save();
 
         const userObject = user.toObject();
@@ -309,3 +295,25 @@ exports.deleteProfileImage = async (req, res) => {
         res.status(500).json({ message: 'Server error deleting profile image' });
     }
 };
+
+exports.checkSession = async function (req, res) {
+    try {
+        // Fetch the user from the database using the ID from the token
+        const user = await UserModel.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        // Return user info without sensitive data
+        return res.status(200).json({
+            user: {
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                profileImage: user.profileImage
+            }
+        });
+    } catch (error) {
+        console.error("Session check error:", error);
+        return res.status(500).json({ message: "Server error" });
+    }
+}

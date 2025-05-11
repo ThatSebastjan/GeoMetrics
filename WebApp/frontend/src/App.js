@@ -1,4 +1,4 @@
-import React from 'react';
+import { useContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { UserContext, UserProvider } from './Contexts/UserContext';
 import Login from './Components/Login';
@@ -13,11 +13,12 @@ import Edit from "./Components/Edit";
 import Results from "./Components/Results";
 import SavedLots from "./Components/SavedLots";
 
+
 // Create a separate component for routes that uses the context
 function AppRoutes() {
-    const { setUserContext } = React.useContext(UserContext);
+    const { setUserContext, clearUserContext } = useContext(UserContext);
 
-    React.useEffect(() => {
+    useEffect(() => {
         authenticate();
     }, []);
 
