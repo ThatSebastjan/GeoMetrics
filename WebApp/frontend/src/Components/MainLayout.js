@@ -1,4 +1,3 @@
-import React from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import styles from '../styles';
 
@@ -25,24 +24,30 @@ function MainLayout() {
                 </styles.layout.NavMenu>
 
                 {!user ? (
-                <styles.layout.UserSection>
-                    <styles.layout.NavItem onClick={() => navigate('/settings')}>
-                        Settings
-                    </styles.layout.NavItem>
-
-                    <styles.layout.NavItem onClick={() => navigate('/login')}>
-                        Login
-                    </styles.layout.NavItem>
-                    <styles.layout.NavItem onClick={() => navigate('/register')}>
-                        Register
-                    </styles.layout.NavItem>
-                </styles.layout.UserSection>
-                ) : (
-                <styles.layout.UserSection>
-                    <styles.layout.NavItem onClick={() => navigate('/settings')}>
-                        Settings
+                    <styles.layout.UserSection>
+                        <styles.layout.NavItem onClick={() => navigate('/settings')}>
+                            Settings
                         </styles.layout.NavItem>
-                </styles.layout.UserSection>
+
+                        <styles.layout.NavItem onClick={() => navigate('/login')}>
+                            Login
+                        </styles.layout.NavItem>
+                        <styles.layout.NavItem onClick={() => navigate('/register')}>
+                            Register
+                        </styles.layout.NavItem>
+                    </styles.layout.UserSection>
+                ) : (
+                    <styles.layout.UserSection>
+                        <styles.layout.NavItem onClick={() => navigate('/saved-lots')}>
+                            Saved Lots
+                        </styles.layout.NavItem>
+                        <styles.layout.NavItem onClick={() => navigate('/results')}>
+                            Results
+                        </styles.layout.NavItem>
+                        <styles.layout.NavItem onClick={() => navigate('/settings')}>
+                            Settings
+                        </styles.layout.NavItem>
+                    </styles.layout.UserSection>
                 )}
 
             </styles.layout.Sidebar>

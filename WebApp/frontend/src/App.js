@@ -10,6 +10,8 @@ import Assess from "./Components/Assess";
 import SideBySide from "./Components/SideBySide";
 import SmartSelect from "./Components/SmartSelect";
 import Edit from "./Components/Edit";
+import Results from "./Components/Results";
+import SavedLots from "./Components/SavedLots";
 
 // Create a separate component for routes that uses the context
 function AppRoutes() {
@@ -68,6 +70,8 @@ function AppRoutes() {
                         <Route path="side-by-side" element={<SideBySide />} />
                         <Route path="settings" element={<Settings />} />
                         <Route path="settings/edit-profile" element={<Edit />} />
+                        <Route path="results" element={<Results />} />
+                        <Route path="saved-lots" element={<SavedLots />} />
                     </Route>
                 </Routes>
             </div>

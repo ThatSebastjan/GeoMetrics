@@ -1,4 +1,3 @@
-// frontend/src/Components/Edit.js
 import { useState, useEffect, useContext } from 'react';
 import { UserContext } from '../Contexts/UserContext';
 import styles from '../styles';

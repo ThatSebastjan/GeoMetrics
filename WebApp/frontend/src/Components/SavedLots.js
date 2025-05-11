@@ -3,8 +3,8 @@ import styles from '../styles';
 
 function SideBySide() {
     return (
-        <div>sidebyside</div>
-        )
+        <div>Placeholder Saved Lots</div>
+    )
 }
 
 export default SideBySide;

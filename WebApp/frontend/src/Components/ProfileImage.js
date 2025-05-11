@@ -1,5 +1,3 @@
-import React from 'react';
-
 function ProfileImage({ user, size = 'medium', onClick = null }) {
     // Determine image URL
     const getImageUrl = () => {
