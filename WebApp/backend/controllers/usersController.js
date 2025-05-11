@@ -209,3 +209,13 @@ exports.updateProfile = async (req, res) => {
 };
 
 
+exports.getUserById = async (userId) => {
+    try {
+        return await UserModel.findById(userId);
+
+    } catch (error) {
+        console.error("Error fetching user by ID:", error);
+        throw error;
+    }
+};
+
