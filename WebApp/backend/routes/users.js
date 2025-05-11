@@ -3,6 +3,7 @@ const userController = require("../controllers/usersController");
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const config = require('../config.js');
+const upload = require('../utils/fileUpload');
 
 const authenticate = (req, res, next) => {
   try {
@@ -43,7 +44,7 @@ router.get("/check-session", authenticate, async (req, res) => {
         _id: user._id,
         username: user.username,
         email: user.email,
-        // Add other non-sensitive user fields you need
+        profileImage: user.profileImage
       }
     });
   } catch (error) {
@@ -51,5 +52,9 @@ router.get("/check-session", authenticate, async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 });
+
+// Profile picture routes
+router.post("/profile/image", authenticate, upload.single('profileImage'), userController.uploadProfileImage);
+router.delete("/profile/image", authenticate, userController.deleteProfileImage);
 
 module.exports = router;

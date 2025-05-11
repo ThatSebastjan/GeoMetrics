@@ -1,34 +1,49 @@
-// frontend/src/Contexts/UserContext.js
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 
-export const UserContext = createContext({
-    user: null,
-    token: null,
-    setUserContext : () => {},
-    clearUserContext: () => {}
-});
+export const UserContext = createContext(null);
 
-export const UserProvider = ({ children }) => {
-    const [user, setUser] = useState(localStorage.user ? JSON.parse(localStorage.user) : null);
-    const [token, setToken] = useState(localStorage.token);
+export function UserProvider({ children }) {
+    const [userContext, setUserContext] = useState({
+        user: null,
+        token: null
+    });
 
-    const setUserContext = (userData) => {
-        setUser(userData.user);
-        setToken(userData.token);
-        localStorage.setItem('user', JSON.stringify(userData.user));
-        localStorage.setItem('token', userData.token);
+    useEffect(() => {
+        // Load user data and token from localStorage when the app starts
+        const token = localStorage.getItem('token');
+        const savedUser = JSON.parse(localStorage.getItem('user'));
+
+        if (token && savedUser) {
+            setUserContext({ user: savedUser, token });
+        }
+    }, []);
+
+    // Function to update user context
+    const setUserContextAndSave = (newContext) => {
+        setUserContext(newContext);
+
+        // Save to localStorage
+        if (newContext.user && newContext.token) {
+            localStorage.setItem('token', newContext.token);
+            localStorage.setItem('user', JSON.stringify(newContext.user));
+        }
     };
 
+    // Function to clear user context
     const clearUserContext = () => {
-        setUser(null);
-        setToken(null);
-        localStorage.removeItem('user');
+        setUserContext({ user: null, token: null });
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
     };
 
     return (
-        <UserContext.Provider value={{ user, token, setUserContext, clearUserContext }}>
+        <UserContext.Provider value={{
+            user: userContext.user,
+            token: userContext.token,
+            setUserContext: setUserContextAndSave,
+            clearUserContext
+        }}>
             {children}
         </UserContext.Provider>
     );
-};
+}

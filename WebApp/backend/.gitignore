@@ -63,3 +63,4 @@ typings/
 
 # VS-code metadata
 .vscode
+/public/uploads/profiles

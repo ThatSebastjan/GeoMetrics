@@ -1,11 +1,20 @@
+
 import { useState, useEffect, useContext} from "react";
 import styles from "../styles";
 import {useNavigate} from "react-router-dom";
-import userContext, {UserContext} from "../Contexts/UserContext";
+import {UserContext} from "../Contexts/UserContext";
 
 function Settings() {
     const navigate = useNavigate();
     const context = useContext(UserContext);
+    const [profileImageUrl, setProfileImageUrl] = useState(null);
+
+    // Set profile image URL when user is available
+    useEffect(() => {
+        if (context.user && context.user.profileImage && context.user.profileImage.path) {
+            setProfileImageUrl(`http://localhost:3001${context.user.profileImage.path}`);
+        }
+    }, [context.user]);
 
     const handleLogout = () => {
         // Clear localStorage
@@ -61,14 +70,30 @@ function Settings() {
 
     return (
         <div>
-
             {/* User info at the top */}
             <styles.settings.Section>
-                <styles.common.HeroTitle> {context.user.username}</styles.common.HeroTitle>
-                <styles.common.SectionTitle> {context.user.email}</styles.common.SectionTitle>
-                <p><strong>Joined:</strong> {context.user.registrationDate
-                    ? new Date(context.user.registrationDate).toLocaleDateString()
-                    : 'Not available'}</p>
+                {/* Profile Image */}
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    marginBottom: '20px'
+                }}>
+                    <img
+                        src={profileImageUrl || '/default-avatar.png'}
+                        alt={`${context.user.username}'s profile`}
+                        style={{
+                            width: '150px',
+                            height: '150px',
+                            objectFit: 'cover',
+                            borderRadius: '50%',
+                            border: `3px solid ${styles.colors.primary}`,
+                            marginBottom: '20px'
+                        }}
+                    />
+                    <styles.common.HeroTitle>{context.user.username}</styles.common.HeroTitle>
+                    <styles.common.SectionTitle>{context.user.email}</styles.common.SectionTitle>
+                </div>
 
                 <styles.settings.Button
                     onClick={() => handleLogout()}
@@ -76,7 +101,7 @@ function Settings() {
                     Logout
                 </styles.settings.Button>
                 <styles.settings.EditButton
-                    onClick={() => {window.location.href = '/settings/edit-profile';}}>
+                    onClick={() => {navigate('/settings/edit-profile');}}>
                     Edit Profile
                 </styles.settings.EditButton>
             </styles.settings.Section>
@@ -84,7 +109,6 @@ function Settings() {
             <styles.settings.Section>
                 <styles.common.PageTitle>Settings</styles.common.PageTitle>
             </styles.settings.Section>
-
         </div>
     );
 }

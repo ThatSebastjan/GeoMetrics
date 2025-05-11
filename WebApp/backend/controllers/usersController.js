@@ -1,7 +1,15 @@
 const UserModel = require('../models/usersModel.js');
 const jwt = require('jsonwebtoken');
 const config = require('../config.js');
+const upload = require('../utils/fileUpload.js');
+const path = require('path');
+const fs = require('fs');
 
+const DEFAULT_PROFILE_IMAGE = {
+    filename: 'default-avatar.png',
+    path: '/default-avatar.png',
+    contentType: 'image/png'
+};
 
 /**
  * User login function
@@ -50,7 +58,8 @@ exports.login = async (req, res) => {
                 id: user._id,
                 username: user.username,
                 email: user.email,
-                registrationDate: user.registrationDate
+                registrationDate: user.registrationDate,
+                profileImage: user.profileImage
             }
         });
     } catch (error) {
@@ -87,12 +96,13 @@ exports.register = async (req, res) => {
             });
         }
 
-        // Create new user
+        // Create new user with default profile image
         const newUser = new UserModel({
             username,
             email,
             password,
-            registrationDate: new Date()
+            registrationDate: new Date(),
+            profileImage: DEFAULT_PROFILE_IMAGE
         });
 
         // Save user (password will be hashed by pre-save middleware)
@@ -104,7 +114,8 @@ exports.register = async (req, res) => {
                 id: newUser._id,
                 username: newUser.username,
                 email: newUser.email,
-                registrationDate: newUser.registrationDate
+                registrationDate: newUser.registrationDate,
+                profileImage: newUser.profileImage
             }
         });
     } catch (error) {
@@ -219,3 +230,82 @@ exports.getUserById = async (userId) => {
     }
 };
 
+// profile picture logic
+exports.uploadProfileImage = async (req, res) => {
+    try {
+        // req.file is added by multer middleware
+        if (!req.file) {
+            return res.status(400).json({ message: 'No image file provided' });
+        }
+
+        const userId = req.userId;
+        const user = await UserModel.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // If user already has a profile image, delete the old one
+        if (user.profileImage && user.profileImage.path) {
+            const oldImagePath = path.join(__dirname, '..', user.profileImage.path);
+            if (fs.existsSync(oldImagePath)) {
+                fs.unlinkSync(oldImagePath);
+            }
+        }
+
+        // Update user with new profile image information
+        user.profileImage = {
+            filename: req.file.filename,
+            path: `/uploads/profiles/${req.file.filename}`,
+            contentType: req.file.mimetype,
+            uploadDate: new Date()
+        };
+
+        await user.save();
+
+        // Return the updated user without password
+        const userObject = user.toObject();
+        delete userObject.password;
+
+        res.status(200).json({
+            message: 'Profile image uploaded successfully',
+            user: userObject
+        });
+    } catch (error) {
+        console.error('Profile image upload error:', error);
+        res.status(500).json({ message: 'Server error uploading profile image' });
+    }
+};
+
+// Delete profile image
+exports.deleteProfileImage = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const user = await UserModel.findById(userId);
+
+        if (!user || !user.profileImage) {
+            return res.status(404).json({ message: 'User or profile image not found' });
+        }
+
+        // Delete the file from storage
+        const imagePath = path.join(__dirname, '..', user.profileImage.path);
+        if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath);
+        }
+
+        // Remove profile image data from user
+        user.profileImage = undefined;
+        await user.save();
+
+        const userObject = user.toObject();
+        delete userObject.password;
+
+        res.status(200).json({
+            message: 'Profile image deleted successfully',
+            user: userObject
+        });
+    } catch (error) {
+        console.error('Delete profile image error:', error);
+        res.status(500).json({ message: 'Server error deleting profile image' });
+    }
+};

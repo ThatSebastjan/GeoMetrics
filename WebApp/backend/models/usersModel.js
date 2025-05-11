@@ -1,12 +1,21 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const Schema = mongoose.Schema;
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
-var userSchema = new Schema({
+const userSchema = new Schema({
     'username': String,
     'password': String,
     'email': String,
-    'registrationDate': Date
+    'registrationDate': Date,
+    'profileImage': {
+        filename: String,
+        path: String,
+        contentType: String,
+        uploadDate: Date
+    }
 });
 
 // Password hashing middleware
