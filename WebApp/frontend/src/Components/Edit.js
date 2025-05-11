@@ -73,7 +73,7 @@ function Edit() {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `${token}`
                 },
                 body: JSON.stringify(updateData),
             });
@@ -84,10 +84,21 @@ function Edit() {
                 throw new Error(data.message || 'Update failed');
             }
 
-            //Update local user data
-            setUserContext(data)
+            // Create a properly updated user object using the response data
+            const updatedUser = {
+                ...user,
+                ...data.user || {}, // Merge any user object from response
+                username: data.username || formData.username || user.username,
+                email: data.email || formData.email || user.email
+            };
 
-            setSuccess('Profile updated successfully');
+            // Update context properly with both user and token
+            setUserContext({
+                user: updatedUser,
+                token: token
+            });
+
+            setSuccess('Profile updated successfully. Redirecting to Settings ...');
 
             // Clear password fields
             setFormData(prev => ({

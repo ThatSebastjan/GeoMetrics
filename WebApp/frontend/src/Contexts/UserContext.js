@@ -15,8 +15,8 @@ export const UserProvider = ({ children }) => {
     const setUserContext = (userData) => {
         setUser(userData.user);
         setToken(userData.token);
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(userData.user));
+        localStorage.setItem('token', userData.token);
     };
 
     const clearUserContext = () => {

@@ -8,8 +8,14 @@ function Settings() {
     const context = useContext(UserContext);
 
     const handleLogout = () => {
+        // Clear localStorage
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+
+        // Reset the user context
+        context.clearUserContext()
+
+        // Navigate to home page
         navigate('/');
     };
 
