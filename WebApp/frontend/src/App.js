@@ -7,7 +7,7 @@ function App() {
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
         <p>
-          Edit <code>src/App.js</code> and save to reload.
+          3-Logy web app in a docker container, test 1/5000000
         </p>
         <a
           className="App-link"
