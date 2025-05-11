@@ -113,7 +113,6 @@ const land_lot_update = async () => {
     const num_y_chunks = 128;
 
     const land_lot_service = new ArcGis.MapService(arc_gis, "TEMELJNE_VSEBINE", "GH_ZK_KO", config.service_layers.parcele);
-    //const land_lot_service_info = await land_lot_service.get_info();
 
     const grab_layer_data = async (x_counter, y_counter) => {
 
@@ -122,7 +121,7 @@ const land_lot_update = async () => {
                 rings:[ gen_chunk_bounds(x_counter, y_counter, config.SI_BBOX, num_x_chunks, num_y_chunks) ],
             },
             geometryType: "esriGeometryPolygon",
-            outFields: "ST_PARCELE,EID_PARCELA,OBJECTID,POVRSINA,GEOMETRY",
+            outFields: "ST_PARCELE,EID_PARCELA,OBJECTID,KO_ID,POVRSINA,GEOMETRY",
             inSR: ArcGis.WKID.Slovenia,
             outSR: ArcGis.WKID.WGS,
         });
@@ -300,7 +299,7 @@ const land_use_update = async () => {
     const num_x_chunks = 128;
     const num_y_chunks = 128;
 
-    const gerk_service = new ArcGis.MapService(arc_gis, "TEMELJNE_VSEBINE", "GH_MKGP_GERK_RABA", config.service_layers.gerk);
+    const gerk_service = new ArcGis.MapService(arc_gis, "TEMELJNE_VSEBINE", "GH_MKGP_GERK_RABA", config.service_layers.raba);
 
     const grab_layer_data = async (x_counter, y_counter) => {
 
@@ -309,7 +308,7 @@ const land_use_update = async () => {
                 rings:[ gen_chunk_bounds(x_counter, y_counter, config.SI_BBOX, num_x_chunks, num_y_chunks) ],
             },
             geometryType: "esriGeometryPolygon",
-            outFields: "OBJECTID,GERK_PID,RABA_ID,Z_AVG,NAGIB_AVG",
+            outFields: "OBJECTID,RABA_PID,RABA_ID",
             inSR: ArcGis.WKID.Slovenia,
             outSR: ArcGis.WKID.WGS,
         });

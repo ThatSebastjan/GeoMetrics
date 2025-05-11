@@ -24,7 +24,7 @@ export default {
         plazljiva_obmocja: 4402,
 
         // TEMELJNE_VSEBINE/GH_MKGP_GERK_RABA
-        gerk: 1550,
+        raba: 1551,
     },
 
 
