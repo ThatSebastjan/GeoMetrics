@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import styles from '../styles';
+import Map from '../Components/Map.js';
 
 function Assess() {
     const [user, setUser] = useState(null);
@@ -17,9 +18,9 @@ function Assess() {
     // }
 
     return (
-        <div>
-            <styles.common.PageTitle>PLACEHOLDER ASSESS</styles.common.PageTitle>
-        </div>
+
+        <Map />
+
     );
 }
 

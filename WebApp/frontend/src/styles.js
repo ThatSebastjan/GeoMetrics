@@ -288,7 +288,7 @@ const layoutStyles = {
 
     Content: styled.main`
         flex: 1;
-        padding: ${spacing.xl};
+        padding: 0px;
         background-color: ${colors.light};
         overflow-y: auto;
     `,
@@ -445,6 +445,27 @@ const settingsStyles = {
     `,
 };
 
+const mapStyles = {
+    MapContainer: styled.div`
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    `,
+
+
+    MapControls: styled.div`
+        position: absolute;
+        top: ${spacing.md};
+        right: ${spacing.md};
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: ${spacing.xs};
+    `
+}
+
 const appStyles = {
     colors,
     spacing,
@@ -455,6 +476,7 @@ const appStyles = {
     common: commonStyles,
     layout: layoutStyles,
     settings: settingsStyles,
+    map: mapStyles,
 };
 
 
