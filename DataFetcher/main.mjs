@@ -171,11 +171,23 @@ const flood_areas_update = async () => {
     };
 
 
+    let flood_idx = 0; //For fixing indexes (same indexes between different flood types)
+
+    const re_index = (list) => {
+        list.forEach(e => {
+            e.id = flood_idx;
+            e.properties.OBJECTID = flood_idx++;
+        });
+    };
+    
+
+
     //Rare flood areas -> Num: ~1700
     log_info("Querying rare flood areas");
 
     const rare_floods_service = new ArcGis.MapService(arc_gis, "DRSV", "Zun", config.service_layers.obmocje_redkih_poplav);
     const rare_floods = await query_layer_data(rare_floods_service);
+    re_index(rare_floods.features);
     
     fs.writeFileSync("./data/flood_data/rare_floods.json", JSON.stringify(rare_floods.features));
     log_succcess(`Rare flood area count: ${rare_floods.features.length}`);
@@ -186,6 +198,7 @@ const flood_areas_update = async () => {
 
     const common_floods_service = new ArcGis.MapService(arc_gis, "DRSV", "Zun", config.service_layers.obmocje_pogostih_poplav);
     const common_floods = await query_layer_data(common_floods_service);
+    re_index(common_floods.features);
     
     fs.writeFileSync("./data/flood_data/common_floods.json", JSON.stringify(common_floods.features));
     log_succcess(`Common flood area count: ${common_floods.features.length}`);
@@ -196,6 +209,7 @@ const flood_areas_update = async () => {
 
     const rc_floods_service = new ArcGis.MapService(arc_gis, "DRSV", "Zun", config.service_layers.obmocje_zelo_redkih_katastrofalnih_poplav);
     const rc_floods = await query_layer_data(rc_floods_service);
+    re_index(rc_floods.features);
     
     fs.writeFileSync("./data/flood_data/rare_catastrophic_floods.json", JSON.stringify(rc_floods.features));
     log_succcess(`Very rare, catastrophic flood area count: ${rc_floods.features.length}`);
@@ -263,7 +277,17 @@ const land_slides_update = async () => {
     //Seperate different types based on description
     const files = fs.readdirSync("./data/land_slide_data/").filter(e => e.includes("chunk") && path.parse(e).ext == ".json").map(e => `./data/land_slide_data/${e}`);
 
+    let land_slide_idx = 0;
     const type_map = {};
+
+    const LAND_SLIDE_TYPE_MAP = {
+        "zanemarljiva_verjetnost_pojavljanja_plazov": 0,
+        "zelo_majhna_verjetnost_pojavljanja_plazov": 1,
+        "majhna_verjetnost_pojavljanja_plazov": 2,
+        "srednja_verjetnost_pojavljanja_plazov": 3,
+        "velika_verjetnost_pojavljanja_plazov": 4,
+        "zelo_velika_verjetnost_pojavljanja_plazov": 5,
+    };
 
     for(let i = 0; i < files.length; i++){
         const data = JSON.parse(fs.readFileSync(files[i], "utf8"));
@@ -275,6 +299,9 @@ const land_slides_update = async () => {
                 type_map[type] = [];
             };
 
+            e.id = land_slide_idx; //Re-index
+            e.properties.OBJECTID = land_slide_idx++;
+
             type_map[type].push(e);
         });
 
@@ -284,6 +311,11 @@ const land_slides_update = async () => {
     Object.keys(type_map).forEach(key => {
         const normalized = key.split(" ").join("_").toLowerCase();
         log_info(`Saving ${normalized}`);
+
+        type_map[key].forEach(el => {
+            delete el.properties.OPIS_GRID;
+            el.properties.LandSlideType = LAND_SLIDE_TYPE_MAP[normalized];
+        });
 
         fs.writeFileSync(`./data/land_slide_data/${normalized}.json`, JSON.stringify(type_map[key]));
     });
