@@ -15,6 +15,7 @@ const colors = {
     disabled: '#a0aec0',
     light: '#f5f5f5',
     white: '#ffffff',
+    offWhite: '#fdfdfd',
     border: '#ddd',
     text: '#333',
     highlight: '#e3f2fd',
@@ -136,7 +137,7 @@ const dashboardStyles = {
 const commonStyles = {
 
     HeroTitle: styled.h1`
-    font-size: 2.5rem;
+        font-size: 2.5rem;
         padding: 0px;
         margin-bottom: 0px;
     `,
@@ -146,11 +147,22 @@ const commonStyles = {
         color: ${colors.textDark};
         font-size: 1.8rem;
         font-weight: 600;
+        text-align: left;
+    `,
+
+    PageTitleHero: styled.h1`
+        margin: 0 0 ${spacing.md} 0;
+        font-size: 1.8rem;
+        font-weight: 600;
     `,
 
     SectionTitle: styled.h2`
         margin-bottom: ${spacing.md};
         color: ${colors.text};
+    `,
+
+    SectionTitleHero: styled.h2`
+        margin-bottom: ${spacing.md};
     `,
 
     Card: styled.div`
@@ -177,46 +189,46 @@ const commonStyles = {
 
     // Add these to commonStyles object
     FormGroup: styled.div`
-  margin-bottom: 15px;
-`,
+        margin-bottom: 15px;
+    `,
     Label: styled.label`
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-`,
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    `,
     Input: styled.input`
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-`,
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    `,
     Message: styled.div`
-  padding: 10px;
-  margin: 15px 0;
-  border-radius: 4px;
-  background-color: ${props => props.$type === 'error' ? '#ffdddd' : '#ddffdd'};
-  border: 1px solid ${props => props.$type === 'error' ? '#f44336' : '#4CAF50'};
-`,
+        padding: 10px;
+        margin: 15px 0;
+        border-radius: 4px;
+        background-color: ${props => props.$type === 'error' ? '#ffdddd' : '#ddffdd'};
+        border: 1px solid ${props => props.$type === 'error' ? '#f44336' : '#4CAF50'};
+    `,
 
 // Add this to settingsStyles object
     Button: styled.button`
-  background: ${props => props.$secondary ? '#f1f1f1' : colors.primary};
-  color: ${props => props.$secondary ? '#333' : 'white'};
-  border: none;
-  padding: ${spacing.sm} ${spacing.md};
-  border-radius: ${borderRadius.small};
-  margin-right: 10px;
-  cursor: pointer;
-  
-  &:hover {
-    background: ${props => props.$secondary ? '#e1e1e1' : colors.primaryDark};
-  }
-  
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-`,
+        background: ${props => props.$secondary ? '#f1f1f1' : colors.primary};
+        color: ${props => props.$secondary ? '#333' : 'white'};
+        border: none;
+        padding: ${spacing.sm} ${spacing.md};
+        border-radius: ${borderRadius.small};
+        margin-right: 10px;
+        cursor: pointer;
+
+        &:hover {
+            background: ${props => props.$secondary ? '#e1e1e1' : colors.primaryDark};
+        }
+
+        &:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    `,
 };
 
 const layoutStyles = {
@@ -296,6 +308,16 @@ const layoutStyles = {
 
 
 const settingsStyles = {
+    ContainerHero: styled.div`
+        align-items: center;
+        background: rgba(0, 0, 0, 0.85);
+        color: ${colors.white};
+        padding: ${spacing.xl};
+        box-shadow: ${shadows.small};
+        margin: 0px;
+        backdrop-filter: blur(5px);
+    `,
+
     Container: styled.div`
         max-width: 1200px;
         margin: 0 auto;
@@ -320,12 +342,19 @@ const settingsStyles = {
 
     Section: styled.div`
         align-items: center;
-        background: ${colors.white};
-        border-radius: ${borderRadius.medium};
+        border: 1px solid ${colors.border};
+        background: ${colors.offWhite};
         padding: ${spacing.xl};
-        box-shadow: ${shadows.small};
-        margin-bottom: ${spacing.lg};
-        max-width: 800px;
+        margin: 0px;
+    `,
+
+    TitleSection: styled.div`
+        align-items: center;
+        border-left: 1px solid ${colors.border};
+        border-right: 1px solid ${colors.border};
+        background: ${colors.offWhite};
+        padding: ${spacing.xl};
+        margin: 0px;
     `,
 
     FormGroup: styled.div`
@@ -391,6 +420,7 @@ const settingsStyles = {
         background: ${colors.primary};
         color: white;
         border: none;
+        margin-right: ${spacing.md};
         padding: ${spacing.sm} ${spacing.md};
         border-radius: 10px;
         font-size: 1rem;
@@ -431,7 +461,7 @@ const settingsStyles = {
 
     LoginButton: styled.button`
         background: ${colors.primary};
-        color: white;
+        color: ${colors.white};
         border: none;
         padding: ${spacing.sm} ${spacing.md};
         border-radius: 10px;
@@ -466,6 +496,234 @@ const mapStyles = {
     `
 }
 
+const gaugeStyles = {
+    GaugeContainer: styled.div`
+        position: relative;
+        width: ${props => props.$size}px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    `,
+
+    GaugeCircle: styled.div`
+        position: relative;
+        width: ${props => props.$size}px;
+        height: ${props => props.$size}px;
+    `,
+
+    GaugeTrack: styled.div`
+        position: absolute;
+        top: 10%;
+        left: 10%;
+        width: 80%;
+        height: 80%;
+        border-radius: 50%;
+        background: ${props => props.$trackColor || '#f0f0f0'};
+    `,
+
+    GaugeFill: styled.div`
+        position: absolute;
+        top: 10%;
+        left: 10%;
+        width: 80%;
+        height: 80%;
+        border-radius: 50%;
+        background: ${props => {
+            const degrees = props.$percentage * 3.6;
+            if (props.$fillGradient) {
+                // Use the gradient colors but mask them with another conic gradient
+                return `conic-gradient(
+                from 0deg,
+                transparent ${degrees}deg,
+                rgba(255,255,255,0.7) ${degrees}deg
+            ), conic-gradient(${props.$fillGradient})`;
+            } else {
+                return `conic-gradient(${props.$fillColor || '#007aff'} 0deg ${degrees}deg, transparent ${degrees}deg 360deg)`;
+            }
+        }};
+        transition: all 0.5s ease-in-out;
+    `,
+
+    GaugeInnerCircle: styled.div`
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: ${props => props.$size * 0.6}px;
+        height: ${props => props.$size * 0.6}px;
+        border-radius: 50%;
+        background: ${props => props.$innerColor || '#fff'};
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `,
+
+    GaugeValue: styled.div`
+        font-size: ${props => props.$size * 0.2}px;
+        font-weight: bold;
+        color: ${props => props.$valueColor || colors.textDark};
+    `,
+
+    GaugeLabel: styled.div`
+        font-size: ${props => props.$size * 0.12}px;
+        color: ${props => props.$labelColor || colors.textDark};
+        margin-top: ${spacing.sm};
+        text-align: center;
+        width: 100%;
+        font-weight: 500;
+    `
+}
+
+const resultStyles = {
+    Container: styled.div`
+        background-color: ${props => props.$isFullScreen ? 'rgba(255, 255, 255, 0.95)' : colors.white};
+        border-radius: ${borderRadius.medium} ${borderRadius.medium} 0 0;
+        box-shadow: ${shadows.small};
+        transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        padding: ${props => props.$isFullScreen ? spacing.lg : spacing.md};
+        position: relative;
+        width: 100%;
+        min-width: 450px;
+        height: auto;
+        max-height: ${props => props.$isFullScreen ? '80vh' : '180px'};
+        z-index: 1;
+        overflow-y: visible;
+        overflow-x: visible;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        backdrop-filter: ${props => props.$isFullScreen ? 'blur(10px)' : 'none'};
+        margin-top: 25px;
+    `,
+
+
+    Header: styled.div`
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: ${spacing.md};
+        border-bottom: 1px solid ${colors.border};
+        padding-bottom: ${spacing.xs};
+        width: 100%;
+    `,
+
+    Title: styled.h2`
+        margin: 0;
+        font-size: ${props => props.$isFullScreen ? '1.8rem' : '1.5rem'};
+        color: ${colors.textDark};
+        text-align: center;
+    `,
+
+
+    GaugeGrid: styled.div`
+        display: flex;
+        flex-wrap: ${props => props.$isFullScreen ? 'wrap' : 'nowrap'};
+        justify-content: center;
+        gap: ${props => props.$isFullScreen ? spacing.xl : spacing.md};
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        width: 100%;
+        padding: ${props => props.$isFullScreen ? spacing.md : '0'};
+        transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+    `,
+
+
+    GaugeItem: styled.div`
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: ${spacing.md};
+        min-width: ${props => props.$isFullScreen ? '150px' : 'auto'};
+        max-width: ${props => props.$isFullScreen ? '350px' : 'none'};
+    `,
+
+    ExpandButtonWrapper: styled.div`
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10;
+    `,
+
+    ExpandButton: styled.button`
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: ${colors.primary};
+        color: white;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 20px;
+        font-weight: bold;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+
+        &:hover {
+            background: ${colors.primaryLight};
+        }
+    `,
+    ContentSection: styled.div`
+        width: 100%;
+        margin-top: ${spacing.lg};
+        padding: ${props => props.$isFullScreen ? spacing.md : '0'};
+        overflow-y: auto;
+        max-height: ${props => props.$isFullScreen ? '300px' : '0'};
+        opacity: ${props => props.$isFullScreen ? '1' : '0'};
+        visibility: ${props => props.$isFullScreen ? 'visible' : 'hidden'};
+        transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        border-top: ${props => props.$isFullScreen ? `1px solid ${colors.border}` : 'none'};
+    `,
+};
+
+const assessStyles = {
+    Container: styled.div`
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+        position: relative;
+    `,
+
+    MapWrapper: styled.div`
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        filter: ${props => props.$isFullScreen ? 'blur(3px) brightness(0.8)' : 'none'};
+        transition: filter 1s cubic-bezier(0.16, 1, 0.3, 1);
+    `,
+
+    ResultBarWrapper: styled.div`
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        display: flex;
+        justify-content: center;
+        transition: all 0.3s ease;
+        overflow: visible;
+    `,
+
+    ResultBarInner: styled.div`
+        width: ${props => props.$isFullScreen ? '90%' : '50%'};
+        max-width: ${props => props.$isFullScreen ? '1600px' : '800px'};
+        padding-top: 20px;
+        overflow: visible;
+        position: relative;
+        z-index: 5;
+        display: flex;
+        justify-content: center;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    `,
+};
+
 const appStyles = {
     colors,
     spacing,
@@ -477,8 +735,10 @@ const appStyles = {
     layout: layoutStyles,
     settings: settingsStyles,
     map: mapStyles,
+    gauge: gaugeStyles,
+    results: resultStyles,
+    assess: assessStyles,
 };
-
 
 
 export default appStyles;
