@@ -16,5 +16,5 @@ const polygonSchema = new Schema({
 
 
 module.exports = {
-    polygon: polygonSchema,
+    polygonSchema,
 };

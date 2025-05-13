@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
-const { polygon } = require("./GeoJsonSchema.js");
+const { polygonSchema } = require("./GeoJsonSchema.js");
 const Schema = mongoose.Schema;
 
 
-const landLotSchema = new mongoose.Schema({
+const landLotSchema = new Schema({
     type: {
         type: String,
         required: true
@@ -15,7 +15,7 @@ const landLotSchema = new mongoose.Schema({
         unique: true,
     },
 
-    geometry: polygon,
+    geometry: polygonSchema,
 
     properties: {
         ST_PARCELE: String,
@@ -30,4 +30,4 @@ landLotSchema.index({ geometry: "2dsphere" });
 landLotSchema.path("properties.ST_PARCELE").index(true);
 
 
-module.exports = mongoose.model("land_lot", landLotSchema);
+module.exports = mongoose.model("land_lot", landLotSchema);;

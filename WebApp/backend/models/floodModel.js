@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { polygon } = require("./GeoJsonSchema.js");
+const { polygonSchema } = require("./GeoJsonSchema.js");
 const Schema = mongoose.Schema;
 
 const FLOOD_TYPE_MAP = {
@@ -21,7 +21,7 @@ const floodSchema = new Schema({
         unique: true,
     },
 
-    geometry: polygon,
+    geometry: polygonSchema,
 
     properties: {
         OBJECTID: Number,
