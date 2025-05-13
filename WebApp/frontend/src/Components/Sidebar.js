@@ -254,7 +254,7 @@ function Sidebar() {
           <StyledNavItem onClick={() => navigate('/settings')}>
             <NavItemContent>
               <IconWrapper><FaCog /></IconWrapper>
-              Settings
+              Preferences
             </NavItemContent>
           </StyledNavItem>
         </styles.layout.UserSection>

@@ -31,9 +31,9 @@ function Settings() {
 
     if (!context.user) return (
         <>
-            <styles.settings.Section>
-                <styles.common.PageTitle>Here is where your user profile lives ...</styles.common.PageTitle>
-                <styles.common.SectionTitle>Once you login that is.</styles.common.SectionTitle>
+            <styles.settings.ContainerHero>
+                <styles.common.PageTitleHero>Here is where your user profile lives ...</styles.common.PageTitleHero>
+                <styles.common.SectionTitleHero>Once you login that is.</styles.common.SectionTitleHero>
                 <br/>
                 <styles.settings.LoginButton
                     onClick={() => {
@@ -42,7 +42,7 @@ function Settings() {
                 >
                     Login
                 </styles.settings.LoginButton>
-            </styles.settings.Section>
+            </styles.settings.ContainerHero>
 
             <styles.settings.Section>
                 <styles.common.SectionTitle>App Settings</styles.common.SectionTitle>
@@ -71,7 +71,7 @@ function Settings() {
     return (
         <div>
             {/* User info at the top */}
-            <styles.settings.Section>
+            <styles.settings.ContainerHero>
                 {/* Profile Image */}
                 <div style={{
                     display: 'flex',
@@ -92,7 +92,7 @@ function Settings() {
                         }}
                     />
                     <styles.common.HeroTitle>{context.user.username}</styles.common.HeroTitle>
-                    <styles.common.SectionTitle>{context.user.email}</styles.common.SectionTitle>
+                    <styles.common.SectionTitleHero>{context.user.email}</styles.common.SectionTitleHero>
                 </div>
 
                 <styles.settings.Button
@@ -104,10 +104,24 @@ function Settings() {
                     onClick={() => {navigate('/settings/edit-profile');}}>
                     Edit Profile
                 </styles.settings.EditButton>
-            </styles.settings.Section>
+            </styles.settings.ContainerHero>
+
+            <styles.settings.TitleSection>
+                <styles.common.PageTitle>Preferences</styles.common.PageTitle>
+            </styles.settings.TitleSection>
 
             <styles.settings.Section>
-                <styles.common.PageTitle>Settings</styles.common.PageTitle>
+
+                <div style={{
+                    height: '400px',
+                    border: '2px dashed #ccc',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '20px 0',
+                    color: '#888'
+                }}>Settings Content Will Go Here</div>
             </styles.settings.Section>
         </div>
     );
