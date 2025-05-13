@@ -3,7 +3,11 @@ import styled from 'styled-components';
 // Theme constants
 const colors = {
     primary: '#000000',
-    primaryLight: '#454545',
+    primaryLight: '#1b1b1b',
+    primarySuperLight: '#454545',
+    secondary: '#838383',
+    secondaryLight: '#a8a8a8',
+    secondarySuperLight: '#eeeeee',
     danger: '#f44336',
     dangerDark: '#d32f2f',
     error: '#fdedee',
@@ -37,6 +41,8 @@ const shadows = {
 const borderRadius = {
     small: '4px',
     medium: '8px',
+    large: '10px',
+    xLarge: '14px',
 };
 
 const loginStyles = {
@@ -235,14 +241,22 @@ const layoutStyles = {
     Container: styled.div`
         display: flex;
         min-height: 100vh;
+        overflow: hidden; /* Prevent content overflow */
     `,
 
     Sidebar: styled.div`
         width: 250px;
+        min-width: 250px; /* Ensures sidebar doesn't shrink */
+        height: 100vh;
         background-color: ${colors.primaryDark};
         display: flex;
         flex-direction: column;
         padding: ${spacing.md} 0;
+        position: fixed; /* Fix the sidebar */
+        left: 0;
+        top: 0;
+        z-index: 100;
+        overflow-y: auto; /* Make sidebar content scrollable if needed */
     `,
 
     Logo: styled.div`
@@ -273,8 +287,8 @@ const layoutStyles = {
 
     UserSection: styled.div`
         margin-top: auto;
+        margin-bottom: 1rem;
         padding: ${spacing.md};
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
     `,
 
     UserInfo: styled.div`
@@ -300,9 +314,134 @@ const layoutStyles = {
 
     Content: styled.main`
         flex: 1;
-        padding: 0px;
+        padding: 0;
+        margin-left: 250px; /* Match the sidebar width */
         background-color: ${colors.light};
-        overflow-y: auto;
+        overflow-y: auto; /* Make the content scrollable */
+        min-height: 100vh;
+        width: calc(100% - 250px);
+    `,
+
+
+    DropdownContainer: styled.div`
+        margin-left: ${spacing.md};
+        margin-right: ${spacing.md};
+        margin-bottom: ${spacing.xs};
+        border-radius: ${borderRadius.medium};
+        background-color: ${colors.secondarySuperLight};
+    `,
+
+    DropdownMenu: styled.div`
+        overflow: hidden;
+        max-height: ${props => (props.$isOpen ? '500px' : '0')};
+        opacity: ${props => (props.$isOpen ? '1' : '0')};
+        transform-origin: top;
+        transform: ${props => (props.$isOpen ? 'scaleY(1)' : 'scaleY(0.95)')};
+        transition:
+                max-height 0.35s ease-out,
+                opacity 0.25s ease-in-out,
+                transform 0.25s ease-in-out,
+                margin 0.2s ease-out;
+        background-color: rgba(255, 255, 255, 0.05);
+            // border-radius: ${props => (props.$isOpen ? borderRadius.small : '0')};
+
+        & > * {
+            opacity: ${props => (props.$isOpen ? '1' : '0')};
+            transform: translateY(${props => (props.$isOpen ? '0' : '-4px')});
+            transition: opacity 0.25s ease-in-out, transform 0.25s ease-out;
+            transition-delay: ${props => (props.$isOpen ? '0.05s' : '0s')};
+        }
+    `,
+
+    NavItemWithIcon: styled.div`
+        text-indent: ${spacing.xs};
+        background-color: ${colors.white};
+        padding: ${spacing.md} ${spacing.lg};
+        border-radius: ${borderRadius.medium};
+        cursor: pointer;
+        color: ${colors.text};
+        font-weight: bold;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        transition: all 0.25s;
+
+        ${props => props.$isActive && `
+            background: ${colors.primary};
+            color: ${colors.white};
+            border-radius: ${borderRadius.medium} ${borderRadius.medium} 0 0;
+        `}
+        &:hover {
+            background: ${colors.primary};
+            color: white;
+
+        }
+    `,
+
+    DropdownItem: styled.div`
+        text-indent: ${spacing.xs};
+        padding: ${spacing.md} ${spacing.md};
+        background-color: transparent;
+        cursor: pointer;
+        color: ${colors.text || '#000000'};
+        text-align: left;
+        transition: background-color 0.3s, border-radius 0.3s;
+        padding-left: ${spacing.lg};
+        font-family: inherit;
+        font-size: inherit;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 0;
+
+        &:hover, &:active {
+            background-color: rgba(168, 168, 168, 0.5); /* Semi-transparent version of secondaryLight */
+
+        }
+
+        &:last-child {
+            border-radius: 0 0 ${borderRadius.medium} ${borderRadius.medium} ;
+        }
+
+    `,
+
+    StyledNavItem: styled.div`
+        text-indent: ${spacing.xs};
+        padding: ${spacing.md} ${spacing.lg};
+        border-radius: ${borderRadius.medium};
+        cursor: pointer;
+        color: ${colors.text};
+        font-weight: bold;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        transition: all 0.25s;
+
+        &:hover, &:active {
+            background-color: ${colors.primary};
+            color: white;
+            backdrop-filter: blur(10px);
+
+        }
+    `,
+
+    NavItemContent: styled.div`
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1rem;
+    `,
+
+    IconWrapper: styled.span`
+        display: flex;
+        align-items: center;
+        font-size: 1rem;
+
+        &hover, svg {
+            filter: drop-shadow(0 0 4px ${colors.offWhite});
+        }
+
     `,
 };
 
@@ -439,7 +578,7 @@ const settingsStyles = {
     `,
 
     EditButton: styled.button`
-        background: ${colors.primaryLight};
+        background: ${colors.primarySuperLight};
         color: white;
         border: none;
         padding: ${spacing.sm} ${spacing.md};
@@ -586,7 +725,7 @@ const resultStyles = {
         width: 100%;
         min-width: 450px;
         height: auto;
-        max-height: ${props => props.$isFullScreen ? '80vh' : '180px'};
+        max-height: ${props => props.$isFullScreen ? '90vh' : '180px'};
         z-index: 1;
         overflow-y: visible;
         overflow-x: visible;
@@ -664,7 +803,7 @@ const resultStyles = {
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 
         &:hover {
-            background: ${colors.primaryLight};
+            background: ${colors.primarySuperLight};
         }
     `,
     ContentSection: styled.div`
@@ -682,11 +821,23 @@ const resultStyles = {
 
 const assessStyles = {
     Container: styled.div`
+        border: 1px solid ${colors.border};
         display: flex;
         flex-direction: column;
         height: 100%;
         width: 100%;
         position: relative;
+    `,
+
+    SideBySideContainer: styled.div`
+        display: flex;
+        width: 100%;
+        height: 100%;
+
+        & > div {
+            flex: 1;
+            height: 100%;
+        }
     `,
 
     MapWrapper: styled.div`
@@ -722,6 +873,104 @@ const assessStyles = {
         justify-content: center;
         transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     `,
+
+    SideBySideResults: styled.div`
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 ${spacing.md};
+        gap: ${spacing.md};
+        z-index: 10;
+
+        & > div {
+            width: calc(50% - ${spacing.md} / 2);
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            position: relative;
+        }
+    `,
+};
+
+const searchBarStyles = {
+    SearchBarContainer: styled.div`
+        width: 100%;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: ${spacing.sm} ${spacing.md};
+    `,
+
+    SearchInputWrapper: styled.div`
+        position: relative;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        background-color: ${colors.white};
+        border: 1px solid ${colors.border};
+        border-radius: 50px;
+        transition: all 0.2s ease;
+
+        &:focus-within {
+            border-color: ${colors.primary};
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+        }
+    `,
+
+    SearchIconWrapper: styled.div`
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 ${spacing.sm};
+        color: ${colors.textMedium};
+    `,
+
+    SearchInput: styled.input`
+        flex: 1;
+        height: 40px;
+        padding: ${spacing.xs} ${spacing.sm};
+        border: none;
+        outline: none;
+        font-size: 1rem;
+        background: transparent;
+
+        &::placeholder {
+            color: ${colors.secondary};
+        }
+    `,
+
+    ClearButtonContainer: styled.div`
+        margin-right: .60rem;
+    `,
+
+    ClearButton: styled.button`
+        background: transparent;
+        padding-left: 25px;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0 8px;
+        color: ${colors.textMedium};
+        transition: color 0.2s ease;
+        height: 100%;
+        border-radius: 0 50px 50px 0;
+        
+        &:hover {
+            color: ${colors.dangerDark};
+        }
+    `,
+
+    SearchBarWrapper: styled.div`
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        right: 15px;
+        z-index: 1000;
+    `,
 };
 
 const appStyles = {
@@ -738,6 +987,7 @@ const appStyles = {
     gauge: gaugeStyles,
     results: resultStyles,
     assess: assessStyles,
+    search: searchBarStyles,
 };
 
 

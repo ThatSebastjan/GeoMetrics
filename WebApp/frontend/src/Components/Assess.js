@@ -2,10 +2,16 @@ import { useState, useEffect } from 'react';
 import styles from '../styles';
 import Map from '../Components/Map.js';
 import ResultBar from '../Components/ResultBar';
+import SearchBar from "./SearchBar";
 
 function Assess() {
     const [user, setUser] = useState(null);
     const [isFullScreen, setIsFullScreen] = useState(false);
+
+    const handleSearch = (query) => {
+        // Implement search functionality here
+        console.log('Searching for:', query);
+    };
 
     // Sample data for the gauges - environmental risk indicators
     const gauges = [
@@ -21,7 +27,7 @@ function Assess() {
             value: 78,
             label: "Mudslide Risk",
             fillGradient: "#F9F5EB 0deg, #E3D5CA 90deg, #D5A021 180deg, #8B5A2B 270deg, #4A3728 360deg",
-            innerColor: "#f8fafc",
+            innerColor: "#f8f9fa",
             valueColor: "#2d3748",
             labelColor: "#4a5568"
         },
@@ -45,6 +51,12 @@ function Assess() {
 
     return (
         <styles.assess.Container>
+            <styles.search.SearchBarWrapper>
+                <SearchBar
+                    placeholder="Search locations..."
+                    onSearch={handleSearch}
+                />
+            </styles.search.SearchBarWrapper>
             <styles.assess.MapWrapper $isFullScreen={isFullScreen}>
                 <Map />
             </styles.assess.MapWrapper>
