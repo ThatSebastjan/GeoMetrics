@@ -46,31 +46,44 @@ const loginStyles = {
         align-items: center;
         min-height: 100vh;
         background-color: ${colors.light};
+        width: 100vw;
+        box-sizing: border-box;
     `,
 
     FormWrapper: styled.div`
         width: 100%;
-        max-width: 400px;
-        padding: ${spacing.xl};
+        max-width: 480px; // was 400px
+        padding: ${spacing.xl} ${spacing.xl}; // was ${spacing.xl} ${spacing.lg}
         background-color: ${colors.white};
         border-radius: ${borderRadius.medium};
         box-shadow: ${shadows.medium};
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
     `,
 
     FormTitle: styled.h2`
         text-align: center;
         margin-bottom: ${spacing.lg};
         color: ${colors.text};
+        width: 100%;
     `,
 
     FormGroup: styled.div`
         margin-bottom: ${spacing.md};
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
     `,
 
     Label: styled.label`
         display: block;
         margin-bottom: ${spacing.xs};
         font-weight: 500;
+        color: ${colors.text};
+        text-align: left;
     `,
 
     Input: styled.input`
@@ -79,6 +92,7 @@ const loginStyles = {
         border: 1px solid ${colors.border};
         border-radius: ${borderRadius.small};
         font-size: 1rem;
+        box-sizing: border-box;
     `,
 
     SubmitButton: styled.button`
@@ -91,9 +105,10 @@ const loginStyles = {
         font-size: 1rem;
         cursor: pointer;
         margin-top: ${spacing.md};
+        transition: background 0.2s;
 
         &:hover {
-            background-color: ${colors.primaryDark};
+            background-color: ${colors.primaryLight};
         }
 
         &:disabled {
@@ -108,11 +123,15 @@ const loginStyles = {
         padding: ${spacing.sm};
         border-radius: ${borderRadius.small};
         margin-bottom: ${spacing.md};
+        width: 100%;
+        text-align: center;
+        box-sizing: border-box;
     `,
 
     FormSwitch: styled.div`
         margin-top: ${spacing.lg};
         text-align: center;
+        width: 100%;
     `,
 
     SwitchButton: styled.button`
@@ -122,6 +141,7 @@ const loginStyles = {
         cursor: pointer;
         font-size: 1rem;
         text-decoration: underline;
+        margin-top: ${spacing.xs};
     `,
 };
 
