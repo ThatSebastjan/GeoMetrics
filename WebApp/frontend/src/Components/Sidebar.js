@@ -1,95 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../styles';
-import styled from 'styled-components';
-// Import React Icons
+import icons from './Icons.js'
 import { FaMapMarkerAlt, FaLayerGroup, FaColumns, FaChevronDown, FaChevronUp, FaCog, FaSignInAlt, FaUserPlus, FaSave, FaChartBar } from 'react-icons/fa';
 
-// Styled components for dropdown functionality
-const DropdownContainer = styled.div`
-  width: 100%;
-`;
-
-const DropdownMenu = styled.div`
-  display: ${props => (props.$isOpen ? 'block' : 'none')};
-  width: 100%;
-  background-color: #ffffff;
-  overflow: hidden;
-  max-height: ${props => (props.$isOpen ? '200px' : '0')};
-  transition: max-height 0.3s ease;
-  margin-top: 2px; /* Add a small margin for visual separation */
-`;
-
-const DropdownItem = styled.div`
-  padding: ${styles.spacing.md} ${styles.spacing.md};
-  cursor: pointer;
-  color: ${styles.colors.text || '#000000'};
-  text-align: left;
-  transition: background-color 0.3s, border-radius 0.3s, margin 0.3s;
-  padding-left: calc(${styles.spacing.lg} * 2);
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  
-  &:hover, &:active {
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    margin: 0 ${styles.spacing.sm};
-  }
-  
-  
-`;
-
-const NavItemWithIcon = styled(styles.layout.NavItem)`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: background-color 0.3s, border-radius 0.3s, margin 0.3s;
-  
-  ${props => props.$isActive && `
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    margin: 0 ${styles.spacing.sm};
-  `}
-  
-  &:hover {
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    margin: 0 ${styles.spacing.sm};
-  }
-`;
-
-const NavItemContent = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const IconWrapper = styled.span`
-  display: flex;
-  align-items: center;
-  font-size: 1rem;
-`;
-
-const StyledNavItem = styled(styles.layout.NavItem)`
-  display: flex;
-  align-items: center;
-  transition: background-color 0.3s, border-radius 0.3s, margin 0.3s;
-  
-  &:hover, &:active {
-    background-color: #f0f0f0;
-    border-radius: 8px;
-    margin: 0 ${styles.spacing.sm};
-  }
-`;
 
 function Sidebar() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || 'null');
-  
+
   // Track multiple open dropdowns
   const [openDropdowns, setOpenDropdowns] = useState({
     assess: false,
@@ -122,144 +41,148 @@ function Sidebar() {
   };
 
   return (
-    <styles.layout.Sidebar>
-      <styles.layout.Logo>GeoMetrics</styles.layout.Logo>
-      <styles.layout.NavMenu>
-        {/* Assess Dropdown */}
-        <DropdownContainer>
-          <NavItemWithIcon 
-            onClick={() => toggleDropdown('assess')} 
-            $isActive={openDropdowns.assess}
-          >
-            <NavItemContent>
-              <IconWrapper><FaMapMarkerAlt /></IconWrapper>
-              Assess
-            </NavItemContent>
-            <IconWrapper>
-              {openDropdowns.assess ? <FaChevronUp /> : <FaChevronDown />}
-            </IconWrapper>
-          </NavItemWithIcon>
-          <DropdownMenu $isOpen={openDropdowns.assess}>
-            <DropdownItem 
-              onClick={() => handleNavigation('/assess', 'assess')} 
-              $isActive={activeRoute === '/assess'}
+      <styles.layout.Sidebar>
+        <styles.layout.Logo>GeoMetrics</styles.layout.Logo>
+        <styles.layout.NavMenu>
+          {/* Assess Dropdown */}
+          <styles.layout.DropdownContainer>
+            <styles.layout.NavItemWithIcon
+                onClick={() => toggleDropdown('assess')}
+                $isActive={openDropdowns.assess}
             >
-              Assessment
-            </DropdownItem>
-            <DropdownItem 
-              onClick={() => handleNavigation('/assess/advanced', 'assess')} 
-              $isActive={activeRoute === '/assess/advanced'}
-            >
-              Advanced
-            </DropdownItem>
-          </DropdownMenu>
-        </DropdownContainer>
+              <styles.layout.NavItemContent>
+                <styles.layout.IconWrapper><icons.MapIcon /></styles.layout.IconWrapper>
+                Assess
+              </styles.layout.NavItemContent>
+              <styles.layout.IconWrapper style={{ marginLeft: 'auto' }}>
+                {openDropdowns.assess ? <FaChevronUp /> : <FaChevronDown />}
+              </styles.layout.IconWrapper>
+            </styles.layout.NavItemWithIcon>
+            <styles.layout.DropdownMenu $isOpen={openDropdowns.assess}>
+              <styles.layout.DropdownItem
+                  onClick={() => handleNavigation('/assess', 'assess')}
+                  $isActive={activeRoute === '/assess'}
+              > <styles.layout.IconWrapper><icons.AssessIcon /></styles.layout.IconWrapper>
 
-        {/* Smart Select Dropdown */}
-        <DropdownContainer>
-          <NavItemWithIcon 
-            onClick={() => toggleDropdown('smart-select')} 
-            $isActive={openDropdowns['smart-select']}
-          >
-            <NavItemContent>
-              <IconWrapper><FaLayerGroup /></IconWrapper>
-              Smart Select
-            </NavItemContent>
-            <IconWrapper>
-              {openDropdowns['smart-select'] ? <FaChevronUp /> : <FaChevronDown />}
-            </IconWrapper>
-          </NavItemWithIcon>
-          <DropdownMenu $isOpen={openDropdowns['smart-select']}>
-            <DropdownItem 
-              onClick={() => handleNavigation('/smart-select', 'smart-select')}
-              $isActive={activeRoute === '/smart-select'}
-            >
-              Select Area
-            </DropdownItem>
-            <DropdownItem 
-              onClick={() => handleNavigation('/smart-select/parameters', 'smart-select')}
-              $isActive={activeRoute === '/smart-select/parameters'}
-            >
-              Parameters
-            </DropdownItem>
-          </DropdownMenu>
-        </DropdownContainer>
+                Assessment
+              </styles.layout.DropdownItem>
+              <styles.layout.DropdownItem
+                  onClick={() => handleNavigation('/assess/advanced', 'assess')}
+                  $isActive={activeRoute === '/assess/advanced'}
+              > <styles.layout.IconWrapper><icons.ZapIcon /></styles.layout.IconWrapper>
+                Advanced
+              </styles.layout.DropdownItem>
+            </styles.layout.DropdownMenu>
+          </styles.layout.DropdownContainer>
 
-        {/* Side by Side Dropdown */}
-        <DropdownContainer>
-          <NavItemWithIcon 
-            onClick={() => toggleDropdown('side-by-side')} 
-            $isActive={openDropdowns['side-by-side']}
-          >
-            <NavItemContent>
-              <IconWrapper><FaColumns /></IconWrapper>
-              Side By Side
-            </NavItemContent>
-            <IconWrapper>
-              {openDropdowns['side-by-side'] ? <FaChevronUp /> : <FaChevronDown />}
-            </IconWrapper>
-          </NavItemWithIcon>
-          <DropdownMenu $isOpen={openDropdowns['side-by-side']}>
-            <DropdownItem 
-              onClick={() => handleNavigation('/side-by-side', 'side-by-side')}
-              $isActive={activeRoute === '/side-by-side'}
+          {/* Smart Select Dropdown */}
+          <styles.layout.DropdownContainer>
+            <styles.layout.NavItemWithIcon
+                onClick={() => toggleDropdown('smart-select')}
+                $isActive={openDropdowns['smart-select']}
             >
-              Select
-            </DropdownItem>
-            <DropdownItem 
-              onClick={() => handleNavigation('/side-by-side/compare', 'side-by-side')}
-              $isActive={activeRoute === '/side-by-side/compare'}
-            >
-              Compare
-            </DropdownItem>
-          </DropdownMenu>
-        </DropdownContainer>
-      </styles.layout.NavMenu>
+              <styles.layout.NavItemContent>
+                <styles.layout.IconWrapper><icons.TargetIcon /></styles.layout.IconWrapper>
+                Smart Select
+              </styles.layout.NavItemContent>
+              <styles.layout.IconWrapper style={{ marginLeft: 'auto' }}>
+                {openDropdowns['smart-select'] ? <FaChevronUp /> : <FaChevronDown />}
+              </styles.layout.IconWrapper>
+            </styles.layout.NavItemWithIcon>
+            <styles.layout.DropdownMenu $isOpen={openDropdowns['smart-select']}>
+              <styles.layout.DropdownItem
+                  onClick={() => handleNavigation('/smart-select', 'smart-select')}
+                  $isActive={activeRoute === '/smart-select'}
+              > <styles.layout.IconWrapper><icons.SelectIcon /></styles.layout.IconWrapper>
+                Select Area
+              </styles.layout.DropdownItem>
+              <styles.layout.DropdownItem
+                  onClick={() => handleNavigation('/smart-select/parameters', 'smart-select')}
+                  $isActive={activeRoute === '/smart-select/parameters'}
+              > <styles.layout.IconWrapper><icons.CheckboxIcon /></styles.layout.IconWrapper>
+                Parameters
+              </styles.layout.DropdownItem>
+            </styles.layout.DropdownMenu>
+          </styles.layout.DropdownContainer>
 
-      {!user ? (
-        <styles.layout.UserSection>
-          <StyledNavItem onClick={() => navigate('/settings')}>
-            <NavItemContent>
-              <IconWrapper><FaCog /></IconWrapper>
-              Settings
-            </NavItemContent>
-          </StyledNavItem>
-          <StyledNavItem onClick={() => navigate('/login')}>
-            <NavItemContent>
-              <IconWrapper><FaSignInAlt /></IconWrapper>
-              Login
-            </NavItemContent>
-          </StyledNavItem>
-          <StyledNavItem onClick={() => navigate('/register')}>
-            <NavItemContent>
-              <IconWrapper><FaUserPlus /></IconWrapper>
-              Register
-            </NavItemContent>
-          </StyledNavItem>
-        </styles.layout.UserSection>
-      ) : (
-        <styles.layout.UserSection>
-          <StyledNavItem onClick={() => navigate('/saved-lots')}>
-            <NavItemContent>
-              <IconWrapper><FaSave /></IconWrapper>
-              Saved Lots
-            </NavItemContent>
-          </StyledNavItem>
-          <StyledNavItem onClick={() => navigate('/results')}>
-            <NavItemContent>
-              <IconWrapper><FaChartBar /></IconWrapper>
-              Results
-            </NavItemContent>
-          </StyledNavItem>
-          <StyledNavItem onClick={() => navigate('/settings')}>
-            <NavItemContent>
-              <IconWrapper><FaCog /></IconWrapper>
-              Settings
-            </NavItemContent>
-          </StyledNavItem>
-        </styles.layout.UserSection>
-      )}
-    </styles.layout.Sidebar>
+          {/* Side by Side Dropdown */}
+          <styles.layout.DropdownContainer>
+            <styles.layout.NavItemWithIcon
+                onClick={() => toggleDropdown('side-by-side')}
+                $isActive={openDropdowns['side-by-side']}
+            >
+              <styles.layout.NavItemContent>
+                <styles.layout.IconWrapper><icons.SideBySideIcon /></styles.layout.IconWrapper>
+                Side By Side
+              </styles.layout.NavItemContent>
+              <styles.layout.IconWrapper style={{ marginLeft: 'auto' }}>
+                {openDropdowns['side-by-side'] ? <FaChevronUp /> : <FaChevronDown />}
+              </styles.layout.IconWrapper>
+            </styles.layout.NavItemWithIcon>
+            <styles.layout.DropdownMenu $isOpen={openDropdowns['side-by-side']}>
+              <styles.layout.DropdownItem
+                  onClick={() => handleNavigation('/side-by-side', 'side-by-side')}
+                  $isActive={activeRoute === '/side-by-side'}
+              > <styles.layout.IconWrapper><icons.SearchIcon /></styles.layout.IconWrapper>
+                Select
+              </styles.layout.DropdownItem>
+              <styles.layout.DropdownItem
+                  onClick={() => handleNavigation('/side-by-side/compare', 'side-by-side')}
+                  $isActive={activeRoute === '/side-by-side/compare'}
+              > <styles.layout.IconWrapper><icons.ShuffleIcon /></styles.layout.IconWrapper>
+                Compare
+              </styles.layout.DropdownItem>
+            </styles.layout.DropdownMenu>
+          </styles.layout.DropdownContainer>
+        </styles.layout.NavMenu>
+
+        {!user ? (
+            <styles.layout.UserSection>
+
+              <styles.layout.StyledNavItem onClick={() => navigate('/login')}>
+                <styles.layout.NavItemContent>
+                  <styles.layout.IconWrapper><icons.LoginIcon /></styles.layout.IconWrapper>
+                  Login
+                </styles.layout.NavItemContent>
+              </styles.layout.StyledNavItem>
+
+              <styles.layout.StyledNavItem onClick={() => navigate('/register')}>
+                <styles.layout.NavItemContent>
+                  <styles.layout.IconWrapper><icons.RegisterIcon /></styles.layout.IconWrapper>
+                  Register
+                </styles.layout.NavItemContent>
+              </styles.layout.StyledNavItem>
+              <styles.layout.StyledNavItem onClick={() => navigate('/settings')}>
+                <styles.layout.NavItemContent>
+                  <styles.layout.IconWrapper><icons.PrefferencesIcon /></styles.layout.IconWrapper>
+                  Preferences
+                </styles.layout.NavItemContent>
+              </styles.layout.StyledNavItem>
+            </styles.layout.UserSection>
+
+        ) : (
+            <styles.layout.UserSection>
+              <styles.layout.StyledNavItem onClick={() => navigate('/saved-lots')}>
+                <styles.layout.NavItemContent>
+                  <styles.layout.IconWrapper><icons.SaveIcon /></styles.layout.IconWrapper>
+                  Saved Lots
+                </styles.layout.NavItemContent>
+              </styles.layout.StyledNavItem>
+              <styles.layout.StyledNavItem onClick={() => navigate('/results')}>
+                <styles.layout.NavItemContent>
+                  <styles.layout.IconWrapper><icons.ListIcon /></styles.layout.IconWrapper>
+                  Results
+                </styles.layout.NavItemContent>
+              </styles.layout.StyledNavItem>
+              <styles.layout.StyledNavItem onClick={() => navigate('/settings')}>
+                <styles.layout.NavItemContent>
+                  <styles.layout.IconWrapper><icons.PrefferencesIcon /></styles.layout.IconWrapper>
+                  Preferences
+                </styles.layout.NavItemContent>
+              </styles.layout.StyledNavItem>
+            </styles.layout.UserSection>
+        )}
+      </styles.layout.Sidebar>
   );
 }
 

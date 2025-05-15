@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom';
 
 function Edit() {
     const { user, token, setUserContext } = useContext(UserContext);
-
     const navigate = useNavigate();
+
     const [formData, setFormData] = useState({
         username: '',
         email: '',
@@ -20,7 +20,6 @@ function Edit() {
     const [success, setSuccess] = useState('');
     const [showPasswordSection, setShowPasswordSection] = useState(false);
 
-    // Load user data on component mount
     useEffect(() => {
         if (!user) {
             navigate('/login');
@@ -33,7 +32,6 @@ function Edit() {
             email: user.email || ''
         }));
 
-        // Set image preview if user has a profile image
         if (user.profileImage && user.profileImage.path) {
             setImagePreview(`http://localhost:3001${user.profileImage.path}`);
         }
@@ -64,16 +62,11 @@ function Edit() {
 
             const response = await fetch('http://localhost:3001/users/profile/image', {
                 method: 'POST',
-                headers: {
-                    'Authorization': token
-                },
+                headers: { 'Authorization': token },
                 body: formData
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to upload image');
-            }
-
+            if (!response.ok) throw new Error('Failed to upload image');
             return await response.json();
         } catch (error) {
             console.error('Error uploading image:', error);
@@ -87,28 +80,16 @@ function Edit() {
             setLoading(true);
             const response = await fetch('http://localhost:3001/users/profile/image', {
                 method: 'DELETE',
-                headers: {
-                    'Authorization': token
-                }
+                headers: { 'Authorization': token }
             });
 
-            if (!response.ok) {
-                throw new Error('Failed to delete image');
-            }
-
+            if (!response.ok) throw new Error('Failed to delete image');
             const data = await response.json();
 
-            // Update context with new user data
-            setUserContext({
-                user: data.user,
-                token
-            });
-
-            // Clear image preview
+            setUserContext({ user: data.user, token });
             setImagePreview(null);
             setProfileImage(null);
             setSuccess('Profile image deleted successfully');
-
         } catch (error) {
             console.error('Error deleting image:', error);
             setError(error.message);
@@ -124,38 +105,27 @@ function Edit() {
         setLoading(true);
 
         try {
-            if (!token) {
-                throw new Error('Authentication required');
-            }
+            if (!token) throw new Error('Authentication required');
 
-            // Upload image first if there is one
             let imageUploadResult = null;
             if (profileImage) {
                 imageUploadResult = await handleImageUpload();
-                if (!imageUploadResult) {
-                    throw new Error('Image upload failed');
-                }
+                if (!imageUploadResult) throw new Error('Image upload failed');
             }
 
-            // Create object with only fields that have values
             const updateData = {};
 
-            // Only add password fields if password section is shown
             if (showPasswordSection) {
                 if (!formData.currentPassword) {
                     throw new Error('Current password is required when changing password');
                 }
                 updateData.currentPassword = formData.currentPassword;
-                if (formData.newPassword) {
-                    updateData.newPassword = formData.newPassword;
-                }
+                if (formData.newPassword) updateData.newPassword = formData.newPassword;
             }
 
-            // Always include basic profile fields
             if (formData.username) updateData.username = formData.username;
             if (formData.email) updateData.email = formData.email;
 
-            // Only proceed with profile update if there are fields to update
             let updatedUser = user;
 
             if (Object.keys(updateData).length > 0) {
@@ -165,16 +135,12 @@ function Edit() {
                         'Content-Type': 'application/json',
                         'Authorization': token
                     },
-                    body: JSON.stringify(updateData),
+                    body: JSON.stringify(updateData)
                 });
 
                 const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'Update failed');
 
-                if (!response.ok) {
-                    throw new Error(data.message || 'Update failed');
-                }
-
-                // Use data from profile update
                 updatedUser = {
                     ...user,
                     ...data.user || {},
@@ -183,7 +149,6 @@ function Edit() {
                 };
             }
 
-            // If image was uploaded, use that user data
             if (imageUploadResult && imageUploadResult.user) {
                 updatedUser = {
                     ...updatedUser,
@@ -191,22 +156,14 @@ function Edit() {
                 };
             }
 
-            // Update context
-            setUserContext({
-                user: updatedUser,
-                token: token
-            });
-
+            setUserContext({ user: updatedUser, token });
             setSuccess('Profile updated successfully. Redirecting to Settings ...');
-
-            // Clear password fields
             setFormData(prev => ({
                 ...prev,
                 currentPassword: '',
                 newPassword: ''
             }));
 
-            // Navigate back to settings after a short delay
             setTimeout(() => {
                 navigate('/settings');
             }, 1500);
@@ -219,7 +176,6 @@ function Edit() {
 
     const togglePasswordSection = () => {
         setShowPasswordSection(!showPasswordSection);
-        // Clear password fields when hiding the section
         if (showPasswordSection) {
             setFormData(prev => ({
                 ...prev,
@@ -229,113 +185,146 @@ function Edit() {
         }
     };
 
+    // Define a common button style for all main buttons
+    const buttonStyle = {
+        minWidth: '140px',
+        padding: '0.4rem 1.2rem',
+        transition: 'background 0.2s, box-shadow 0.2s'
+    };
+
     return (
-        <styles.settings.Section>
-            <styles.settings.Header>
+        <styles.settings.Section style={{
+            minHeight: 'calc(100vh - 100px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: '2rem 1rem'
+        }}>
+            <styles.settings.Header style={{ maxWidth: '500px', width: '100%', textAlign: 'center' }}>
                 <styles.common.PageTitle>Edit Profile</styles.common.PageTitle>
             </styles.settings.Header>
 
-            {error && <styles.common.Message $type="error">{error}</styles.common.Message>}
-            {success && <styles.common.Message $type="success">{success}</styles.common.Message>}
+            {error && <styles.common.Message $type="error" style={{ maxWidth: '500px', width: '100%' }}>{error}</styles.common.Message>}
+            {success && <styles.common.Message $type="success" style={{ maxWidth: '500px', width: '100%' }}>{success}</styles.common.Message>}
 
-            <form onSubmit={handleSubmit}>
-                {/* Profile Image Section */}
-                <styles.settings.FormGroup>
-                    <styles.settings.Label>Profile Picture</styles.settings.Label>
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        marginBottom: '20px'
-                    }}>
+            <form onSubmit={handleSubmit} style={{
+                width: '100%',
+                maxWidth: '500px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1.5rem',
+                marginTop: '1.5rem',
+                background: '#fff',
+                borderRadius: '16px',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+                padding: '2rem'
+            }}>
+                <styles.settings.FormGroup style={{ alignItems: 'center', maxWidth: '350px', margin: '0 auto', width: '100%' }}>
+                    <styles.settings.Label style={{ marginBottom: '0.5rem' }}>Profile Picture</styles.settings.Label>
+                    {imagePreview && (
+                        <img
+                            src={imagePreview}
+                            alt="Profile"
+                            style={{
+                                width: '140px',
+                                height: '140px',
+                                borderRadius: '50%',
+                                objectFit: 'cover',
+                                border: `3px solid ${styles.colors.primary}`,
+                                margin: '1.5rem 0 1rem 0',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                            }}
+                        />
+                    )}
+                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', width: '100%', marginTop: '0.5rem' }}>
+                        <styles.settings.Button
+                            type="button"
+                            onClick={() => document.getElementById('imageInput').click()}
+                            style={{
+                                ...buttonStyle,
+                            }}
+                            onMouseOver={e => e.currentTarget.style.backgroundColor = styles.colors.primaryLight}
+                            onMouseOut={e => e.currentTarget.style.backgroundColor = ''}
+                        >
+                            Choose Image
+                            <input
+                                id="imageInput"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageChange}
+                                style={{ display: 'none' }}
+                            />
+                        </styles.settings.Button>
                         {imagePreview && (
-                            <div style={{ marginBottom: '10px' }}>
-                                <img
-                                    src={imagePreview}
-                                    alt="Profile Preview"
-                                    style={{
-                                        width: '150px',
-                                        height: '150px',
-                                        objectFit: 'cover',
-                                        borderRadius: '50%',
-                                        border: `3px solid ${styles.colors.primary}`
-                                    }}
-                                />
-                            </div>
+                            <styles.settings.Button
+                                type="button"
+                                onClick={handleDeleteImage}
+                                disabled={loading}
+                                style={{
+                                    ...buttonStyle,
+                                    backgroundColor: styles.colors.danger
+                                }}
+                                onMouseOver={e => e.currentTarget.style.backgroundColor = '#ff4d4f'}
+                                onMouseOut={e => e.currentTarget.style.backgroundColor = styles.colors.danger}
+                            >
+                                Delete
+                            </styles.settings.Button>
                         )}
-                        <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                            <label style={{
-                                padding: '8px 15px',
-                                backgroundColor: styles.colors.primary,
-                                color: 'white',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                display: 'inline-block'
-                            }}>
-                                Choose Image
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleImageChange}
-                                    style={{ display: 'none' }}
-                                />
-                            </label>
-                            {imagePreview && (
-                                <styles.settings.Button
-                                    type="button"
-                                    onClick={handleDeleteImage}
-                                    disabled={loading}
-                                    style={{ backgroundColor: styles.colors.danger }}
-                                >
-                                    Delete Image
-                                </styles.settings.Button>
-                            )}
-                        </div>
                     </div>
                 </styles.settings.FormGroup>
 
-                <styles.settings.FormGroup>
+                <styles.settings.FormGroup style={{ maxWidth: '350px', margin: '0 auto', width: '100%' }}>
                     <styles.settings.Label htmlFor="username">Username</styles.settings.Label>
                     <styles.settings.Input
-                        type="text"
                         id="username"
                         name="username"
+                        type="text"
                         value={formData.username}
                         onChange={handleChange}
                     />
                 </styles.settings.FormGroup>
 
-                <styles.settings.FormGroup>
+                <styles.settings.FormGroup style={{ maxWidth: '350px', margin: '0 auto', width: '100%' }}>
                     <styles.settings.Label htmlFor="email">Email</styles.settings.Label>
                     <styles.settings.Input
-                        type="email"
                         id="email"
                         name="email"
+                        type="email"
                         value={formData.email}
                         onChange={handleChange}
                     />
                 </styles.settings.FormGroup>
 
-                <styles.settings.Button
-                    type="button"
-                    onClick={togglePasswordSection}
-                >
-                    {showPasswordSection ? 'Cancel Password Update' : 'Update Password'}
-                </styles.settings.Button>
+                <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                    <styles.settings.Button
+                        type="button"
+                        onClick={togglePasswordSection}
+                        style={{
+                            ...buttonStyle,
+                            backgroundColor: styles.colors.secondary,
+                            margin: '0.5rem 0'
+                        }}
+                    >
+                        {showPasswordSection ? 'Cancel Password Update' : 'Update Password'}
+                    </styles.settings.Button>
+                </div>
 
                 {showPasswordSection && (
                     <div style={{
-                        marginTop: styles.spacing.md,
-                        padding: styles.spacing.md,
+                        backgroundColor: '#f9f9f9',
                         border: `1px solid ${styles.colors.border}`,
-                        borderRadius: styles.borderRadius.small
+                        borderRadius: '8px',
+                        padding: '1rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1rem'
                     }}>
                         <styles.settings.FormGroup>
                             <styles.settings.Label htmlFor="currentPassword">Current Password *</styles.settings.Label>
                             <styles.settings.Input
-                                type="password"
                                 id="currentPassword"
                                 name="currentPassword"
+                                type="password"
                                 value={formData.currentPassword}
                                 onChange={handleChange}
                                 required
@@ -345,9 +334,9 @@ function Edit() {
                         <styles.settings.FormGroup>
                             <styles.settings.Label htmlFor="newPassword">New Password</styles.settings.Label>
                             <styles.settings.Input
-                                type="password"
                                 id="newPassword"
                                 name="newPassword"
+                                type="password"
                                 value={formData.newPassword}
                                 onChange={handleChange}
                             />
@@ -355,14 +344,19 @@ function Edit() {
                     </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '10px', marginTop: styles.spacing.lg }}>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                     <styles.settings.Button
                         type="submit"
                         disabled={loading}
+                        style={buttonStyle}
                     >
                         {loading ? 'Saving...' : 'Save Changes'}
                     </styles.settings.Button>
-                    <styles.settings.EditButton onClick={() => navigate('/settings')}>
+                    <styles.settings.EditButton
+                        type="button"
+                        onClick={() => navigate('/settings')}
+                        style={buttonStyle}
+                    >
                         Cancel
                     </styles.settings.EditButton>
                 </div>

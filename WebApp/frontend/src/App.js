@@ -27,7 +27,6 @@ function AppRoutes() {
         if (!token) {
             return;
         }
-        debugger
         try {
             const req = await fetch("http://localhost:3001/users/check-session", {
                 headers: { authorization: token }
