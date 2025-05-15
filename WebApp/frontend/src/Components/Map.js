@@ -6,6 +6,23 @@ import styles from "../styles";
 
 
 
+//TODO: This is here temporarily as it needs to be integrated with the search bar which is currently on another branch
+//Uses MapBox foward Geocoding to find nearby locations that match the specified address (limited to Slovenia)
+//Returns an array of 5 nearest matches as GeoJson features
+const proximitySearchByAddress = async (address) => {
+    try {
+        const req = await fetch(`https://api.mapbox.com/search/geocode/v6/forward?q=${address}&proximity=ip&country=si&access_token=${process.env.REACT_APP_MAPBOX_TOKEN}`);
+        const resp = await req.json();
+        return resp.features;
+    }
+    catch(err){
+        console.log(`Error in proximitySearchByAddress:`, err);
+    };
+
+    return [];
+};
+
+
 
 const Map = () => {
     const mapContainer = useRef(null);
@@ -47,13 +64,10 @@ const Map = () => {
                 paint: {
                     "fill-color": "#000000",
                     "fill-opacity": 0.2
-                }
+                },
+                minzoom: 13.5,
             });
         });
-
-
-        //DEBUG ONLY
-        window.map = map.current;
 
 
         //Clean-up handler
@@ -93,7 +107,7 @@ const Map = () => {
         try {
             const req = await fetch(`http://localhost:3001/map/query/${[...previousBounds.current.data, ...bounds].join(",")}`);
 
-            if(req.status == 200){ //Returns 304 if there no new data
+            if(req.status === 200){ //Returns 304 if there no new data
                 const resp = await req.json();
                 handleMapData(resp);
             };
@@ -106,13 +120,15 @@ const Map = () => {
     };
 
 
+
+    //TODO: Better caching / optimization that does not discard data that could potentially be used when going back to previous location
     //View change -> new map data response processing
     const handleMapData = (resp) => {
         const map_view = make_polygon(get_view_bounds());
 
         //Keep visible features
         const old_data = landData.current.features.filter(f => turf.booleanIntersects(map_view, f));
-        const new_data = resp.data.filter(f => old_data.findIndex(o => o.id == f.id) == -1); //Remove duplicates already present in old data
+        const new_data = resp.data.filter(f => old_data.findIndex(o => o.id === f.id) === -1); //Remove duplicates already present in old data
 
         //Set new data
         landData.current.features = old_data.concat(new_data);
