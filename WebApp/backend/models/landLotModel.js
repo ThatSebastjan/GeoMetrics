@@ -30,4 +30,4 @@ landLotSchema.index({ geometry: "2dsphere" });
 landLotSchema.path("properties.ST_PARCELE").index(true);
 
 
-module.exports = mongoose.model("land_lot", landLotSchema);;
+module.exports = mongoose.model("land_lot", landLotSchema);

@@ -49,15 +49,21 @@ const getLandTypeInfo = async (land_lot) => {
 //Get land lots in a given polygon
 const getLandLotsInArea = async (polygon) => {
 
-    const lots = await LandLotModel.find({
-        geometry: {
-            $geoIntersects: {
-                $geometry: polygon.geometry,
+    try {
+        const lots = await LandLotModel.find({
+            geometry: {
+                $geoIntersects: {
+                    $geometry: polygon.geometry,
+                }
             }
-        }
-    });
+        });
 
-    return lots;
+        return lots;
+    }
+    catch(err){
+        console.log("Error in getLandLotsInArea:", err);
+        return [];
+    };
 };
 
 
@@ -71,7 +77,7 @@ const make_polygon = (bbox) => turf.polygon([[ [bbox[0], bbox[1]], [bbox[0], bbo
 module.exports = {
 
 
-    //Get map features in a given bounding box
+    //Get map features (land lots) in a given bounding box
     mapQuery: async (req, res) => {
 
         //Check bbox
@@ -107,17 +113,48 @@ module.exports = {
             return res.status(304).end();
         };
 
-        const differenceArea = turf.area(difference.geometry);
-
-        const t1 = Date.now();
+        //const differenceArea = turf.area(difference.geometry);
         const landLots = await getLandLotsInArea(difference);
-        const t_elapsed = Date.now() - t1;
 
         res.json({
-            time: t_elapsed,
             data: landLots,
-            area: differenceArea,
+            //area: differenceArea,
         });
+    },
+
+
+
+    //Find feature locations by identifier (št. parcele, katastrske občine)
+    mapFind: async (req, res) => {
+
+        if(!req.params.land_lot_id){
+            return res.status(500).json({ message: "Missing required parameter" });
+        };
+
+        let ko_id = null;
+
+        if(req.params.ko_id){
+            ko_id = parseInt(req.params.ko_id);
+
+            if(isNaN(ko_id)){
+                return res.status(500).json({ message: "Invalid parameter" });
+            };
+        };
+
+        try {
+            let landLots = await LandLotModel.find({ "properties.ST_PARCELE": req.params.land_lot_id });
+
+            if(ko_id != null){
+                landLots = landLots.filter(l => l.properties.KO_ID == ko_id); //NOTE: filtered here as there are at most ~50 results
+            };
+
+            const results = landLots.map(l => turf.centerOfMass(turf.polygon(l.geometry.coordinates))); //Coumpte center of each land lot
+            return res.json({ data: results });
+        }
+        catch(err){
+            console.log("Error in mapFind:", err);
+            return res.status(500).json({ message: "Search error" });
+        };
     },
     
 };
