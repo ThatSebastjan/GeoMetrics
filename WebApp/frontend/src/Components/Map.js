@@ -6,25 +6,8 @@ import styles from "../styles";
 
 
 
-//TODO: This is here temporarily as it needs to be integrated with the search bar which is currently on another branch
-//Uses MapBox foward Geocoding to find nearby locations that match the specified address (limited to Slovenia)
-//Returns an array of 5 nearest matches as GeoJson features
-const proximitySearchByAddress = async (address) => {
-    try {
-        const req = await fetch(`https://api.mapbox.com/search/geocode/v6/forward?q=${address}&proximity=ip&country=si&access_token=${process.env.REACT_APP_MAPBOX_TOKEN}`);
-        const resp = await req.json();
-        return resp.features;
-    }
-    catch(err){
-        console.log(`Error in proximitySearchByAddress:`, err);
-    };
-
-    return [];
-};
-
-
-
-const Map = () => {
+//searchTerm = GeoJSON feature
+const Map = ({ searchTerm }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
     const previousBounds = useRef({ data: [0,0,0,0] }); //Previous requested bbox for optimization
@@ -62,6 +45,8 @@ const Map = () => {
                 type: "fill",
                 source: "land_data",
                 paint: {
+                    //"fill-color": ["coalesce", ["get", "fill"], "#ff0000"],
+                    //"fill-opacity": ["coalesce", ["get", "fill-opacity"], 0.2]
                     "fill-color": "#000000",
                     "fill-opacity": 0.2
                 },
@@ -75,6 +60,25 @@ const Map = () => {
             map.current.remove();
         };
     }, []);
+
+
+    //This handler gets called when search term is changed in parent component
+    useEffect(() => {
+
+        if(searchTerm != null){
+
+            if(searchTerm.properties.bbox != null){
+                map.current.fitBounds([
+                    searchTerm.properties.bbox.slice(0, 2),
+                    searchTerm.properties.bbox.slice(2)
+                ]);
+            }
+            else {
+                map.current.panTo(searchTerm.geometry.coordinates);
+            };
+        };
+        
+    }, [searchTerm]);
 
 
 

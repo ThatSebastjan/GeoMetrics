@@ -1,17 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import styles from '../styles';
 import Map from '../Components/Map.js';
 import ResultBar from '../Components/ResultBar';
 import SearchBar from "./SearchBar";
+import { UserContext } from '../Contexts/UserContext.js';
 
 function Assess() {
-    const [user, setUser] = useState(null);
+    const { user } = useContext(UserContext);
     const [isFullScreen, setIsFullScreen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState(null);
+
 
     const handleSearch = (query) => {
-        // Implement search functionality here
-        console.log('Searching for:', query);
+        setSearchTerm(query);
     };
+
 
     // Sample data for the gauges - environmental risk indicators
     const gauges = [
@@ -41,16 +44,9 @@ function Assess() {
         }
     ];
 
-    useEffect(() => {
-        // Get user data from localStorage
-        const userData = localStorage.getItem('user');
-        if (userData) {
-            setUser(JSON.parse(userData));
-        }
-    }, []);
 
     return (
-        <styles.assess.Container>
+        <styles.assess.Container style={{ border: "none" }}>
             <styles.search.SearchBarWrapper>
                 <SearchBar
                     placeholder="Search locations..."
@@ -58,7 +54,7 @@ function Assess() {
                 />
             </styles.search.SearchBarWrapper>
             <styles.assess.MapWrapper $isFullScreen={isFullScreen}>
-                <Map />
+                <Map searchTerm={searchTerm}/>
             </styles.assess.MapWrapper>
 
             <styles.assess.ResultBarWrapper>

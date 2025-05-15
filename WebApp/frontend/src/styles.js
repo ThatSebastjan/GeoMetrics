@@ -909,13 +909,14 @@ const searchBarStyles = {
         align-items: center;
         width: 100%;
         background-color: ${colors.white};
-        border: 1px solid ${colors.border};
+        border: 1px solid ${props => props.$hasResults ? "transparent" : colors.border};
         border-radius: 50px;
-        transition: all 0.2s ease;
+        transition: border-color 0.2s ease-in;
+        box-sizing: border-box;
 
         &:focus-within {
             border-color: ${colors.primary};
-            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+            box-shadow: ${props => props.$hasResults ? "none" : "0 0 0 2px rgba(0, 0, 0, 0.1)"};
         }
     `,
 
@@ -970,6 +971,34 @@ const searchBarStyles = {
         left: 15px;
         right: 15px;
         z-index: 1000;
+    `,
+
+    SearchResultsWrapper: styled.div`
+        width: 100%;
+        margin-top: calc((40px + ${spacing.xs}) / -2);
+        background-color: ${colors.white};
+        padding-top: ${props => props.$numResults > 0 ? "calc((40px + " + spacing.xs + ") / 2)" : "0px"};
+        border-radius: 0 0 ${borderRadius.medium} ${borderRadius.medium};
+        max-height: ${props => props.$numResults * 37.33}px;
+        transition: all 0.2s ease-in-out;
+        overflow-y: clip;
+    `,
+
+    SearchResult: styled.div`
+        padding: ${spacing.xs} ${spacing.sm};
+        border: none;
+        outline: none;
+        text-align: left;
+        background-color: ${colors.white};
+        cursor: pointer;
+
+        &:hover {
+            background-color: ${colors.lightGray};
+        }
+
+        &:last-child {
+            border-radius: 0 0 ${borderRadius.medium} ${borderRadius.medium};
+        }
     `,
 };
 
