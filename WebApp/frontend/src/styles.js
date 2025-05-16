@@ -979,9 +979,9 @@ const searchBarStyles = {
         background-color: ${colors.white};
         padding-top: ${props => props.$numResults > 0 ? "calc((40px + " + spacing.xs + ") / 2)" : "0px"};
         border-radius: 0 0 ${borderRadius.medium} ${borderRadius.medium};
-        max-height: ${props => props.$numResults * 37.33}px;
+        max-height: ${props => Math.min(props.$numResults, 8) * 37.33}px;
         transition: all 0.2s ease-in-out;
-        overflow-y: clip;
+        overflow-y: auto;
     `,
 
     SearchResult: styled.div`
@@ -991,6 +991,9 @@ const searchBarStyles = {
         text-align: left;
         background-color: ${colors.white};
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        flex-direction: row;
 
         &:hover {
             background-color: ${colors.lightGray};
@@ -999,6 +1002,13 @@ const searchBarStyles = {
         &:last-child {
             border-radius: 0 0 ${borderRadius.medium} ${borderRadius.medium};
         }
+    `,
+
+    SearchResultInfo: styled.div`
+        color: ${colors.textMedium};
+        font-size: 0.8rem;
+        display: inline;
+        padding-left: 1rem;
     `,
 };
 

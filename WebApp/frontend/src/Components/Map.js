@@ -75,6 +75,7 @@ const Map = ({ searchTerm }) => {
             }
             else {
                 map.current.panTo(searchTerm.geometry.coordinates);
+                //TODO: maybe add a marker here
             };
         };
         
@@ -100,9 +101,13 @@ const Map = ({ searchTerm }) => {
         const top_left = m.unproject({x: 0, y: 0});
         const bottom_right = m.unproject({x: m._canvas.clientWidth, y: m._canvas.clientHeight});
 
+        const from = turf.point(top_left.toArray());
+        const to = turf.point(bottom_right.toArray());
+        const distance = turf.distance(from, to); //in km
+
         //Diagonal distance max 10km
-        if(top_left.distanceTo(bottom_right) > 10000){
-            return
+        if(distance > 10){
+            return;
         };
 
         

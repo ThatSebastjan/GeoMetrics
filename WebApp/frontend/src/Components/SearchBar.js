@@ -12,12 +12,24 @@ function SearchBar({ placeholder = "Search...", onSearch }) {
 
         const value = query.trim();
 
-        if(value.length == 0){
+        if(value.length === 0){
             return;
         };
 
-        const results = await proximitySearchByAddress(value);
-        setSearchResults(results);
+        //Land lot search. In form of: katastrska občina? parcela
+        const landLotSearchRgx = /^(?:(\d+)-)?(\d+(?:\/\d+)?)$/gm;
+
+        if(landLotSearchRgx.test(value)){
+            landLotSearchRgx.lastIndex = 0;
+
+            const parts = landLotSearchRgx.exec(value);
+            const results = await landLotSearch(parts[2], parts[1]);
+            setSearchResults(results);
+        }
+        else {
+            const results = await proximitySearchByAddress(value);
+            setSearchResults(results);
+        };
     };
 
     const handleChange = (e) => {
@@ -52,10 +64,36 @@ function SearchBar({ placeholder = "Search...", onSearch }) {
     };
 
 
+    //Query land lots that match specified ids
+    const landLotSearch = async (landLotId, koId = null) => {
+        try {
+            const req = await fetch(`http://localhost:3001/map/find/${encodeURIComponent(landLotId)}/${koId || ""}`);
+            const resp = await req.json();
+            
+            return resp.map(e => {
+                return {
+                    properties: {
+                        full_address: `${e.ko_id}-${e.st_parcele}`,
+                        bbox: e.bbox,
+                        info: e.ko_name,
+                    }
+                };
+            });
+        }
+        catch(err){
+            console.log("Error in landLotSearch:", err);
+        };
+
+        return [];
+    };
+
+    window.lls = landLotSearch;
+
+
     return (
         <styles.search.SearchBarContainer>
             <form onSubmit={handleSubmit}>
-                <styles.search.SearchInputWrapper $hasResults={isFocused && (searchResults.length != 0)}>
+                <styles.search.SearchInputWrapper $hasResults={isFocused && (searchResults.length !== 0)}>
                     <styles.search.SearchIconWrapper>
                         <SearchIcon />
                     </styles.search.SearchIconWrapper>
@@ -82,7 +120,14 @@ function SearchBar({ placeholder = "Search...", onSearch }) {
             </form>
 
             <styles.search.SearchResultsWrapper $numResults={isFocused ? searchResults.length : 0}>
-                {searchResults.map(s => <styles.search.SearchResult onClick={() => handleResultClick(s)}>{s.properties.full_address}</styles.search.SearchResult>)}
+                {searchResults.map(s => 
+                    (<styles.search.SearchResult onClick={() => handleResultClick(s)}>
+                        {s.properties.full_address}
+                        {s.properties.info && (
+                            <styles.search.SearchResultInfo>{s.properties.info}</styles.search.SearchResultInfo>
+                        )}
+                    </styles.search.SearchResult>)
+                )}
             </styles.search.SearchResultsWrapper>
             
         </styles.search.SearchBarContainer>

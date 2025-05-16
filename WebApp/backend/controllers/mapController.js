@@ -1,6 +1,22 @@
 const turf = require("@turf/turf");
 const LandLotModel = require("../models/landLotModel.js");
 const LandUseModel = require("../models/landUseModel.js");
+const KoModel = require("../models/koModel.js");
+
+
+
+//Št. katastrske občine -> name map; populated on start
+const KO_cache = {};
+
+
+//Initializer routine
+(async () => {
+    const ko_list = await KoModel.find();
+
+    ko_list.forEach(e => {
+        KO_cache[e.id] = e.name;
+    });
+})();
 
 
 
@@ -148,8 +164,16 @@ module.exports = {
                 landLots = landLots.filter(l => l.properties.KO_ID == ko_id); //NOTE: filtered here as there are at most ~50 results
             };
 
-            const results = landLots.map(l => turf.centerOfMass(turf.polygon(l.geometry.coordinates))); //Coumpte center of each land lot
-            return res.json({ data: results });
+            const results = landLots.map(l => {
+                return {
+                    ko_id: l.properties.KO_ID,
+                    ko_name: KO_cache[l.properties.KO_ID] || "??",
+                    st_parcele: l.properties.ST_PARCELE,
+                    bbox: turf.bbox(turf.polygon(l.geometry.coordinates)),
+                };
+            });
+
+            return res.json(results);
         }
         catch(err){
             console.log("Error in mapFind:", err);
