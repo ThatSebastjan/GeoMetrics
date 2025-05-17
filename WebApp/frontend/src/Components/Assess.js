@@ -19,7 +19,7 @@ function Assess() {
     // Sample data for the gauges - environmental risk indicators
     const gauges = [
         {
-            value: 55,
+            value: 13,
             label: "Flood Risk",
             fillGradient: "#e0f2fe 0deg, #7dd3fc 90deg, #38bdf8 180deg, #0284c7 270deg, #0c4a6e 360deg",
             innerColor: "#f8f9fa",
@@ -28,7 +28,7 @@ function Assess() {
         },
         {
             value: 78,
-            label: "Mudslide Risk",
+            label: "Landslide Risk",
             fillGradient: "#F9F5EB 0deg, #E3D5CA 90deg, #D5A021 180deg, #8B5A2B 270deg, #4A3728 360deg",
             innerColor: "#f8f9fa",
             valueColor: "#2d3748",

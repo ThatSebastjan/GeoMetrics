@@ -19,7 +19,7 @@ function SmartSelect() {
         },
         {
             value: 78,
-            label: "Mudslide Risk",
+            label: "Landslide Risk",
             fillGradient: "#F9F5EB 0deg, #E3D5CA 90deg, #D5A021 180deg, #8B5A2B 270deg, #4A3728 360deg",
             innerColor: "#f8fafc",
             valueColor: "#2d3748",
