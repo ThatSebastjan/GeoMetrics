@@ -1,6 +1,7 @@
 const turf = require("@turf/turf");
 const LandLotModel = require("../models/landLotModel.js");
 const LandUseModel = require("../models/landUseModel.js");
+const WaterBodyModel = require("../models/waterBodyModel.js");
 const KoModel = require("../models/koModel.js");
 
 
@@ -27,14 +28,21 @@ const KO_cache = {};
 */
 const getLandTypeInfo = async (land_lot) => {
     const landLotArea = turf.area(land_lot.geometry);
+    let landUse = [];
 
-    const landUse = await LandUseModel.find({
-        geometry: {
-            $geoIntersects: {
-                $geometry: land_lot.geometry
+    try {
+        landUse = await LandUseModel.find({
+            geometry: {
+                $geoIntersects: {
+                    $geometry: land_lot.geometry
+                }
             }
-        }
-    });
+        });
+    }
+    catch(err){
+        console.log("Error in getLandTypeInfo:", err);
+        return [];
+    };
 
     const landLotPolygon = turf.polygon(land_lot.geometry.coordinates);
     const typeArea = {};
@@ -58,6 +66,43 @@ const getLandTypeInfo = async (land_lot) => {
         .map(e => [e[0], e[1] / landLotArea]);
 
     return val_area;
+};
+
+
+
+/*
+    Get water bodies near to a given land lot feature
+    If no results are returned, the nearest water body is more than 200m away
+*/
+const getNearWaterBodies = async (land_lot) => {
+    const landLotCenter = turf.centerOfMass(turf.polygon(land_lot.geometry.coordinates));
+    let list = [];
+    
+    try {
+        list = await WaterBodyModel.find({
+            geometry: {
+                $near: {
+                    $geometry: landLotCenter.geometry,
+                    $maxDistance: 200,
+                },
+            },
+        });
+
+    }
+    catch(err){
+        console.log("Error in getNearWaterBodies:", err);
+        return [];
+    };
+
+    return list.map(el => {
+        const vertices = turf.explode(turf.polygon(el.geometry.coordinates));
+        const closestVertex = turf.nearest(landLotCenter, vertices);
+
+        return {
+            feature: el,
+            distance: turf.distance(landLotCenter, closestVertex) * 1000, //km -> m 
+        };
+    });
 };
 
 
