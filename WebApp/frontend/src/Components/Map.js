@@ -16,6 +16,13 @@ const Map = ({ searchTerm }) => {
     const landData = useRef({ 
         type: "FeatureCollection",
         features: [],
+    });
+
+
+    //Test data
+    const labelData = useRef({ 
+        type: "FeatureCollection",
+        features: [],
     }); 
 
 
@@ -42,19 +49,87 @@ const Map = ({ searchTerm }) => {
 
             map.current.addLayer({
                 id: "land_data",
-                type: "fill",
+                type: "line",
                 source: "land_data",
                 paint: {
-                    //"fill-color": ["coalesce", ["get", "fill"], "#ff0000"],
-                    //"fill-opacity": ["coalesce", ["get", "fill-opacity"], 0.2]
-                    "fill-color": "#000000",
-                    "fill-opacity": 0.2
+                    "line-color": "#005000",
+                    "line-opacity": 0.3
                 },
+                minzoom: 13.5,
+            });
+
+
+            map.current.addLayer({
+                id: "land_data_fill",
+                type: "fill",
+                source: "land_data", //Same source
+                paint: {
+                    "fill-color": "#000000",
+                    "fill-opacity":  [
+                        "case",
+                        ["boolean", ["feature-state", "hover"], false],
+                        0.1,
+                        0
+                    ],
+                },
+                minzoom: 13.5,
+            });
+
+
+            //Add label layer
+            map.current.addSource("label_data", { type: "geojson", data: labelData.current });
+
+            map.current.addLayer({
+                id: "label_data",
+                type: "symbol",
+                source: "label_data",
+                layout: {
+                    "text-field": ["get", "label"],
+                    "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+                    "text-size": 11,
+                    "text-letter-spacing": 0.05,
+                    "text-offset": [0, 0]
+                },
+                paint: {
+                    "text-color": "#202",
+                    "text-halo-color": "#fff",
+                    "text-halo-width": 2
+                },
+
                 minzoom: 13.5,
             });
         });
 
 
+
+        //Hover interactions
+        let hoveredPolygonId = null;
+
+        map.current.on("mousemove", "land_data_fill", (e) => {
+            if (e.features.length > 0) {
+                if (hoveredPolygonId !== null) {
+                    map.current.setFeatureState({ source: "land_data", id: hoveredPolygonId }, { hover: false });
+                };
+
+                hoveredPolygonId = e.features[0].id;
+                map.current.setFeatureState({ source: "land_data", id: hoveredPolygonId }, { hover: true });
+            };
+        });
+
+
+        map.current.on("mouseleave", "state-fills", () => {
+            if (hoveredPolygonId !== null) {
+                map.current.setFeatureState({ source: "land_data", id: hoveredPolygonId }, { hover: false });
+            };
+
+            hoveredPolygonId = null;
+        });
+
+
+        //TODO: Add a click handler to select a land lot and display relevant information!
+
+
+        
         //Clean-up handler
         return () => {
             map.current.remove();
@@ -142,6 +217,16 @@ const Map = ({ searchTerm }) => {
         //Set new data
         landData.current.features = old_data.concat(new_data);
         map.current.getSource("land_data").setData(landData.current);
+
+
+        //Set label data
+        labelData.current.features = landData.current.features.map(f => {
+            const point = turf.centerOfMass(turf.polygon(f.geometry.coordinates));
+            point.properties.label = f.properties.ST_PARCELE;
+            return point
+        });
+
+        map.current.getSource("label_data").setData(labelData.current);
     };
 
 
