@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { UserContext } from '../Contexts/UserContext';
 import styles from '../styles';
 import { useNavigate } from 'react-router-dom';
@@ -9,9 +9,9 @@ function Edit() {
 
     const [formData, setFormData] = useState({
         username: '',
-        email: '',
         currentPassword: '',
-        newPassword: ''
+        newPassword: '',
+        confirmPassword: ''
     });
     const [profileImage, setProfileImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
@@ -19,6 +19,12 @@ function Edit() {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState('');
     const [showPasswordSection, setShowPasswordSection] = useState(false);
+    const [passwordMatchError, setPasswordMatchError] = useState('');
+
+    // Add new state variables for animation
+    const [passwordSectionVisible, setPasswordSectionVisible] = useState(false);
+    const [passwordSectionHeight, setPasswordSectionHeight] = useState(0);
+    const passwordSectionRef = useRef(null);
 
     useEffect(() => {
         if (!user) {
@@ -28,8 +34,7 @@ function Edit() {
 
         setFormData(prev => ({
             ...prev,
-            username: user.username || '',
-            email: user.email || ''
+            username: user.username || ''
         }));
 
         if (user.profileImage && user.profileImage.path) {
@@ -43,6 +48,22 @@ function Edit() {
             ...prev,
             [name]: value
         }));
+        
+        // Real-time password match validation
+        if (name === 'newPassword' || name === 'confirmPassword') {
+            const newPassword = name === 'newPassword' ? value : formData.newPassword;
+            const confirmPassword = name === 'confirmPassword' ? value : formData.confirmPassword;
+            
+            if (newPassword && confirmPassword) {
+                if (newPassword !== confirmPassword) {
+                    setPasswordMatchError('Passwords do not match');
+                } else {
+                    setPasswordMatchError('');
+                }
+            } else {
+                setPasswordMatchError('');
+            }
+        }
     };
 
     const handleImageChange = (e) => {
@@ -107,6 +128,13 @@ function Edit() {
         try {
             if (!token) throw new Error('Authentication required');
 
+            // Add password confirmation validation
+            if (showPasswordSection && formData.newPassword) {
+                if (formData.newPassword !== formData.confirmPassword) {
+                    throw new Error('New password and confirmation do not match');
+                }
+            }
+            
             let imageUploadResult = null;
             if (profileImage) {
                 imageUploadResult = await handleImageUpload();
@@ -124,7 +152,6 @@ function Edit() {
             }
 
             if (formData.username) updateData.username = formData.username;
-            if (formData.email) updateData.email = formData.email;
 
             let updatedUser = user;
 
@@ -144,8 +171,7 @@ function Edit() {
                 updatedUser = {
                     ...user,
                     ...data.user || {},
-                    username: data.username || formData.username || user.username,
-                    email: data.email || formData.email || user.email
+                    username: data.username || formData.username || user.username
                 };
             }
 
@@ -161,7 +187,8 @@ function Edit() {
             setFormData(prev => ({
                 ...prev,
                 currentPassword: '',
-                newPassword: ''
+                newPassword: '',
+                confirmPassword: ''
             }));
 
             setTimeout(() => {
@@ -174,16 +201,42 @@ function Edit() {
         }
     };
 
+    // Replace togglePasswordSection with this enhanced version
     const togglePasswordSection = () => {
-        setShowPasswordSection(!showPasswordSection);
         if (showPasswordSection) {
-            setFormData(prev => ({
-                ...prev,
-                currentPassword: '',
-                newPassword: ''
-            }));
+            // Begin closing animation
+            setPasswordSectionVisible(false);
+            setTimeout(() => {
+                setShowPasswordSection(false);
+                setFormData(prev => ({
+                    ...prev,
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: ''
+                }));
+                setPasswordMatchError('');
+            }, 300); // Match transition duration
+        } else {
+            // Open immediately, then animate in
+            setShowPasswordSection(true);
+            // Small delay to ensure DOM has updated
+            setTimeout(() => {
+                if (passwordSectionRef.current) {
+                    const height = passwordSectionRef.current.scrollHeight;
+                    setPasswordSectionHeight(height);
+                    setPasswordSectionVisible(true);
+                }
+            }, 50);
         }
     };
+
+    // Add useEffect to measure height when content changes
+    useEffect(() => {
+        if (showPasswordSection && passwordSectionRef.current) {
+            const height = passwordSectionRef.current.scrollHeight;
+            setPasswordSectionHeight(height);
+        }
+    }, [showPasswordSection, formData.newPassword, formData.confirmPassword, passwordMatchError]);
 
     // Define a common button style for all main buttons
     const buttonStyle = {
@@ -207,36 +260,45 @@ function Edit() {
             {error && <styles.common.Message $type="error" style={{ maxWidth: '500px', width: '100%' }}>{error}</styles.common.Message>}
             {success && <styles.common.Message $type="success" style={{ maxWidth: '500px', width: '100%' }}>{success}</styles.common.Message>}
 
+            {/* Main form container - increase padding and gap */}
             <form onSubmit={handleSubmit} style={{
                 width: '100%',
-                maxWidth: '500px',
+                maxWidth: '550px',  // Increased from 500px
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '1.5rem',
-                marginTop: '1.5rem',
+                alignItems: 'center',
+                gap: '2.2rem',      // Increased from 1.5rem
+                marginTop: '2rem',  // Increased from 1.5rem
                 background: '#fff',
                 borderRadius: '16px',
                 boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-                padding: '2rem'
+                padding: '2.5rem'   // Increased from 2rem
             }}>
-                <styles.settings.FormGroup style={{ alignItems: 'center', maxWidth: '350px', margin: '0 auto', width: '100%' }}>
-                    <styles.settings.Label style={{ marginBottom: '0.5rem' }}>Profile Picture</styles.settings.Label>
+                {/* Profile picture section */}
+                <styles.settings.FormGroup style={{ alignItems: 'center', maxWidth: '380px', margin: '0 auto', width: '100%' }}>
+                    <styles.settings.Label style={{ marginBottom: '0.75rem', fontSize: '1.05rem' }}>Profile Picture</styles.settings.Label>
                     {imagePreview && (
                         <img
                             src={imagePreview}
                             alt="Profile"
                             style={{
-                                width: '140px',
-                                height: '140px',
+                                width: '160px',    // Increased from 140px
+                                height: '160px',   // Increased from 140px
                                 borderRadius: '50%',
                                 objectFit: 'cover',
                                 border: `3px solid ${styles.colors.primary}`,
-                                margin: '1.5rem 0 1rem 0',
+                                margin: '1.8rem 0 1.2rem 0',  // Increased margins
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
                             }}
                         />
                     )}
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', width: '100%', marginTop: '0.5rem' }}>
+                    <div style={{ 
+                        display: 'flex', 
+                        gap: '15px',   // Increased from 10px
+                        justifyContent: 'center', 
+                        width: '100%', 
+                        marginTop: '0.8rem'  // Increased from 0.5rem
+                    }}>
                         <styles.settings.Button
                             type="button"
                             onClick={() => document.getElementById('imageInput').click()}
@@ -273,54 +335,84 @@ function Edit() {
                     </div>
                 </styles.settings.FormGroup>
 
-                <styles.settings.FormGroup style={{ maxWidth: '350px', margin: '0 auto', width: '100%' }}>
-                    <styles.settings.Label htmlFor="username">Username</styles.settings.Label>
+                {/* Username form group */}
+                <styles.settings.FormGroup style={{ 
+                    maxWidth: '400px', 
+                    margin: '0 auto', 
+                    width: '100%',
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center'
+                }}>
+                    <styles.settings.Label htmlFor="username" style={{ 
+                        alignSelf: 'flex-start',  // Changed from center to flex-start
+                        fontSize: '1.05rem',      // Increased font size
+                        marginBottom: '0.5rem'    // Added margin
+                    }}>
+                        Username
+                    </styles.settings.Label>
                     <styles.settings.Input
                         id="username"
                         name="username"
                         type="text"
                         value={formData.username}
                         onChange={handleChange}
+                        style={{ 
+                            width: "100%",
+                            padding: "0.7rem 1rem",  // Increased padding
+                            fontSize: "1rem"         // Increased font size
+                        }}
                     />
                 </styles.settings.FormGroup>
 
-                <styles.settings.FormGroup style={{ maxWidth: '350px', margin: '0 auto', width: '100%' }}>
-                    <styles.settings.Label htmlFor="email">Email</styles.settings.Label>
-                    <styles.settings.Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                    />
-                </styles.settings.FormGroup>
 
-                <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                {/* Password toggle button */}
+                <div style={{ display: 'flex', justifyContent: 'center', width: '100%', margin: '0.5rem 0' }}>
                     <styles.settings.Button
                         type="button"
                         onClick={togglePasswordSection}
                         style={{
                             ...buttonStyle,
                             backgroundColor: styles.colors.secondary,
-                            margin: '0.5rem 0'
+                            margin: '0.5rem 0',
+                            padding: '0.6rem 1.5rem',  // Increased padding
+                            fontSize: '1rem'           // Increased font size
                         }}
                     >
                         {showPasswordSection ? 'Cancel Password Update' : 'Update Password'}
                     </styles.settings.Button>
                 </div>
 
+                {/* Password section */}
                 {showPasswordSection && (
-                    <div style={{
-                        backgroundColor: '#f9f9f9',
-                        border: `1px solid ${styles.colors.border}`,
-                        borderRadius: '8px',
-                        padding: '1rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '1rem'
-                    }}>
-                        <styles.settings.FormGroup>
-                            <styles.settings.Label htmlFor="currentPassword">Current Password *</styles.settings.Label>
+                    <div 
+                        ref={passwordSectionRef}
+                        style={{
+                            backgroundColor: '#f9f9f9',
+                            border: `1px solid ${styles.colors.border}`,
+                            borderRadius: '8px',
+                            padding: '1.5rem',   // Increased from 1rem
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '1.5rem',       // Increased from 1rem
+                            maxWidth: '420px',   // Increased from 400px
+                            margin: '0 auto',   
+                            width: '100%',
+                            opacity: passwordSectionVisible ? 1 : 0,
+                            maxHeight: passwordSectionVisible ? `${passwordSectionHeight}px` : '0',
+                            overflow: 'hidden',
+                            transition: 'opacity 300ms ease, max-height 300ms ease',
+                        }}
+                    >
+                        <styles.settings.FormGroup style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <styles.settings.Label htmlFor="currentPassword" style={{ 
+                                alignSelf: 'flex-start', 
+                                width: "90%",     // Keep at 90% as requested
+                                fontSize: '1.05rem',
+                                marginBottom: '0.5rem'
+                            }}>
+                                Current Password *
+                            </styles.settings.Label>
                             <styles.settings.Input
                                 id="currentPassword"
                                 name="currentPassword"
@@ -328,34 +420,72 @@ function Edit() {
                                 value={formData.currentPassword}
                                 onChange={handleChange}
                                 required
+                                style={{ 
+                                    width: "90%",   // Keep at 90% as requested
+                                    padding: "0.7rem 1rem",
+                                    fontSize: "1rem"
+                                }}
                             />
                         </styles.settings.FormGroup>
 
-                        <styles.settings.FormGroup>
-                            <styles.settings.Label htmlFor="newPassword">New Password</styles.settings.Label>
+                        <styles.settings.FormGroup style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <styles.settings.Label htmlFor="newPassword" style={{ alignSelf: 'flex-start' }}>New Password</styles.settings.Label>
                             <styles.settings.Input
                                 id="newPassword"
                                 name="newPassword"
                                 type="password"
                                 value={formData.newPassword}
                                 onChange={handleChange}
+                                style={{ width: "90%" }}
                             />
+                        </styles.settings.FormGroup>
+
+                        <styles.settings.FormGroup style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <styles.settings.Label htmlFor="confirmPassword" style={{ alignSelf: 'flex-start' }}>Confirm New Password</styles.settings.Label>
+                            <styles.settings.Input
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                type="password"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                style={{ width: "90%" }}
+                            />
+                            {passwordMatchError && (
+                                <div style={{ 
+                                    color: '#ff4d4f', 
+                                    fontSize: '0.85rem', 
+                                    marginTop: '0.5rem',
+                                    fontWeight: '500',
+                                    width: '100%'
+                                }}>
+                                    {passwordMatchError}
+                                </div>
+                            )}
                         </styles.settings.FormGroup>
                     </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                {/* Form buttons */}
+                <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginTop: '1rem' }}>
                     <styles.settings.Button
                         type="submit"
                         disabled={loading}
-                        style={buttonStyle}
+                        style={{
+                            ...buttonStyle,
+                            padding: '0.7rem 1.5rem',  // Increased padding
+                            fontSize: '1rem'           // Increased font size
+                        }}
                     >
                         {loading ? 'Saving...' : 'Save Changes'}
                     </styles.settings.Button>
                     <styles.settings.EditButton
                         type="button"
                         onClick={() => navigate('/settings')}
-                        style={buttonStyle}
+                        style={{
+                            ...buttonStyle,
+                            padding: '0.7rem 1.5rem',  // Increased padding
+                            fontSize: '1rem'           // Increased font size
+                        }}
                     >
                         Cancel
                     </styles.settings.EditButton>
