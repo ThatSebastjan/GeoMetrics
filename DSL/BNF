@@ -22,6 +22,14 @@ MulDiv' ::= * NumericType MulDiv'
 NumericType ::= -<number>
                 | <number>
                 | (AddSub)
+                | ConstNumericType       # Type has to be checked!
+
+
+ConstNumericType ::= <constName> ConstNumericProperty       #Either a const with numeric value or a point with property access specifier
+
+ConstNumericProperty ::= .ConstNumericProperty' | <epsilon>
+
+ConstNumericProperty' ::= longitude | latitude
 
 
 
@@ -32,14 +40,77 @@ PolygonType ::= Polygon(PolygonPoints)
 
 PolygonPoints ::= PointType PolygonPoints'
 
-PolygonPoints' ::= , PolygonPoints | <epxilon>
+PolygonPoints' ::= , PolygonPoints
+                   | <epsilon>
+
+
+CircleType ::= Circle(PointType, <number>)
+
+BoxType ::= Box(PointType, PointType)
+
+PolyLineType ::= PolyLine(<number>, PolygonPoints)
+
+
+BoundsType ::= PolygonType
+               | CircleType
+               | BoxType
+               | PolyLineType
 
 
 ConstDef ::= const <constName> = ConstValue;
 
+ConstValue ::= NumericExpr
+               | PointType
+               | PolygonType
+               | import <string>
 
 
-ConstValue ::= NumericExpr | PointType | PolygonType
+PropertyDef ::= .<propertyName>: PropertyValue;
+
+PropertyValue ::= <number>
+                  | <string>
+                  | BoundsType
+                  | ConstBoundsType
+                  | null
+
+
+ConstBoundsType ::= <constName> ConstArrayIndexed       # Constant type needs to be checked to be either BoundsType or imported array
+
+ConstArrayIndexed ::= [<integer>] | <epsilon>
+                  
+
+
+CadastreBlock ::= cadastre { CadastreContent }
+
+CadastreContent ::= CadastreContent' CadastreContent | <epsilon>        # This allows for empty cadastre blocks which will have to be checked for
+
+CadastreContent' ::= ConstDef
+                     | PropertyDef
+                     | LotBlock
+
+
+
+# TODO: Syntactic sugar defintions for lot blocks
+LotBlock ::= lot { BlockContent }
+
+BlockContent ::= BlockContent' BlockContent | <epsilon>
+
+BlockContent' ::= ConstDef
+                | PropertyDef
+
+
+# TODO: Syntactic sugar defintions for risk blocks
+RiskBlock ::= risk { BlockContent }
+
+
+ProgramBlock ::= ProgramBlock' ProgramBlock | <epsilon>
+
+ProgramBlock' ::= ConstDef
+                  | CadastreBlock
+                  | RiskBlock
+
+
+# TODO: lambda expressions, foreach loop
 
 
 
@@ -51,8 +122,14 @@ ConstValue ::= NumericExpr | PointType | PolygonType
 
 #Terminal definitions
 
+<epsilon> = <void of space>
+
 <number> = \d+(?:\.\d+)?
+
+<integer> = \d+
 
 <string> = "([^"]*)"   #match group = string data
 
 <constName> = [a-zA-Z_$][a-zA-Z_$0-9]*
+
+<propertyName> = [a-zA-Z_$][a-zA-Z_$0-9]*

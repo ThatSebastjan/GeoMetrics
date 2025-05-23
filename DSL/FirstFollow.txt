@@ -1,0 +1,155 @@
+
+FIRST(NumericExpr) = FIRST(AddSub) = { -, <number>, (, <constName> }
+
+FIRST(AddSub) = FIRST(FIRST(MulDiv) ° FIRST(AddSub')) = { -, <number>, (, <constName> }
+
+FIRST(AddSub') = { +, -, EPSILON }
+
+FIRST(MulDiv) = FIRST(FIRST(NumericType) ° FIRST(MulDiv')) = { -, <number>, (, <constName> }
+
+FIRST(MulDiv') = { *, /, EPSILON }
+
+FIRST(NumericType) = { -, <number>, (, <constName> }
+
+FIRST(ConstNumericType) = { <constName> }
+
+FIRST(ConstNumericProperty) = { ., EPSILON }
+
+FIRST(ConstNumericProperty') = { longitude, latitude }
+
+
+
+
+FOLLOW(NumericExpr) = FIRST(, ° FOLLOW(PointType)) U FIRST(> ° FOLLOW(PointType)) U FIRST(EPSILON ° FOLLOW(ConstValue)) = { __comma, } U { > } U { ; }
+
+FOLLOW(AddSub) = FIRST(EPSILON ° FOLLOW(NumericExpr)) U FIRST( ) ° FOLLOW(NumericType)) = { __comma, >, ; } U { ) }
+
+FOLLOW(AddSub') = FOLLOW(AddSub) U FOLLOW(AddSub') = { __comma, >, ;, ) }
+
+FOLLOW(MulDiv) = FIRST(AddSub' ° FOLLOW(AddSub)) U FIRST(AddSub' ° FOLLOW(AddSub')) = { +, -, __comma, >, ;, ) } 
+
+FOLLOW(MulDiv') = FOLLOW(MulDiv) U FOLLOW(MulDiv') = { +, -, __comma, >, ;, ) }
+
+FOLLOW(NumericType) = FIRST(MulDiv' ° FOLLOW(MulDiv)) U FIRST(MulDiv' ° FOLLOW(MulDiv')) = { *, /, +, -, __comma, >, ;, ) }
+
+FOLLOW(ConstNumericType) = FOLLOW(NumericType) = { *, /, +, -, __comma, >, ;, ) }
+
+FOLLOW(ConstNumericProperty) = FOLLOW(ConstNumericType) = { *, /, +, -, __comma, >, ;, ) }
+
+FOLLOW(ConstNumericProperty') = FOLLOW(ConstNumericProperty) = { *, /, +, -, __comma, >, ;, ) }
+
+
+
+
+
+
+
+
+
+
+FIRST(PointType) = { < }
+
+FIRST(PolygonType) = { Polygon }
+
+FIRST(PolygonPoints) = FIRST(FIRST(PointType) ° FIRST(PolygonPoints')) = { < }
+
+FIRST(PolygonPoints') = { __comma, EPSILON }
+
+FIRST(CircleType) = { Circle }
+
+FIRST(BoxType) = { Box }
+
+FIRST(PolyLineType) = { PolyLine }
+
+FIRST(BoundsType) = { Polygon, Circle, Box, PolyLine }
+
+FIRST(ConstDef) = { const }
+
+FIRST(ConstValue) = FIRST(NumericExpr) U FIRST(PointType) U FIRST(PolygonType) U { import } = { -, <number>, (, <constName> } U { < } U { Polygon } U { import }
+
+
+FIRST(PropertyDef) = { . }
+
+FIRST(PropertyValue) = { <number>, <string>, null } U { Polygon, Circle, Box, PolyLine } U { <constName> }
+
+FIRST(ConstBoundsType) = { <constName> }
+
+FIRST(ConstArrayIndexed) = { [, EPSILON }
+
+
+
+
+FOLLOW(PointType) = FIRST(PolygonPoints' ° FOLLOW(PolygonPoints)) U { __comma, ) } U FOLLOW(ConstValue) = { __comma, ) } U { ; }
+
+FOLLOW(PolygonType) = FOLLOW(BoundsType) U FOLLOW(ConstValue) = { ; }
+
+FOLLOW(PolygonPoints) = { ) } U FOLLOW(PolygonPoints') = { ) }
+
+FOLLOW(PolygonPoints') = FOLLOW(PolygonPoints) = { ) }
+
+FOLLOW(CircleType) = FOLLOW(BoundsType) = { ; }
+
+FOLLOW(BoxType) = FOLLOW(BoundsType) = { ; }
+
+FOLLOW(PolyLineType) = FOLLOW(BoundsType) = { ; }
+
+FOLLOW(BoundsType) = FOLLOW(PropertyValue) = { ; }
+
+FOLLOW(ConstDef) = FOLLOW(CadastreContent') U FOLLOW(BlockContent') U FOLLOW(ProgramBlock') = { const, ., lot, } } U { const, ., } } U { const, cadastre, risk, EPSILON } = { const, ., lot, }, cadastre, risk, EPSILON }
+
+FOLLOW(ConstValue) = FIRST(; ° FOLLOW(ConstDef)) = { ; }
+
+
+FOLLOW(PropertyDef) = FOLLOW(CadastreContent') U FOLLOW(BlockContent') = { const, ., lot, } }
+
+FOLLOW(PropertyValue) = { ; }
+
+FOLLOW(ConstBoundsType) = FOLLOW(PropertyValue) = { ; }
+
+FOLLOW(ConstArrayIndexed) = FOLLOW(ConstBoundsType) = { ; }
+
+
+
+
+
+FIRST(CadastreBlock) = { cadastre }
+
+FIRST(CadastreContent) = FIRST(FIRST(CadastreContent') ° FIRST(CadastreContent)) U { EPSILON } = { const, ., lot } U { EPSILON }
+
+FIRST(CadastreContent') = FIRST(ConstDef) U FIRST(PropertyDef) U FIRST(LotBlock) = { const } U { . } U { lot }
+
+
+FIRST(LotBlock) = { lot }
+
+FIRST(BlockContent) = FIRST(FIRST(BlockContent') ° FIRST(BlockContent)) U { EPSILON } = { const } U { . } U { EPSILON }
+
+FIRST(BlockContent') = FIRST(ConstDef) U FIRST(PropertyDef) = { const } U { . }
+
+FIRST(RiskBlock) = { risk }
+
+
+FIRST(ProgramBlock) = FIRST(FIRST(ProgramBlock') ° FIRST(ProgramBlock)) U { EPSILON } = { const } U { cadastre } U { risk } U { EPSILON }
+
+FIRST(ProgramBlock') = FIRST(ConstDef) U FIRST(CadastreBlock) U FIRST(RiskBlock) = { const } U { cadastre } U { risk }
+
+
+
+FOLLOW(CadastreBlock) = FOLLOW(ProgramBlock') = { const, cadastre, risk, EPSILON }
+
+FOLLOW(CadastreContent) = { } } U FOLLOW(CadastreContent) = { } }
+
+FOLLOW(CadastreContent') = FIRST(CadastreContent ° FOLLOW(CadastreContent)) = { const, ., lot, } }
+
+
+FOLLOW(LotBlock) = FOLLOW(CadastreContent') = { const, ., lot, } }
+
+FOLLOW(BlockContent) = { } }
+
+FOLLOW(BlockContent') = FIRST(BlockContent ° FOLLOW(BlockContent)) = { const, ., } }
+
+FOLLOW(RiskBlock) = FOLLOW(ProgramBlock') = { const, cadastre, risk, EPSILON }
+
+
+FOLLOW(ProgramBlock) = FOLLOW(ProgramBlock) = {}
+
+FOLLOW(ProgramBlock') = FIRST(ProgramBlock ° FOLLOW(ProgramBlock)) = { const, cadastre, risk, EPSILON }
