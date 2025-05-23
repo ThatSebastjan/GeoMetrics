@@ -12,6 +12,7 @@ import SmartSelect from "./Components/SmartSelect";
 import Edit from "./Components/Edit";
 import Results from "./Components/Results";
 import SavedLots from "./Components/SavedLots";
+import ResultDetails from "./Components/ResultDetails";
 
 
 // Create a separate component for routes that uses the context
@@ -65,12 +66,13 @@ function AppRoutes() {
                     {/* Protected routes with layout */}
                     <Route path="/" element={<MainLayout />}>
                         <Route index element={<Navigate to="/assess" replace />} />
-                        <Route path="assess" element={<Assess />} />
+                        <Route path="assess/:param?" element={<Assess />} />
                         <Route path="smart-select" element={<SmartSelect />} />
                         <Route path="side-by-side" element={<SideBySide />} />
                         <Route path="settings" element={<Settings />} />
                         <Route path="settings/edit-profile" element={<Edit />} />
                         <Route path="results" element={<Results />} />
+                        <Route path="result-details" element={<ResultDetails/>}/>
                         <Route path="saved-lots" element={<SavedLots />} />
                     </Route>
                 </Routes>

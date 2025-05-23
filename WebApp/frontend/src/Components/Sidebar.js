@@ -60,9 +60,9 @@ function Sidebar() {
             </styles.layout.NavItemWithIcon>
             <styles.layout.DropdownMenu $isOpen={openDropdowns.assess}>
               <styles.layout.DropdownItem
-                  onClick={() => handleNavigation('/assess', 'assess')}
-                  $isActive={activeRoute === '/assess'}
-              > <styles.layout.IconWrapper><icons.AssessIcon /></styles.layout.IconWrapper>
+                  onClick={() => handleNavigation('/assess/basic', 'assess')}
+                  $isActive={activeRoute === '/assess/basic'}
+              > <styles.layout.IconWrapper><icons.RippleIcon /></styles.layout.IconWrapper>
 
                 Assessment
               </styles.layout.DropdownItem>

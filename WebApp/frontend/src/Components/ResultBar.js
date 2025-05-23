@@ -2,13 +2,39 @@ import { useState } from 'react';
 import styles from '../styles';
 import Gauge from './Gauge';
 
+
 const ResultBar = ({
                        title = "Assessment Results",
                        gauges = [],
                        isFullScreen = false,
                        onToggleFullScreen,
-                       children // Add children prop to accept additional content
+                       children, // Add children prop to accept additional content
+                       hideIfOtherExpanded = false
                    }) => {
+
+
+    // If we should hide when another component is expanded
+    if (hideIfOtherExpanded) {
+        return (
+            <div style={{
+                width: '50px',
+                height: '50px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: styles.colors.primary,
+                borderRadius: '50%',
+                position: 'absolute',
+                bottom: '10px',
+                cursor: 'pointer',
+                color: 'white'
+            }} onClick={() => onToggleFullScreen(true)}>
+                <span>📊</span>
+            </div>
+        );
+    }
+
+
     return (
         <styles.results.Container $isFullScreen={isFullScreen}>
             <styles.results.ExpandButtonWrapper>

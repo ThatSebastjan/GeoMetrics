@@ -127,6 +127,20 @@ export const CancelIcon = () => (
     </svg>
 )
 
+export const RippleIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="18" viewBox="0 0 22 18" fill="none">
+        <path d="M15.24 4.75993C15.7979 5.31717 16.2404 5.9789 16.5424 6.70729C16.8443 7.43568 16.9997 8.21644 16.9997 9.00493C16.9997 9.79342 16.8443 10.5742 16.5424 11.3026C16.2404 12.031 15.7979 12.6927 15.24 13.2499M6.76 13.2399C6.20214 12.6827 5.75959 12.021 5.45764 11.2926C5.1557 10.5642 5.00028 9.78342 5.00028 8.99493C5.00028 8.20644 5.1557 7.42568 5.45764 6.69729C5.75959 5.9689 6.20214 5.30717 6.76 4.74993M18.07 1.92993C19.9447 3.80521 20.9979 6.34829 20.9979 8.99993C20.9979 11.6516 19.9447 14.1947 18.07 16.0699M3.93 16.0699C2.05529 14.1947 1.00214 11.6516 1.00214 8.99993C1.00214 6.34829 2.05529 3.80521 3.93 1.92993" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="11" cy="9" r="3" fill="currentColor" />
+    </svg>
+)
+
+export  const BackIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19 12H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+)
+
 
 const icons = {
     AssessIcon,
@@ -144,6 +158,8 @@ const icons = {
     CheckboxIcon,
     SearchIcon,
     CancelIcon,
+    RippleIcon,
+    BackIcon,
 }
 
 export default icons;
