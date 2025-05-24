@@ -1,6 +1,10 @@
 
 
-#Non-terminal definitions
+# Non-terminal definitions
+
+Start ::= ProgramBlock         # Entry point
+
+
 
 NumericExpr ::= AddSub
 
@@ -19,24 +23,24 @@ MulDiv' ::= * NumericType MulDiv'
             | <epsilon>
 
 
-NumericType ::= -<number>
+NumericType ::= - <number>
                 | <number>
                 | (AddSub)
                 | ConstNumericType       # Type has to be checked!
 
 
-ConstNumericType ::= <constName> ConstNumericProperty       #Either a const with numeric value or a point with property access specifier
+ConstNumericType ::= <identifier> ConstNumericProperty       # Either a const with numeric value or a point with property access specifier
 
-ConstNumericProperty ::= .ConstNumericProperty' | <epsilon>
+ConstNumericProperty ::= . ConstNumericProperty' | <epsilon>
 
 ConstNumericProperty' ::= longitude | latitude
 
 
 
-PointType ::= <NumericExpr, NumericExpr>    # declared this way to prevent collisions with numeric expressions wrapped in ()
+PointType ::= < NumericExpr , NumericExpr >    # Declared this way to prevent collisions with numeric expressions wrapped in () and to add extra clarity
 
 
-PolygonType ::= Polygon(PolygonPoints)
+PolygonType ::= Polygon ( PolygonPoints )
 
 PolygonPoints ::= PointType PolygonPoints'
 
@@ -44,11 +48,11 @@ PolygonPoints' ::= , PolygonPoints
                    | <epsilon>
 
 
-CircleType ::= Circle(PointType, <number>)
+CircleType ::= Circle ( PointType , <number> )
 
-BoxType ::= Box(PointType, PointType)
+BoxType ::= Box ( PointType , PointType )
 
-PolyLineType ::= PolyLine(<number>, PolygonPoints)
+PolyLineType ::= PolyLine ( <number> , PolygonPoints )
 
 
 BoundsType ::= PolygonType
@@ -57,15 +61,16 @@ BoundsType ::= PolygonType
                | PolyLineType
 
 
-ConstDef ::= const <constName> = ConstValue;
+ConstDef ::= const <identifier> = ConstValue ;
 
 ConstValue ::= NumericExpr
                | PointType
                | PolygonType
                | import <string>
+               | LambdaExpr
 
 
-PropertyDef ::= .<propertyName>: PropertyValue;
+PropertyDef ::= . <identifier> : PropertyValue ;
 
 PropertyValue ::= <number>
                   | <string>
@@ -74,33 +79,100 @@ PropertyValue ::= <number>
                   | null
 
 
-ConstBoundsType ::= <constName> ConstArrayIndexed       # Constant type needs to be checked to be either BoundsType or imported array
+ConstBoundsType ::= <identifier> ConstArrayIndexed       # Constant type needs to be checked to be either BoundsType or imported array
 
-ConstArrayIndexed ::= [<integer>] | <epsilon>
+ConstArrayIndexed ::= [ <integer> ] | <epsilon>
+
+
+LambdaExpr ::= lambda ( LambdaParams ) { LambdaBody }
+
+LambdaParams ::= <identifier> LambdaParams'
+
+LambdaParams' ::= , <identifier> LambdaParams'
+                  | <epsilon>
+
+LambdaBody ::= ConstDefList ReturnValue ;        # We either have some constant definitions followed by a return statement or only a return statement
+
+ConstDefList ::= ConstDef ConstDefList | <epsilon>      # List of 0 or more ConstDef-s
+
+ReturnValue ::= return ReturnType ;
+
+ReturnType ::= <number> | BoundsType
+
+
+
+# Flow control
+
+ForEachLoop ::= foreach <identifier> in <identifier> { BlockContent }
+
+
+IfStatement ::= if ( BooleanExpr ) { BlockContent } ElseBlock
+
+ElseBlock ::= else { BlockContent }       # else block is optional
+              | <epsilon>
+
+
+ControlFlowDef ::= ForEachLoop
+                   | IfStatement
+
+
+BooleanExpr ::= NumericExpr BooleanOperator NumericExpr
+
+BooleanOperator ::= > | <
+
+
+
                   
-
+# Main feature blocks
 
 CadastreBlock ::= cadastre { CadastreContent }
 
-CadastreContent ::= CadastreContent' CadastreContent | <epsilon>        # This allows for empty cadastre blocks which will have to be checked for
+CadastreContent ::= CadastreContent' CadastreContent | <epsilon>       # This allows for empty cadastre blocks which will have to be checked for
 
-CadastreContent' ::= ConstDef
-                     | PropertyDef
+CadastreContent' ::= BlockContent'
                      | LotBlock
 
 
 
-# TODO: Syntactic sugar defintions for lot blocks
-LotBlock ::= lot { BlockContent }
-
-BlockContent ::= BlockContent' BlockContent | <epsilon>
+BlockContent ::= BlockContent' BlockContent | <epsilon>         # This allows for empty blocks!
 
 BlockContent' ::= ConstDef
                 | PropertyDef
+                | ControlFlowDef
 
 
-# TODO: Syntactic sugar defintions for risk blocks
+# Lot block and syntactic sugar for it
+LotBlock ::= lot { BlockContent }
+             | RoadLot
+             | BuildingLot
+             | FarmLandLot
+             | ForestLot
+             | MeadowLot
+             | RiverLot
+             | LakeLot
+
+LotSimplifiedArgs ::= ( <string> , BoundsType ) ;
+
+RoadLot ::= road LotSimplifiedArgs
+BuildingLot ::= buildingLot LotSimplifiedArgs
+FarmLandLot ::= farmLand LotSimplifiedArgs
+ForestLot ::= forest LotSimplifiedArgs
+MeadowLot ::= meadow LotSimplifiedArgs
+RiverLot ::= river LotSimplifiedArgs
+LakeLot ::= lake LotSimplifiedArgs
+
+
+# Risk block with syntactic sugar
 RiskBlock ::= risk { BlockContent }
+              | FloodRisk
+              | LandSlideRisk
+              | EarthQuakeRisk
+
+RiskSimplifiedArgs ::= ( BoundsType , NumericExpr , NumericExpr ) ;          # bounds, probability, frequency
+
+FloodRisk ::= flood RiskSimplifiedArgs
+LandSlideRisk ::= landSlide RiskSimplifiedArgs
+EarthQuakeRisk ::= earthQuake RiskSimplifiedArgs
 
 
 ProgramBlock ::= ProgramBlock' ProgramBlock | <epsilon>
@@ -110,17 +182,10 @@ ProgramBlock' ::= ConstDef
                   | RiskBlock
 
 
-# TODO: lambda expressions, foreach loop
 
 
 
-
-
-
-
-
-
-#Terminal definitions
+# Terminal definitions
 
 <epsilon> = <void of space>
 
@@ -130,6 +195,4 @@ ProgramBlock' ::= ConstDef
 
 <string> = "([^"]*)"   #match group = string data
 
-<constName> = [a-zA-Z_$][a-zA-Z_$0-9]*
-
-<propertyName> = [a-zA-Z_$][a-zA-Z_$0-9]*
+<identifier> = [a-zA-Z_$][a-zA-Z_$0-9]*

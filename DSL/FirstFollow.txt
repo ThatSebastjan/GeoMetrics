@@ -1,155 +1,173 @@
+FIRST(Start) = { const, cadastre, risk, flood, landSlide, earthQuake, EPSILON }
+FOLLOW(Start) = {}
 
-FIRST(NumericExpr) = FIRST(AddSub) = { -, <number>, (, <constName> }
+FIRST(NumericExpr) = { -, <number>, (, <identifier> }
+FOLLOW(NumericExpr) = { ;, >, <, <comma>, ) }
 
-FIRST(AddSub) = FIRST(FIRST(MulDiv) ° FIRST(AddSub')) = { -, <number>, (, <constName> }
+FIRST(AddSub) = { -, <number>, (, <identifier> }
+FOLLOW(AddSub) = { ;, >, <, <comma>, ) }
 
 FIRST(AddSub') = { +, -, EPSILON }
+FOLLOW(AddSub') = { ;, >, <, <comma>, ) }
 
-FIRST(MulDiv) = FIRST(FIRST(NumericType) ° FIRST(MulDiv')) = { -, <number>, (, <constName> }
+FIRST(MulDiv) = { -, <number>, (, <identifier> }
+FOLLOW(MulDiv) = { ;, >, <, <comma>, ), +, - }
 
 FIRST(MulDiv') = { *, /, EPSILON }
+FOLLOW(MulDiv') = { ;, >, <, <comma>, ), +, - }
 
-FIRST(NumericType) = { -, <number>, (, <constName> }
+FIRST(NumericType) = { -, <number>, (, <identifier> }
+FOLLOW(NumericType) = { ;, >, <, <comma>, ), *, /, +, - }
 
-FIRST(ConstNumericType) = { <constName> }
+FIRST(ConstNumericType) = { <identifier> }
+FOLLOW(ConstNumericType) = { ;, >, <, <comma>, ), *, /, +, - }
 
-FIRST(ConstNumericProperty) = { ., EPSILON }
+FIRST(ConstNumericProperty) = { <dot>, EPSILON }
+FOLLOW(ConstNumericProperty) = { ;, >, <, <comma>, ), *, /, +, - }
 
 FIRST(ConstNumericProperty') = { longitude, latitude }
-
-
-
-
-FOLLOW(NumericExpr) = FIRST(, ° FOLLOW(PointType)) U FIRST(> ° FOLLOW(PointType)) U FIRST(EPSILON ° FOLLOW(ConstValue)) = { __comma, } U { > } U { ; }
-
-FOLLOW(AddSub) = FIRST(EPSILON ° FOLLOW(NumericExpr)) U FIRST( ) ° FOLLOW(NumericType)) = { __comma, >, ; } U { ) }
-
-FOLLOW(AddSub') = FOLLOW(AddSub) U FOLLOW(AddSub') = { __comma, >, ;, ) }
-
-FOLLOW(MulDiv) = FIRST(AddSub' ° FOLLOW(AddSub)) U FIRST(AddSub' ° FOLLOW(AddSub')) = { +, -, __comma, >, ;, ) } 
-
-FOLLOW(MulDiv') = FOLLOW(MulDiv) U FOLLOW(MulDiv') = { +, -, __comma, >, ;, ) }
-
-FOLLOW(NumericType) = FIRST(MulDiv' ° FOLLOW(MulDiv)) U FIRST(MulDiv' ° FOLLOW(MulDiv')) = { *, /, +, -, __comma, >, ;, ) }
-
-FOLLOW(ConstNumericType) = FOLLOW(NumericType) = { *, /, +, -, __comma, >, ;, ) }
-
-FOLLOW(ConstNumericProperty) = FOLLOW(ConstNumericType) = { *, /, +, -, __comma, >, ;, ) }
-
-FOLLOW(ConstNumericProperty') = FOLLOW(ConstNumericProperty) = { *, /, +, -, __comma, >, ;, ) }
-
-
-
-
-
-
-
-
-
+FOLLOW(ConstNumericProperty') = { ;, >, <, <comma>, ), *, /, +, - }
 
 FIRST(PointType) = { < }
+FOLLOW(PointType) = { ;, <comma>, ) }
 
 FIRST(PolygonType) = { Polygon }
+FOLLOW(PolygonType) = { ), <comma>, ; }
 
-FIRST(PolygonPoints) = FIRST(FIRST(PointType) ° FIRST(PolygonPoints')) = { < }
+FIRST(PolygonPoints) = { < }
+FOLLOW(PolygonPoints) = { ) }
 
-FIRST(PolygonPoints') = { __comma, EPSILON }
+FIRST(PolygonPoints') = { <comma>, EPSILON }
+FOLLOW(PolygonPoints') = { ) }
 
 FIRST(CircleType) = { Circle }
+FOLLOW(CircleType) = { ), <comma>, ; }
 
 FIRST(BoxType) = { Box }
+FOLLOW(BoxType) = { ), <comma>, ; }
 
 FIRST(PolyLineType) = { PolyLine }
+FOLLOW(PolyLineType) = { ), <comma>, ; }
 
 FIRST(BoundsType) = { Polygon, Circle, Box, PolyLine }
+FOLLOW(BoundsType) = { ), <comma>, ; }
 
 FIRST(ConstDef) = { const }
+FOLLOW(ConstDef) = { cadastre, risk, flood, landSlide, earthQuake, lot, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, }, const, return }
 
-FIRST(ConstValue) = FIRST(NumericExpr) U FIRST(PointType) U FIRST(PolygonType) U { import } = { -, <number>, (, <constName> } U { < } U { Polygon } U { import }
+FIRST(ConstValue) = { import, <, Polygon, lambda, -, <number>, (, <identifier> }
+FOLLOW(ConstValue) = { ; }
 
+FIRST(PropertyDef) = { <dot> }
+FOLLOW(PropertyDef) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
 
-FIRST(PropertyDef) = { . }
-
-FIRST(PropertyValue) = { <number>, <string>, null } U { Polygon, Circle, Box, PolyLine } U { <constName> }
-
-FIRST(ConstBoundsType) = { <constName> }
-
-FIRST(ConstArrayIndexed) = { [, EPSILON }
-
-
-
-
-FOLLOW(PointType) = FIRST(PolygonPoints' ° FOLLOW(PolygonPoints)) U { __comma, ) } U FOLLOW(ConstValue) = { __comma, ) } U { ; }
-
-FOLLOW(PolygonType) = FOLLOW(BoundsType) U FOLLOW(ConstValue) = { ; }
-
-FOLLOW(PolygonPoints) = { ) } U FOLLOW(PolygonPoints') = { ) }
-
-FOLLOW(PolygonPoints') = FOLLOW(PolygonPoints) = { ) }
-
-FOLLOW(CircleType) = FOLLOW(BoundsType) = { ; }
-
-FOLLOW(BoxType) = FOLLOW(BoundsType) = { ; }
-
-FOLLOW(PolyLineType) = FOLLOW(BoundsType) = { ; }
-
-FOLLOW(BoundsType) = FOLLOW(PropertyValue) = { ; }
-
-FOLLOW(ConstDef) = FOLLOW(CadastreContent') U FOLLOW(BlockContent') U FOLLOW(ProgramBlock') = { const, ., lot, } } U { const, ., } } U { const, cadastre, risk, EPSILON } = { const, ., lot, }, cadastre, risk, EPSILON }
-
-FOLLOW(ConstValue) = FIRST(; ° FOLLOW(ConstDef)) = { ; }
-
-
-FOLLOW(PropertyDef) = FOLLOW(CadastreContent') U FOLLOW(BlockContent') = { const, ., lot, } }
-
+FIRST(PropertyValue) = { <number>, <string>, null, <identifier>, Polygon, Circle, Box, PolyLine }
 FOLLOW(PropertyValue) = { ; }
 
-FOLLOW(ConstBoundsType) = FOLLOW(PropertyValue) = { ; }
+FIRST(ConstBoundsType) = { <identifier> }
+FOLLOW(ConstBoundsType) = { ; }
 
-FOLLOW(ConstArrayIndexed) = FOLLOW(ConstBoundsType) = { ; }
+FIRST(ConstArrayIndexed) = { [, EPSILON }
+FOLLOW(ConstArrayIndexed) = { ; }
 
+FIRST(LambdaExpr) = { lambda }
+FOLLOW(LambdaExpr) = { ; }
 
+FIRST(LambdaParams) = { <identifier> }
+FOLLOW(LambdaParams) = { ) }
 
+FIRST(LambdaParams') = { <comma>, EPSILON }
+FOLLOW(LambdaParams') = { ) }
 
+FIRST(LambdaBody) = { return, const }
+FOLLOW(LambdaBody) = { } }
+
+FIRST(ConstDefList) = { const, EPSILON }
+FOLLOW(ConstDefList) = { return }
+
+FIRST(ReturnValue) = { return }
+FOLLOW(ReturnValue) = { ; }
+
+FIRST(ReturnType) = { <number>, Polygon, Circle, Box, PolyLine }
+FOLLOW(ReturnType) = { ; }
+
+FIRST(ForEachLoop) = { foreach }
+FOLLOW(ForEachLoop) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+
+FIRST(IfStatement) = { if }
+FOLLOW(IfStatement) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+
+FIRST(ElseBlock) = { else, EPSILON }
+FOLLOW(ElseBlock) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+
+FIRST(ControlFlowDef) = { foreach, if }
+FOLLOW(ControlFlowDef) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+
+FIRST(BooleanExpr) = { -, <number>, (, <identifier> }
+FOLLOW(BooleanExpr) = { ) }
+
+FIRST(BooleanOperator) = { >, < }
+FOLLOW(BooleanOperator) = { -, <number>, (, <identifier> }
 
 FIRST(CadastreBlock) = { cadastre }
+FOLLOW(CadastreBlock) = { const, cadastre, risk, flood, landSlide, earthQuake }
 
-FIRST(CadastreContent) = FIRST(FIRST(CadastreContent') ° FIRST(CadastreContent)) U { EPSILON } = { const, ., lot } U { EPSILON }
+FIRST(CadastreContent) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, EPSILON }
+FOLLOW(CadastreContent) = { } }
 
-FIRST(CadastreContent') = FIRST(ConstDef) U FIRST(PropertyDef) U FIRST(LotBlock) = { const } U { . } U { lot }
+FIRST(CadastreContent') = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if }
+FOLLOW(CadastreContent') = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
 
-
-FIRST(LotBlock) = { lot }
-
-FIRST(BlockContent) = FIRST(FIRST(BlockContent') ° FIRST(BlockContent)) U { EPSILON } = { const } U { . } U { EPSILON }
-
-FIRST(BlockContent') = FIRST(ConstDef) U FIRST(PropertyDef) = { const } U { . }
-
-FIRST(RiskBlock) = { risk }
-
-
-FIRST(ProgramBlock) = FIRST(FIRST(ProgramBlock') ° FIRST(ProgramBlock)) U { EPSILON } = { const } U { cadastre } U { risk } U { EPSILON }
-
-FIRST(ProgramBlock') = FIRST(ConstDef) U FIRST(CadastreBlock) U FIRST(RiskBlock) = { const } U { cadastre } U { risk }
-
-
-
-FOLLOW(CadastreBlock) = FOLLOW(ProgramBlock') = { const, cadastre, risk, EPSILON }
-
-FOLLOW(CadastreContent) = { } } U FOLLOW(CadastreContent) = { } }
-
-FOLLOW(CadastreContent') = FIRST(CadastreContent ° FOLLOW(CadastreContent)) = { const, ., lot, } }
-
-
-FOLLOW(LotBlock) = FOLLOW(CadastreContent') = { const, ., lot, } }
-
+FIRST(BlockContent) = { const, <dot>, foreach, if, EPSILON }
 FOLLOW(BlockContent) = { } }
 
-FOLLOW(BlockContent') = FIRST(BlockContent ° FOLLOW(BlockContent)) = { const, ., } }
+FIRST(BlockContent') = { const, <dot>, foreach, if }
+FOLLOW(BlockContent') = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
 
-FOLLOW(RiskBlock) = FOLLOW(ProgramBlock') = { const, cadastre, risk, EPSILON }
+FIRST(LotBlock) = { lot, road, buildingLot, farmLand, forest, meadow, river, lake }
+FOLLOW(LotBlock) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
 
+FIRST(LotSimplifiedArgs) = { ( }
+FOLLOW(LotSimplifiedArgs) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
 
-FOLLOW(ProgramBlock) = FOLLOW(ProgramBlock) = {}
+FIRST(RoadLot) = { road }
+FOLLOW(RoadLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
 
-FOLLOW(ProgramBlock') = FIRST(ProgramBlock ° FOLLOW(ProgramBlock)) = { const, cadastre, risk, EPSILON }
+FIRST(BuildingLot) = { buildingLot }
+FOLLOW(BuildingLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+
+FIRST(FarmLandLot) = { farmLand }
+FOLLOW(FarmLandLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+
+FIRST(ForestLot) = { forest }
+FOLLOW(ForestLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+
+FIRST(MeadowLot) = { meadow }
+FOLLOW(MeadowLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+
+FIRST(RiverLot) = { river }
+FOLLOW(RiverLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+
+FIRST(LakeLot) = { lake }
+FOLLOW(LakeLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+
+FIRST(RiskBlock) = { risk, flood, landSlide, earthQuake }
+FOLLOW(RiskBlock) = { const, cadastre, risk, flood, landSlide, earthQuake }
+
+FIRST(RiskSimplifiedArgs) = { ( }
+FOLLOW(RiskSimplifiedArgs) = { const, cadastre, risk, flood, landSlide, earthQuake }
+
+FIRST(FloodRisk) = { flood }
+FOLLOW(FloodRisk) = { const, cadastre, risk, flood, landSlide, earthQuake }
+
+FIRST(LandSlideRisk) = { landSlide }
+FOLLOW(LandSlideRisk) = { const, cadastre, risk, flood, landSlide, earthQuake }
+
+FIRST(EarthQuakeRisk) = { earthQuake }
+FOLLOW(EarthQuakeRisk) = { const, cadastre, risk, flood, landSlide, earthQuake }
+
+FIRST(ProgramBlock) = { const, cadastre, risk, flood, landSlide, earthQuake, EPSILON }
+FOLLOW(ProgramBlock) = {}
+
+FIRST(ProgramBlock') = { const, cadastre, risk, flood, landSlide, earthQuake }
+FOLLOW(ProgramBlock') = { const, cadastre, risk, flood, landSlide, earthQuake }
