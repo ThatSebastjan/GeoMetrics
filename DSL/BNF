@@ -25,15 +25,21 @@ MulDiv' ::= * NumericType MulDiv'
 
 NumericType ::= - <number>
                 | <number>
-                | (AddSub)
+                | ( AddSub )
                 | ConstNumericType       # Type has to be checked!
 
 
-ConstNumericType ::= <identifier> ConstNumericProperty       # Either a const with numeric value or a point with property access specifier
+ConstNumericType ::= <identifier> ConstNumericProperty       # Either a const with numeric value or a point with property access specifier or a function call
 
-ConstNumericProperty ::= . ConstNumericProperty' | <epsilon>
+ConstNumericProperty ::= . ConstNumericProperty' 
+                         | CallArgs
+                         | <epsilon>
 
 ConstNumericProperty' ::= longitude | latitude
+
+
+CallArgs ::= ( NumericExpr CallArgs' )      # Maybe check if identifier is a function
+CallArgs' ::= , NumericExpr CallArgs' | <epsilon>
 
 
 
@@ -59,6 +65,12 @@ BoundsType ::= PolygonType
                | CircleType
                | BoxType
                | PolyLineType
+               | <identifier> BoundsType'      # Return type has to be checked to be a bounds type!
+
+BoundsType' ::= CallArgs | ConstArrayIndexed
+
+
+ConstArrayIndexed ::= [ <integer> ] | <epsilon>     # Constant type needs to be checked to be imported array
 
 
 ConstDef ::= const <identifier> = ConstValue ;
@@ -75,13 +87,10 @@ PropertyDef ::= . <identifier> : PropertyValue ;
 PropertyValue ::= <number>
                   | <string>
                   | BoundsType
-                  | ConstBoundsType
                   | null
 
 
-ConstBoundsType ::= <identifier> ConstArrayIndexed       # Constant type needs to be checked to be either BoundsType or imported array
 
-ConstArrayIndexed ::= [ <integer> ] | <epsilon>
 
 
 LambdaExpr ::= lambda ( LambdaParams ) { LambdaBody }

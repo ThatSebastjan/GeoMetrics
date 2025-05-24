@@ -1,0 +1,54 @@
+cadastre {
+
+    const cadastreBounds = import "./cadastreBounds.json"; //Import only supports a list of polygons
+
+    .name: "something in cadastre"; // comment
+    .id: "122";
+    .bounds: cadastreBounds[0];
+    .someOtherProperty: null;
+    .testProp: 123;
+
+
+    //Lot -> base type for every other type. Identified by .type property
+    lot {
+        .id: "169/22";
+        .type: BuildingLot;
+        .bounds: Polygon(<1, 2>, <2, 3>, <3, 4>, <1, 2>);
+
+        .property: "something"; //Additional property
+    }
+
+    //Syntactic sugar for "lot" block above
+    road("312/2", PolyLine(1.2, <5, 5>, <6, 5>, <8, 9>));
+    lake("122/1", Circle(<10, 10>, 2));
+
+
+    //Other features
+    const p1 = (1.73, 1.41);
+    const otherVar = (p1.longitude + 2, p1.latitude - 1);
+
+
+    //Foreach loop
+    foreach poly in externData {
+
+        //If statement
+        if(area(poly) > 1000){ //area = inbuilt function
+
+            risk {
+                .type: RiskType;
+                .bounds: poly;
+                .probability: 0.5;
+                .frequency: i / 10;
+            }
+        }
+    }
+
+
+    //Lambda expressions
+    const makeBounds = lambda(x, y, w, h) {
+        return Box(<x, y>, <x + w, y + h>);
+    }
+
+
+    meadow("123/4", makeBounds(10, 10, 12, 14)); //Example usage
+}
