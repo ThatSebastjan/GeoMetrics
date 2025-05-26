@@ -19,6 +19,12 @@ fun main() = runBlocking {
         val landslideCount = Database.landSlideCollection.countDocuments()
         println("✅ Landslide collection access OK - Contains $landslideCount documents")
 
+        val earthquakeCount = Database.earthquakeCollection.countDocuments()
+        println("✅ Earthquake collection access OK - Contains $earthquakeCount documents")
+
+        val fireStationCount = Database.fireStationCollection.countDocuments()
+        println("✅ Fire station collection access OK - Contains $fireStationCount documents")
+
         // Try to fetch some documents (if any)
         if (floodCount > 0) {
             println("\nSample flood document:")
@@ -39,6 +45,34 @@ fun main() = runBlocking {
                 println("Type: ${it.type}")
                 println("Properties: ${it.properties}")
                 println("Geometry coordinates count: ${it.geometry.coordinates.getOrNull(0)?.size ?: 0}")
+            }
+        }
+
+        if (earthquakeCount > 0) {
+            println("\nSample earthquake document:")
+            val earthquake = Database.earthquakeCollection.find().limit(1).toList().firstOrNull()
+            earthquake?.let {
+                println("ID: ${it.id}")
+                println("Type: ${it.type}")
+                println("Timestamp: ${it.properties.timestamp}")
+                println("Magnitude: ${it.properties.magnitude}")
+                println("Depth: ${it.properties.depth}")
+                println("Coordinates: ${it.geometry.coordinates}")
+            }
+        }
+
+        if (fireStationCount > 0) {
+            println("\nSample fire station document:")
+            val fireStation = Database.fireStationCollection.find().limit(1).toList().firstOrNull()
+            fireStation?.let {
+                println("ID: ${it.id}")
+                println("Type: ${it.type}")
+                println("Location: ${it.properties.location}")
+                println("Address: ${it.properties.address}")
+                println("City: ${it.properties.city}")
+                println("Description: ${it.properties.description}")
+                println("Telephone: ${it.properties.telephoneNumber}")
+                println("Coordinates: ${it.geometry.coordinates}")
             }
         }
 
