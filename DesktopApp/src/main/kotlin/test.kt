@@ -27,7 +27,7 @@ fun main() = runBlocking {
                 println("ID: ${it.id}")
                 println("Type: ${it.type}")
                 println("Properties: ${it.properties}")
-                println("Geometry coordinates count: ${it.geometry.coordinates.size}")
+                println("Geometry coordinates count: ${it.geometry.coordinates.getOrNull(0)?.size ?: 0}")
             }
         }
 
@@ -38,7 +38,7 @@ fun main() = runBlocking {
                 println("ID: ${it.id}")
                 println("Type: ${it.type}")
                 println("Properties: ${it.properties}")
-                println("Geometry coordinates count: ${it.geometry.coordinates.size}")
+                println("Geometry coordinates count: ${it.geometry.coordinates.getOrNull(0)?.size ?: 0}")
             }
         }
 
