@@ -78,4 +78,8 @@ class Token(private val lexeme: String, val column: Int, val row: Int, private v
     }
 
     fun isOfType(comparatorType: TokenType) = type == comparatorType
+
+    fun getLexeme() = lexeme
+
+    fun getType() = type
 }

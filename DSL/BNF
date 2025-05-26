@@ -54,11 +54,11 @@ PolygonPoints' ::= , PolygonPoints
                    | <epsilon>
 
 
-CircleType ::= Circle ( PointType , <number> )
+CircleType ::= Circle ( PointType , NumericExpr )
 
 BoxType ::= Box ( PointType , PointType )
 
-PolyLineType ::= PolyLine ( <number> , PolygonPoints )
+PolyLineType ::= PolyLine ( NumericExpr , PolygonPoints )
 
 
 BoundsType ::= PolygonType
@@ -70,7 +70,7 @@ BoundsType ::= PolygonType
 BoundsType' ::= CallArgs | ConstArrayIndexed
 
 
-ConstArrayIndexed ::= [ <integer> ] | <epsilon>     # Constant type needs to be checked to be imported array
+ConstArrayIndexed ::= [ <integer> ] | <epsilon>     # Constant type needs to be checked to be imported array or a bounds constant
 
 
 ConstDef ::= const <identifier> = ConstValue ;

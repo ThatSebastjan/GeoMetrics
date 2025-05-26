@@ -22,11 +22,17 @@ FOLLOW(NumericType) = { ;, >, <, <comma>, ), *, /, +, - }
 FIRST(ConstNumericType) = { <identifier> }
 FOLLOW(ConstNumericType) = { ;, >, <, <comma>, ), *, /, +, - }
 
-FIRST(ConstNumericProperty) = { <dot>, EPSILON }
+FIRST(ConstNumericProperty) = { <dot>, (, EPSILON }
 FOLLOW(ConstNumericProperty) = { ;, >, <, <comma>, ), *, /, +, - }
 
 FIRST(ConstNumericProperty') = { longitude, latitude }
 FOLLOW(ConstNumericProperty') = { ;, >, <, <comma>, ), *, /, +, - }
+
+FIRST(CallArgs) = { ( }
+FOLLOW(CallArgs) = { ;, >, <, <comma>, ), *, /, +, - }
+
+FIRST(CallArgs') = { <comma>, EPSILON }
+FOLLOW(CallArgs') = { ) }
 
 FIRST(PointType) = { < }
 FOLLOW(PointType) = { ;, <comma>, ) }
@@ -49,8 +55,14 @@ FOLLOW(BoxType) = { ), <comma>, ; }
 FIRST(PolyLineType) = { PolyLine }
 FOLLOW(PolyLineType) = { ), <comma>, ; }
 
-FIRST(BoundsType) = { Polygon, Circle, Box, PolyLine }
+FIRST(BoundsType) = { <identifier>, Polygon, Circle, Box, PolyLine }
 FOLLOW(BoundsType) = { ), <comma>, ; }
+
+FIRST(BoundsType') = { (, [, EPSILON }
+FOLLOW(BoundsType') = { ), <comma>, ; }
+
+FIRST(ConstArrayIndexed) = { [, EPSILON }
+FOLLOW(ConstArrayIndexed) = { ), <comma>, ; }
 
 FIRST(ConstDef) = { const }
 FOLLOW(ConstDef) = { cadastre, risk, flood, landSlide, earthQuake, lot, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, }, const, return }
@@ -63,12 +75,6 @@ FOLLOW(PropertyDef) = { lot, const, <dot>, road, buildingLot, farmLand, forest, 
 
 FIRST(PropertyValue) = { <number>, <string>, null, <identifier>, Polygon, Circle, Box, PolyLine }
 FOLLOW(PropertyValue) = { ; }
-
-FIRST(ConstBoundsType) = { <identifier> }
-FOLLOW(ConstBoundsType) = { ; }
-
-FIRST(ConstArrayIndexed) = { [, EPSILON }
-FOLLOW(ConstArrayIndexed) = { ; }
 
 FIRST(LambdaExpr) = { lambda }
 FOLLOW(LambdaExpr) = { ; }
@@ -88,7 +94,7 @@ FOLLOW(ConstDefList) = { return }
 FIRST(ReturnValue) = { return }
 FOLLOW(ReturnValue) = { ; }
 
-FIRST(ReturnType) = { <number>, Polygon, Circle, Box, PolyLine }
+FIRST(ReturnType) = { <number>, <identifier>, Polygon, Circle, Box, PolyLine }
 FOLLOW(ReturnType) = { ; }
 
 FIRST(ForEachLoop) = { foreach }
