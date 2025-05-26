@@ -29,5 +29,5 @@ const fireStationSchema = new Schema({
 fireStationSchema.index({ geometry: "2dsphere" });
 
 
-
-module.exports = mongoose.model("fireStations", fireStationSchema);
+const fsModel = mongoose.model("fireStations", fireStationSchema);
+module.exports = fsModel;

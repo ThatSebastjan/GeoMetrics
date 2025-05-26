@@ -27,5 +27,5 @@ const earthquakeSchema = new Schema({
 earthquakeSchema.index({ geometry: "2dsphere" });
 
 
-
-module.exports = mongoose.model("earthquakes", earthquakeSchema);
+const eqModel = mongoose.model("earthquakes", earthquakeSchema);
+module.exports = eqModel;

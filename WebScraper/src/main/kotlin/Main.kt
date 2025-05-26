@@ -89,9 +89,9 @@ fun scrapeEarthQuakes(): List<EarthQuake> {
                 htmlDocument {
 
                     val results = mutableListOf<Deferred<EarthQuake>>()
-                    val earthquakes = findFirst("tbody").children.drop(1)
+                    val earthquakes = findFirst("tbody").children
 
-                    val batchSize = 10
+                    val batchSize = 20
 
                     // Process earthquakes in batches
                     earthquakes.chunked(batchSize).forEachIndexed { batchIndex, batch ->
