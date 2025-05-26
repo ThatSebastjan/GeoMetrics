@@ -1,36 +1,50 @@
+import it.skrape.core.document
 import it.skrape.core.htmlDocument
 import it.skrape.fetcher.*
 import it.skrape.selects.html5.*
+import kotlinx.coroutines.*
+import kotlin.math.ceil
 
 
-data class Mountain(val name: String, val height: Int, val mountainRange: String, val municipality: String)
-data class Settlement(val name: String, val municipality: String, val postNumber: String, val postName: String)
+data class FireStation(
+    val longitude: Double,
+    val latitude: Double,
+    val location: String,
+    val address: String,
+    val city: String,
+    val description: String,
+    val telephoneNum: String
+)
+
+data class EarthQuake(
+    val timestamp: Number,
+    val magnitude: Double,
+    val depth: Double,
+    val longitude: Double,
+    val latitude: Double
+)
 
 
-fun scrapeMountains(): List<Mountain> {
-    val list = mutableListOf<Mountain>()
+
+fun scrapeFireStations(): List<FireStation> {
+    val list = mutableListOf<FireStation>()
 
     skrape(HttpFetcher) {
         request {
-            url = "https://en.wikipedia.org/wiki/List_of_mountains_in_Slovenia"
+            url = "https://gasilec.net/wp-content/plugins/superstorefinder-wp/ssf-wp-xml.php?wpml_lang=&t=1748199266390"
         }
 
         response {
-            htmlDocument {
-                tbody {
-                    findFirst {
-                        findAll("tr").drop(1).map {
-                            val name = it.findByIndex(0, "td").text
-                            val height = it.findByIndex(1, "td").text.toIntOrNull()
-                            val mountainRange = it.findByIndex(2, "td").text
-                            val municipality = it.findByIndex(3, "td").text
+            document.findFirst("locator").findFirst("store").children.forEach {
+                val loc = it.findFirst("location").text
+                val address = it.findFirst("address").text.trim()
+                val city = it.findFirst("city").text.trim()
+                val latitude = it.findFirst("latitude").text.toDouble()
+                val longitude = it.findFirst("longitude").text.toDouble()
+                val description = it.findFirst("description").text
+                val telephoneNum = it.findFirst("telephone").text
 
-                            if(height != null) {
-                                list.add(Mountain(name, height, when(mountainRange){"" -> "N/A" else -> mountainRange}, when(municipality){"" -> "N/A" else -> municipality}))
-                            }
-                        }
-                    }
-                }
+                list.add(FireStation(longitude, latitude, loc, address, city, description, telephoneNum))
             }
         }
     }
@@ -39,55 +53,72 @@ fun scrapeMountains(): List<Mountain> {
 }
 
 
-fun scrapeSettlements(): List<Settlement> {
-    val list = mutableListOf<Settlement>()
-    val links = mutableListOf<String>()
-    val baseUrl = "https://sl.wikipedia.org"
 
-    skrape(HttpFetcher) {
-        request {
-            url = "$baseUrl/wiki/Seznam_naselij_v_Sloveniji"
-        }
+fun scrapeEarthQuakes(): List<EarthQuake> {
+    val list = mutableListOf<EarthQuake>()
 
-        response {
-            htmlDocument {
-                findFirst("a.mw-selflink"){
-                    parent.children[1].children.forEach {
-                        links.add(it.attribute("href"))
-                    }
-                }
-            }
-        }
-    }
-
-
-    for(link in links){
-        val currentUrl = "$baseUrl$link"
-        println("Grabbing: $currentUrl")
+    suspend fun scrapePos(pageUrl: String): Pair<Double, Double> {
+        var result = Pair(0.0, 0.0)
 
         skrape(HttpFetcher) {
             request {
-                url = currentUrl
+                url = pageUrl
             }
 
             response {
                 htmlDocument {
-                    tbody {
-                        findFirst {
-                            findAll("tr").drop(1).map {
+                    val tbody = findFirst("tbody")
+                    val lon = tbody.children[3].children[1].text.toDouble()
+                    val lat = tbody.children[4].children[1].text.toDouble()
 
-                                val name = it.findByIndex(1, "td").text
-                                val municipality = it.findByIndex(2, "td").text
-                                val postNumber = it.findByIndex(3, "td").text
-                                val postName = when(it.children.size) {
-                                    5 -> it.findByIndex(4, "td").text
-                                    else -> "N/A"
-                                }
+                    result = Pair(lon, lat)
+                }
+            }
+        }
 
-                                list.add(Settlement(name, municipality, postNumber, postName))
+        return result
+    }
 
+    runBlocking {
+        skrape(HttpFetcher) {
+            request {
+                url = "https://www.potresi.com/country/slovenia"
+            }
+
+            response {
+                htmlDocument {
+
+                    val results = mutableListOf<Deferred<EarthQuake>>()
+                    val earthquakes = findFirst("tbody").children.drop(1)
+
+                    val batchSize = 10
+
+                    // Process earthquakes in batches
+                    earthquakes.chunked(batchSize).forEachIndexed { batchIndex, batch ->
+
+                        println("Grabbing earthquake batch $batchIndex / ${ceil((earthquakes.size / batchSize).toDouble())}")
+
+                        // Wait for the current batch to complete before starting the next
+                        val batchResults = batch.map { earthquake ->
+                            async(Dispatchers.IO) {
+
+                                val timestamp = earthquake.children[0].attribute("data-order").toLong() * 1000
+                                val magnitude = earthquake.children[1].findFirst("span").text.toDouble()
+                                val detailsUrl = earthquake.children[2].findFirst("a").attribute("href")
+                                val depth = earthquake.children[3].text.split(" ")[0].toDouble()
+                                val coords = scrapePos(detailsUrl)
+
+                                EarthQuake(timestamp, magnitude, depth, coords.first, coords.second)
                             }
                         }
+                        results.addAll(batchResults)
+                        runBlocking {
+                            batchResults.awaitAll() // Wait for current batch to complete before starting next batch
+                        }
+                    }
+                    // Collect all results
+                    runBlocking {
+                        list.addAll(results.awaitAll())
                     }
                 }
             }
@@ -98,10 +129,11 @@ fun scrapeSettlements(): List<Settlement> {
 }
 
 
-fun main() {
-    val mountains = scrapeMountains()
-    for(m in mountains) println(m)
 
-    val settlements = scrapeSettlements()
-    for (s in settlements) println(s)
+fun main() {
+    val fireStations = scrapeFireStations()
+    for (f in fireStations) println(f)
+
+    val earthQuakes = scrapeEarthQuakes()
+    for (e in earthQuakes) println(e)
 }
