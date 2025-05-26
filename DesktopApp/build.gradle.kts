@@ -1,9 +1,12 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
-    kotlin("jvm")
+    // Specify the Kotlin JVM plugin with a version
+    kotlin("jvm") version "2.0.0"
     id("org.jetbrains.compose")
     id("org.jetbrains.kotlin.plugin.compose")
+    // Add the serialization plugin with the same Kotlin version
+    kotlin("plugin.serialization") version "2.0.0"
 }
 
 group = "org.example"
@@ -16,11 +19,17 @@ repositories {
 }
 
 dependencies {
-    // Note, if you develop a library, you should use compose.desktop.common.
-    // compose.desktop.currentOs should be used in launcher-sourceSet
-    // (in a separate module for demo project and in testMain).
-    // With compose.desktop.common you will also lose @Preview functionality
+    // Compose for Desktop
     implementation(compose.desktop.currentOs)
+
+    // Kotlin Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+
+    // MongoDB Kotlin Driver with coroutine support
+    implementation("org.mongodb:mongodb-driver-kotlin-coroutine:4.11.0")
+
+    // Kotlin coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 }
 
 compose.desktop {
