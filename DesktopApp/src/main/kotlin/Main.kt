@@ -127,54 +127,6 @@ fun EditableLocationRiskRow(
 }
 
 @Composable
-fun ParserTab(
-    parsedData: List<LocationRisk>,
-    onUpdate: (LocationRisk) -> Unit,
-    onDelete: (LocationRisk) -> Unit,
-    onSend: (List<LocationRisk>) -> Unit
-) {
-    var filter by remember { mutableStateOf("") }
-    val filtered = parsedData.filter {
-        it.landslideRisk.toString().contains(filter, true) ||
-                it.floodRisk.toString().contains(filter, true) ||
-                it.earthquakeRisk.toString().contains(filter, true)
-    }
-
-    Column(Modifier.padding(16.dp)) {
-        Text("Data Parser", style = MaterialTheme.typography.h6)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextField(
-                value = filter,
-                onValueChange = { filter = it },
-                label = { Text("Filter by risk") }
-            )
-            Spacer(Modifier.width(8.dp))
-        }
-        Spacer(Modifier.height(8.dp))
-        Box(
-            modifier = Modifier
-                .height(250.dp)
-                .fillMaxWidth()
-                .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f))
-                .padding(8.dp)
-        ) {
-            LazyColumn {
-                items(filtered) { loc ->
-                    EditableLocationRiskRow(
-                        location = loc,
-                        onUpdate = onUpdate,
-                        onDelete = { onDelete(loc) }
-                    )
-                }
-            }
-        }
-        Button(onClick = { onSend(filtered) }, Modifier.padding(top = 8.dp)) {
-            Text("Send to DB (simulation)")
-        }
-    }
-}
-
-@Composable
 fun GeneratorTab(
     locations: List<LocationRisk>,
     onAdd: (LocationRisk) -> Unit,
@@ -195,7 +147,6 @@ fun GeneratorTab(
 
     Column(Modifier.padding(16.dp)) {
         Text("Data Generator", style = MaterialTheme.typography.h6)
-        // Manual entry
         Row(Modifier.padding(vertical = 8.dp)) {
             TextField(
                 value = landslideRisk,
@@ -238,7 +189,6 @@ fun GeneratorTab(
                 }
             }, enabled = validRisk(landslideRisk) && validRisk(floodRisk) && validRisk(earthquakeRisk)) { Text("Add") }
         }
-        // List of manually added locations
         Text("Manually added locations:")
         LazyColumn {
             items(locations) { loc ->
@@ -251,7 +201,6 @@ fun GeneratorTab(
             }
         }
         Spacer(Modifier.height(16.dp))
-        // Generator
         Text("Generate random data:")
         Row {
             TextField(
@@ -323,7 +272,6 @@ fun GeneratorTab(
 @Preview
 fun App() {
     var locations by remember { mutableStateOf(listOf<LocationRisk>()) }
-    var parsedData by remember { mutableStateOf(listOf<LocationRisk>()) }
     var generatedData by remember { mutableStateOf(listOf<LocationRisk>()) }
     var tabIndex by remember { mutableStateOf(0) }
     var dbStatus by remember { mutableStateOf("Unknown") }
@@ -335,8 +283,7 @@ fun App() {
                 modifier = Modifier.height(64.dp)
             ) {
                 Tab(selected = tabIndex == 0, onClick = { tabIndex = 0 }) { Text("Management") }
-                Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }) { Text("Scraper") }
-                Tab(selected = tabIndex == 2, onClick = { tabIndex = 2 }) { Text("Generator") }
+                Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }) { Text("Generator") }
             }
             when (tabIndex) {
                 0 -> DataManagerTab(
@@ -345,17 +292,7 @@ fun App() {
                     onCheckDb = { dbStatus = if (locations.isNotEmpty()) "Up to date" else "Not up to date" },
                     onUpdateDb = { dbStatus = "DB updated" }
                 )
-                1 -> ParserTab(
-                    parsedData = parsedData,
-                    onUpdate = { updated ->
-                        parsedData = parsedData.map { if (it.id == updated.id) updated else it }
-                    },
-                    onDelete = { toDelete ->
-                        parsedData = parsedData.filter { it.id != toDelete.id }
-                    },
-                    onSend = { toAdd -> locations = locations + toAdd }
-                )
-                2 -> GeneratorTab(
+                1 -> GeneratorTab(
                     locations = locations,
                     onAdd = { locations = locations + it },
                     onDelete = { locations = locations - it },
