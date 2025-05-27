@@ -24,8 +24,8 @@ cadastre {
 
 
     //Other features
-    const p1 = (1.73, 1.41);
-    const otherVar = (p1.longitude + 2, p1.latitude - 1);
+    const p1 = <1.73, 1.41>;
+    const otherVar = <p1.longitude + 2, p1.latitude - 1>;
 
 
     //Foreach loop
@@ -38,7 +38,7 @@ cadastre {
                 .type: RiskType;
                 .bounds: poly;
                 .probability: 0.5;
-                .frequency: i / 10;
+                .frequency: 0.3;
             }
         }
     }
@@ -47,7 +47,7 @@ cadastre {
     //Lambda expressions
     const makeBounds = lambda(x, y, w, h) {
         return Box(<x, y>, <x + w, y + h>);
-    }
+    };
 
 
     meadow("123/4", makeBounds(10, 10, 12, 14)); //Example usage

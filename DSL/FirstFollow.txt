@@ -1,5 +1,5 @@
-FIRST(Start) = { const, cadastre, risk, flood, landSlide, earthQuake, EPSILON }
-FOLLOW(Start) = {}
+FIRST(Start) = { const, cadastre, risk, flood, landSlide, earthQuake, foreach, if, EPSILON }
+FOLLOW(Start) = {  }
 
 FIRST(NumericExpr) = { -, <number>, (, <identifier> }
 FOLLOW(NumericExpr) = { ;, >, <, <comma>, ) }
@@ -65,15 +65,15 @@ FIRST(ConstArrayIndexed) = { [, EPSILON }
 FOLLOW(ConstArrayIndexed) = { ), <comma>, ; }
 
 FIRST(ConstDef) = { const }
-FOLLOW(ConstDef) = { cadastre, risk, flood, landSlide, earthQuake, lot, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, }, const, return }
+FOLLOW(ConstDef) = { cadastre, <dot>, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, }, const, return }
 
-FIRST(ConstValue) = { import, <, Polygon, lambda, -, <number>, (, <identifier> }
+FIRST(ConstValue) = { import, <, Polygon, Circle, Box, PolyLine, lambda, -, <number>, (, <identifier> }
 FOLLOW(ConstValue) = { ; }
 
 FIRST(PropertyDef) = { <dot> }
-FOLLOW(PropertyDef) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(PropertyDef) = { const, <dot>, lot, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, } }
 
-FIRST(PropertyValue) = { <number>, <string>, null, <identifier>, Polygon, Circle, Box, PolyLine }
+FIRST(PropertyValue) = { <number>, <integer>, <string>, null, <identifier>, Polygon, Circle, Box, PolyLine }
 FOLLOW(PropertyValue) = { ; }
 
 FIRST(LambdaExpr) = { lambda }
@@ -98,16 +98,22 @@ FIRST(ReturnType) = { <number>, <identifier>, Polygon, Circle, Box, PolyLine }
 FOLLOW(ReturnType) = { ; }
 
 FIRST(ForEachLoop) = { foreach }
-FOLLOW(ForEachLoop) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(ForEachLoop) = { cadastre, <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(IfStatement) = { if }
-FOLLOW(IfStatement) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(IfStatement) = { cadastre, <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(ElseBlock) = { else, EPSILON }
-FOLLOW(ElseBlock) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(ElseBlock) = { cadastre, <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
+
+FIRST(ControlFlowBlockContent) = { const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, EPSILON }
+FOLLOW(ControlFlowBlockContent) = { } }
+
+FIRST(ControlFlowBlockContent') = { const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake }
+FOLLOW(ControlFlowBlockContent') = { const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(ControlFlowDef) = { foreach, if }
-FOLLOW(ControlFlowDef) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(ControlFlowDef) = { cadastre, <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(BooleanExpr) = { -, <number>, (, <identifier> }
 FOLLOW(BooleanExpr) = { ) }
@@ -116,64 +122,61 @@ FIRST(BooleanOperator) = { >, < }
 FOLLOW(BooleanOperator) = { -, <number>, (, <identifier> }
 
 FIRST(CadastreBlock) = { cadastre }
-FOLLOW(CadastreBlock) = { const, cadastre, risk, flood, landSlide, earthQuake }
+FOLLOW(CadastreBlock) = { const, cadastre, risk, flood, landSlide, earthQuake, foreach, if }
 
-FIRST(CadastreContent) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, EPSILON }
+FIRST(CadastreContent) = { const, <dot>, lot, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, EPSILON }
 FOLLOW(CadastreContent) = { } }
 
-FIRST(CadastreContent') = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if }
-FOLLOW(CadastreContent') = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FIRST(CadastreContent') = { const, <dot>, lot, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake }
+FOLLOW(CadastreContent') = { const, <dot>, lot, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, } }
 
-FIRST(BlockContent) = { const, <dot>, foreach, if, EPSILON }
-FOLLOW(BlockContent) = { } }
-
-FIRST(BlockContent') = { const, <dot>, foreach, if }
-FOLLOW(BlockContent') = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FIRST(PropertyDefList) = { <dot>, EPSILON }
+FOLLOW(PropertyDefList) = { } }
 
 FIRST(LotBlock) = { lot, road, buildingLot, farmLand, forest, meadow, river, lake }
-FOLLOW(LotBlock) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(LotBlock) = { <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(LotSimplifiedArgs) = { ( }
-FOLLOW(LotSimplifiedArgs) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(LotSimplifiedArgs) = { <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(RoadLot) = { road }
-FOLLOW(RoadLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(RoadLot) = { <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(BuildingLot) = { buildingLot }
-FOLLOW(BuildingLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(BuildingLot) = { <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(FarmLandLot) = { farmLand }
-FOLLOW(FarmLandLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(FarmLandLot) = { <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(ForestLot) = { forest }
-FOLLOW(ForestLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(ForestLot) = { <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(MeadowLot) = { meadow }
-FOLLOW(MeadowLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(MeadowLot) = { <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(RiverLot) = { river }
-FOLLOW(RiverLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(RiverLot) = { <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(LakeLot) = { lake }
-FOLLOW(LakeLot) = { lot, const, <dot>, road, buildingLot, farmLand, forest, meadow, river, lake, foreach, if, } }
+FOLLOW(LakeLot) = { <dot>, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(RiskBlock) = { risk, flood, landSlide, earthQuake }
-FOLLOW(RiskBlock) = { const, cadastre, risk, flood, landSlide, earthQuake }
+FOLLOW(RiskBlock) = { cadastre, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(RiskSimplifiedArgs) = { ( }
-FOLLOW(RiskSimplifiedArgs) = { const, cadastre, risk, flood, landSlide, earthQuake }
+FOLLOW(RiskSimplifiedArgs) = { cadastre, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(FloodRisk) = { flood }
-FOLLOW(FloodRisk) = { const, cadastre, risk, flood, landSlide, earthQuake }
+FOLLOW(FloodRisk) = { cadastre, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(LandSlideRisk) = { landSlide }
-FOLLOW(LandSlideRisk) = { const, cadastre, risk, flood, landSlide, earthQuake }
+FOLLOW(LandSlideRisk) = { cadastre, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
 FIRST(EarthQuakeRisk) = { earthQuake }
-FOLLOW(EarthQuakeRisk) = { const, cadastre, risk, flood, landSlide, earthQuake }
+FOLLOW(EarthQuakeRisk) = { cadastre, const, lot, risk, foreach, if, road, buildingLot, farmLand, forest, meadow, river, lake, flood, landSlide, earthQuake, } }
 
-FIRST(ProgramBlock) = { const, cadastre, risk, flood, landSlide, earthQuake, EPSILON }
-FOLLOW(ProgramBlock) = {}
+FIRST(ProgramBlock) = { const, cadastre, risk, flood, landSlide, earthQuake, foreach, if, EPSILON }
+FOLLOW(ProgramBlock) = {  }
 
-FIRST(ProgramBlock') = { const, cadastre, risk, flood, landSlide, earthQuake }
-FOLLOW(ProgramBlock') = { const, cadastre, risk, flood, landSlide, earthQuake }
+FIRST(ProgramBlock') = { const, cadastre, risk, flood, landSlide, earthQuake, foreach, if }
+FOLLOW(ProgramBlock') = { const, cadastre, risk, flood, landSlide, earthQuake, foreach, if }

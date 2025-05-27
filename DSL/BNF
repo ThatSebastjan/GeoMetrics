@@ -50,7 +50,7 @@ PolygonType ::= Polygon ( PolygonPoints )
 
 PolygonPoints ::= PointType PolygonPoints'
 
-PolygonPoints' ::= , PolygonPoints
+PolygonPoints' ::= , PointType PolygonPoints'
                    | <epsilon>
 
 
@@ -78,6 +78,9 @@ ConstDef ::= const <identifier> = ConstValue ;
 ConstValue ::= NumericExpr
                | PointType
                | PolygonType
+               | CircleType
+               | BoxType
+               | PolyLineType
                | import <string>
                | LambdaExpr
 
@@ -85,6 +88,7 @@ ConstValue ::= NumericExpr
 PropertyDef ::= . <identifier> : PropertyValue ;
 
 PropertyValue ::= <number>
+                  | <integer>
                   | <string>
                   | BoundsType
                   | null
@@ -104,7 +108,7 @@ LambdaBody ::= ConstDefList ReturnValue ;        # We either have some constant 
 
 ConstDefList ::= ConstDef ConstDefList | <epsilon>      # List of 0 or more ConstDef-s
 
-ReturnValue ::= return ReturnType ;
+ReturnValue ::= return ReturnType
 
 ReturnType ::= <number> | BoundsType
 
@@ -112,13 +116,21 @@ ReturnType ::= <number> | BoundsType
 
 # Flow control
 
-ForEachLoop ::= foreach <identifier> in <identifier> { BlockContent }
+ForEachLoop ::= foreach <identifier> in <identifier> { ControlFlowBlockContent }
 
 
-IfStatement ::= if ( BooleanExpr ) { BlockContent } ElseBlock
+IfStatement ::= if ( BooleanExpr ) { ControlFlowBlockContent } ElseBlock
 
-ElseBlock ::= else { BlockContent }       # else block is optional
+ElseBlock ::= else { ControlFlowBlockContent }       # else block is optional
               | <epsilon>
+
+
+ControlFlowBlockContent ::= ControlFlowBlockContent' ControlFlowBlockContent | <epsilon>        # This allows for empty blocks
+
+ControlFlowBlockContent' ::= ConstDef
+                           | ControlFlowDef
+                           | LotBlock          # Block type has to be checked at runtime; Cannot define risk in cadastre or lot in global scope
+                           | RiskBlock
 
 
 ControlFlowDef ::= ForEachLoop
@@ -138,20 +150,18 @@ CadastreBlock ::= cadastre { CadastreContent }
 
 CadastreContent ::= CadastreContent' CadastreContent | <epsilon>       # This allows for empty cadastre blocks which will have to be checked for
 
-CadastreContent' ::= BlockContent'
+CadastreContent' ::= ConstDef
+                     | PropertyDef
+                     | ControlFlowDef
                      | LotBlock
 
 
 
-BlockContent ::= BlockContent' BlockContent | <epsilon>         # This allows for empty blocks!
-
-BlockContent' ::= ConstDef
-                | PropertyDef
-                | ControlFlowDef
+PropertyDefList ::= PropertyDef PropertyDefList | <epsilon>
 
 
 # Lot block and syntactic sugar for it
-LotBlock ::= lot { BlockContent }
+LotBlock ::= lot { PropertyDefList }
              | RoadLot
              | BuildingLot
              | FarmLandLot
@@ -172,7 +182,7 @@ LakeLot ::= lake LotSimplifiedArgs
 
 
 # Risk block with syntactic sugar
-RiskBlock ::= risk { BlockContent }
+RiskBlock ::= risk { PropertyDefList }
               | FloodRisk
               | LandSlideRisk
               | EarthQuakeRisk
@@ -189,6 +199,7 @@ ProgramBlock ::= ProgramBlock' ProgramBlock | <epsilon>
 ProgramBlock' ::= ConstDef
                   | CadastreBlock
                   | RiskBlock
+                  | ControlFlowDef
 
 
 

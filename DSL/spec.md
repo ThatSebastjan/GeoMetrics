@@ -37,7 +37,7 @@ Data types:
     -RiskType:
         Flood,
         LandSlide,
-        EarthQuake
+        Earthquake
 
     
 ```
@@ -83,29 +83,11 @@ cadastre {
     const otherVar = (p1.longitude + 2, p1.latitude - 1);
 
 
-    const externData = import "./extern.json";
-
-
-    //Foreach loop
-    foreach poly in externData {
-        
-        //If statement
-        if(area(poly) > 1000){ //area = inbuilt function
-
-            risk {
-                .type: RiskType;
-                .bounds: poly;
-                .probability: 0.5;
-                .frequency: i / 10;
-            }
-        }
-    }
-
-
+    
     //Lambda expressions
     const makeBounds = lambda(x, y, w, h) {
         return Box((x, y), (x + w, y + h));
-    }
+    };
 
     meadow("123/4", makeBounds(10, 10, 12, 14)); //Example usage
 
@@ -124,6 +106,27 @@ risk {
 flood(Bounds, Fraction, Fraction);      //bounds, probability, frequency
 landSlide(Bounds, Fraction, Fraction);
 earthQuake(Bounds, Fraction, Fraction);
+
+
+
+const externData = import "./extern.json";
+
+//Foreach loop
+foreach poly in externData {
+    
+    //If statement
+    if(area(poly) > 1000){ //area = inbuilt function
+
+        risk {
+            .type: RiskType;
+            .bounds: poly;
+            .probability: 0.5;
+            .frequency: i / 10;
+        }
+    }
+}
+
+
 ```
 
 
