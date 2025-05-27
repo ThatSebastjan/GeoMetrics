@@ -9,6 +9,7 @@ const colors = {
     secondaryLight: '#a8a8a8',
     secondarySuperLight: '#eeeeee',
     danger: '#f44336',
+    warning: '#dd6b20',
     dangerDark: '#d32f2f',
     error: '#fdedee',
     errorText: '#d32f2f',
@@ -46,60 +47,104 @@ const borderRadius = {
 };
 
 const loginStyles = {
-    Container: styled.div`
+        Container: styled.div`
         display: flex;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
-        background-color: ${colors.light};
+        background: linear-gradient(135deg, ${colors.secondary} 0%, ${colors.white} 100%);
     `,
 
     FormWrapper: styled.div`
         width: 100%;
-        max-width: 400px;
-        padding: ${spacing.xl};
+        max-width: 600px; 
+        padding: ${spacing.xl} ${spacing.xl} ${spacing.xl};
         background-color: ${colors.white};
         border-radius: ${borderRadius.medium};
-        box-shadow: ${shadows.medium};
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08), 0 5px 10px rgba(0, 0, 0, 0.05);
+        position: relative;
+    `,
+
+    LogoSection: styled.div`
+        text-align: center;
+        margin-bottom: ${spacing.xl};
+    `,
+
+    LogoText: styled.h1`
+        font-size: 2.5rem; /* Increased from 2.2rem */
+        font-weight: 700;
+        color: ${colors.primary};
+        margin: 0;
+        letter-spacing: -0.5px;
+    `,
+
+    AppDescription: styled.p`
+        color: ${colors.textMedium};
+        font-size: 1.1rem; /* Increased from 1rem */
+        margin: ${spacing.xs} 0 0;
+        padding-bottom: ${spacing.xl};
     `,
 
     FormTitle: styled.h2`
         text-align: center;
         margin-bottom: ${spacing.lg};
-        color: ${colors.text};
+        color: ${colors.textDark};
+        font-weight: 600;
+        font-size: 1.5rem;
     `,
 
     FormGroup: styled.div`
-        margin-bottom: ${spacing.md};
+        margin-bottom: ${spacing.lg};
+        text-align: left;
+        width: 60%;
+        margin-left: auto;
+        margin-right: auto;
     `,
 
     Label: styled.label`
         display: block;
         margin-bottom: ${spacing.xs};
         font-weight: 500;
+        color: ${colors.textDark};
+        font-size: 0.95rem;
     `,
 
     Input: styled.input`
         width: 100%;
-        padding: ${spacing.sm};
+        padding: ${spacing.md};
         border: 1px solid ${colors.border};
         border-radius: ${borderRadius.small};
         font-size: 1rem;
+        transition: all 0.2s;
+        height: 48px; /* Fixed height for consistency */
+        box-sizing: border-box;
+
+        &:focus {
+            outline: none;
+            border-color: ${colors.primary};
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
     `,
 
     SubmitButton: styled.button`
-        width: 100%;
-        padding: ${spacing.sm};
+        width: 40%;
+        padding: ${spacing.md};
         background-color: ${colors.primary};
         color: ${colors.white};
         border: none;
         border-radius: ${borderRadius.small};
-        font-size: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
         cursor: pointer;
-        margin-top: ${spacing.md};
+        margin-top: ${spacing.xl};
+        transition: background-color 0.2s;
+        height: 50px;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
 
         &:hover {
-            background-color: ${colors.primaryDark};
+            background-color: ${colors.primaryLight};
         }
 
         &:disabled {
@@ -114,11 +159,19 @@ const loginStyles = {
         padding: ${spacing.sm};
         border-radius: ${borderRadius.small};
         margin-bottom: ${spacing.md};
+        font-size: 0.9rem;
+        text-align: center;
     `,
 
     FormSwitch: styled.div`
-        margin-top: ${spacing.lg};
+        margin-top: ${spacing.xl};
         text-align: center;
+        color: ${colors.textMedium};
+
+        p {
+            margin-bottom: ${spacing.xs};
+            font-size: 0.95rem;
+        }
     `,
 
     SwitchButton: styled.button`
@@ -127,17 +180,13 @@ const loginStyles = {
         color: ${colors.primary};
         cursor: pointer;
         font-size: 1rem;
-        text-decoration: underline;
+        font-weight: 500;
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+        }
     `,
-};
-
-// Dashboard styles
-const dashboardStyles = {
-
-
-
-
-
 };
 
 const commonStyles = {
@@ -218,8 +267,9 @@ const commonStyles = {
 
 // Add this to settingsStyles object
     Button: styled.button`
-        background: ${props => props.$secondary ? '#f1f1f1' : colors.primary};
-        color: ${props => props.$secondary ? '#333' : 'white'};
+        background: ${props => props.$secondary ? colors.secondaryLight: colors.primary};
+        // color: ${props => props.$secondary ? '#333' : 'white'};
+        color: white;
         border: none;
         padding: ${spacing.sm} ${spacing.md};
         border-radius: ${borderRadius.small};
@@ -227,7 +277,7 @@ const commonStyles = {
         cursor: pointer;
 
         &:hover {
-            background: ${props => props.$secondary ? '#e1e1e1' : colors.primaryDark};
+            background: ${props => props.$secondary ? colors.secondary : colors.primarySuperLight};
         }
 
         &:disabled {
@@ -725,7 +775,7 @@ const resultStyles = {
         width: 100%;
         min-width: 450px;
         height: auto;
-        max-height: ${props => props.$isFullScreen ? '90vh' : '180px'};
+        max-height: ${props => props.$isFullScreen ? '95vh' : '180px'};
         z-index: 1;
         overflow-y: visible;
         overflow-x: visible;
@@ -817,6 +867,300 @@ const resultStyles = {
         transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         border-top: ${props => props.$isFullScreen ? `1px solid ${colors.border}` : 'none'};
     `,
+
+    // Add these to resultStyles object
+    ResultsGrid: styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: ${spacing.lg};
+    width: 100%;
+`,
+
+    ResultCard: styled.div`
+    background-color: ${colors.white};
+    border-radius: ${borderRadius.medium};
+    box-shadow: ${shadows.small};
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: ${shadows.medium};
+    }
+`,
+
+    ResultCardHeader: styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: ${spacing.md};
+    border-bottom: 1px solid ${colors.border};
+`,
+
+    ResultTitle: styled.h3`
+    margin: 0;
+    font-size: 1.2rem;
+    color: ${colors.textDark};
+`,
+
+    ScoreBadge: styled.div`
+    background-color: ${props => {
+        const score = props.score;
+        if (score >= 90) return colors.success;
+        if (score >= 70) return 'orange';
+        return colors.danger;
+    }};
+    color: white;
+    font-weight: bold;
+    padding: ${spacing.xs} ${spacing.sm};
+    border-radius: ${borderRadius.small};
+`,
+
+    ResultAddress: styled.div`
+    display: flex;
+    align-items: center;
+    gap: ${spacing.xs};
+    padding: ${spacing.sm} ${spacing.md};
+    font-size: 0.9rem;
+    color: ${colors.textMedium};
+`,
+
+    MapContainer: styled.div`
+    width: 100%;
+    height: 200px;
+    border-top: 1px solid ${colors.border};
+    border-bottom: 1px solid ${colors.border};
+    overflow: hidden;
+`,
+
+    ResultSummary: styled.div`
+    padding: ${spacing.md};
+`,
+
+    SummaryTitle: styled.h4`
+    margin: 0 0 ${spacing.xs} 0;
+    color: ${colors.textDark};
+`,
+
+    ResultActions: styled.div`
+    display: flex;
+    justify-content: center;
+    padding: ${spacing.md};
+    border-top: 1px solid ${colors.border};
+`,
+
+    // Add these to resultStyles object
+
+// Detail page layout
+    DetailGrid: styled.div`
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: ${spacing.lg};
+  width: 100%;
+  
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+`,
+
+    DetailMainSection: styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${spacing.md};
+`,
+
+    DetailSidebar: styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${spacing.md};
+`,
+
+// Cards
+    DetailCard: styled.div`
+  background-color: ${colors.white};
+  border-radius: ${borderRadius.medium};
+  box-shadow: ${shadows.small};
+  overflow: hidden;
+  margin-bottom: ${spacing.md};
+`,
+
+    DetailCardHeader: styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: ${spacing.md};
+  border-bottom: 1px solid ${colors.border};
+  background-color: ${colors.lightGray};
+`,
+
+    DetailCardTitle: styled.h3`
+  margin: 0;
+  font-size: 1.2rem;
+  color: ${colors.textDark};
+  font-weight: 600;
+`,
+
+    DetailCardContent: styled.div`
+  padding: ${spacing.md};
+`,
+
+// Risk metrics
+    RiskMetricsGrid: styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: ${spacing.md};
+  margin-top: ${spacing.lg};
+`,
+
+    RiskMetricCard: styled.div`
+  background-color: ${props => {
+        const risk = props.risk;
+        if (risk < 30) return 'rgba(56, 161, 105, 0.1)';
+        if (risk < 70) return 'rgba(221, 107, 32, 0.1)';
+        return 'rgba(229, 62, 62, 0.1)';
+    }};
+  padding: ${spacing.md};
+  border-radius: ${borderRadius.small};
+  position: relative;
+`,
+
+    RiskMetricTitle: styled.h4`
+  margin: 0 0 ${spacing.xs} 0;
+  font-size: 0.9rem;
+  color: ${colors.textDark};
+  font-weight: 500;
+`,
+
+    RiskMetricValue: styled.div`
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: ${spacing.sm};
+`,
+
+    RiskMetricBar: styled.div`
+  height: 6px;
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  
+  &:after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: ${props => props.risk}%;
+    background-color: ${props => {
+        const risk = props.risk;
+        if (risk < 30) return colors.success;
+        if (risk < 70) return '#dd6b20';
+        return colors.danger;
+    }};
+    border-radius: 3px;
+  }
+`,
+
+// Map
+    MapDetailContainer: styled.div`
+  width: 100%;
+  height: 250px;
+  border-bottom: 1px solid ${colors.border};
+  overflow: hidden;
+`,
+
+    AddressDetail: styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${spacing.xs};
+  font-size: 1rem;
+  color: ${colors.textMedium};
+  padding: ${spacing.sm} 0;
+`,
+
+// Detail sections
+    DetailSection: styled.div`
+  margin-bottom: ${spacing.lg};
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`,
+
+    DetailSectionTitle: styled.h4`
+  margin: 0 0 ${spacing.sm} 0;
+  font-size: 1.1rem;
+  color: ${colors.textDark};
+  font-weight: 500;
+`,
+
+// Property info
+    PropertyInfoList: styled.ul`
+  list-style: none;
+  padding: 0;
+  margin: 0;
+`,
+
+    PropertyInfoItem: styled.li`
+  display: flex;
+  padding: ${spacing.xs} 0;
+  border-bottom: 1px solid ${colors.border};
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`,
+
+    PropertyInfoLabel: styled.span`
+  font-weight: 500;
+  flex: 1;
+  color: ${colors.textDark};
+`,
+
+    PropertyInfoValue: styled.span`
+  flex: 2;
+  color: ${colors.textMedium};
+`,
+
+// Actions
+    ActionButtonsContainer: styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${spacing.sm};
+  
+  & > button {
+    width: 100%;
+  }
+`,
+
+// Navigation
+    BackButton: styled.button`
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: ${spacing.xs};
+  color: ${colors.white};
+  font-size: 1rem;
+  cursor: pointer;
+  padding: ${spacing.xs} ${spacing.sm};
+  margin-right: ${spacing.md};
+  border-radius: ${borderRadius.small};
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`,
+    AssessmentSummary: styled.div`
+    padding: ${spacing.sm};
+    background: ${colors.offWhite};`
+
 };
 
 const assessStyles = {
@@ -851,6 +1195,19 @@ const assessStyles = {
     `,
 
     ResultBarWrapper: styled.div`
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        display: flex;
+        justify-content: center;
+        transition: all 0.3s ease;
+        overflow: visible;
+        max-height: 95vh;
+    `,
+
+    AdvancedBarWrapper: styled.div`
         position: absolute;
         bottom: 0;
         left: 0;
@@ -1012,13 +1369,318 @@ const searchBarStyles = {
     `,
 };
 
+
+const advancedStyles = {
+    Container: styled.div`
+        display: flex;
+        flex-direction: column;
+        gap: ${spacing.xl};
+        padding: ${spacing.lg};
+        width: 90%;
+        max-width: 1200px;
+        margin: 0 auto;
+    `,
+
+    HeaderSection: styled.div`
+        text-align: center;
+        padding: ${spacing.md};
+        margin-bottom: ${spacing.sm};
+    `,
+
+    Title: styled.h2`
+        font-size: ${props => props.$isFullScreen ? '1.8rem' : '1.5rem'};
+        color: ${colors.textDark};
+        margin: 0 0 ${spacing.xs} 0;
+    `,
+
+    Subtitle: styled.p`
+        color: ${colors.textMedium};
+        max-width: 600px;
+        margin: 0 auto;
+    `,
+
+    TwoColumnLayout: styled.div`
+        display: grid;
+        grid-template-columns: ${props => props.$isFullScreen ? '1fr 1fr' : '1fr'};
+        gap: 30px;
+    `,
+
+    SettingsPanel: styled.div`
+        display: flex;
+        flex-direction: column;
+        gap: ${spacing.lg};
+        background-color: ${colors.lightGray};
+        padding: ${spacing.lg};
+        border-radius: ${borderRadius.medium};
+    `,
+
+    PanelHeading: styled.h3`
+        margin: 0 0 ${spacing.sm} 0;
+        font-size: 1.2rem;
+        color: ${colors.primary};
+        border-bottom: 2px solid ${colors.primary};
+        padding-bottom: ${spacing.xs};
+    `,
+
+    SettingGroup: styled.div`
+        margin-bottom: ${spacing.md};
+    `,
+
+    SettingLabel: styled.label`
+        display: block;
+        margin-bottom: ${spacing.sm};
+        font-weight: 600;
+        color: ${colors.textDark};
+    `,
+
+    RangeControl: styled.div`
+        display: flex;
+        align-items: center;
+        gap: ${spacing.sm};
+    `,
+
+    RangeLabel: styled.span`
+        min-width: 40px;
+        text-align: center;
+    `,
+
+    RangeSlider: styled.input`
+        width: 100%;
+        height: 8px;
+        appearance: none;
+        background: ${props => `linear-gradient(to right, 
+            ${colors.primary} 0%, 
+            ${colors.primary} ${props.$percentage}%, 
+            #e0e0e0 ${props.$percentage}%, 
+            #e0e0e0 100%)`};
+        border-radius: 4px;
+        cursor: pointer;
+        
+        &::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: ${colors.primary};
+            cursor: pointer;
+        }
+        
+        &::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: ${colors.primary};
+            border: none;
+            cursor: pointer;
+        }
+    `,
+
+    OptionGroup: styled.div`
+        display: flex;
+        gap: ${spacing.sm};
+        flex-wrap: wrap;
+    `,
+
+    Option: styled.div`
+        flex: 1;
+        min-width: 80px;
+        padding: ${spacing.sm};
+        text-align: center;
+        background-color: ${props => props.$isSelected ? colors.primary : colors.white};
+        color: ${props => props.$isSelected ? colors.white : colors.textMedium};
+        border-radius: ${borderRadius.small};
+        cursor: pointer;
+        font-weight: ${props => props.$isSelected ? '600' : 'normal'};
+        transition: all 0.2s ease;
+    `,
+
+    OptionDescription: styled.div`
+        font-size: 0.85rem;
+        margin-top: ${spacing.xs};
+        color: ${colors.textMedium};
+    `,
+
+    CheckboxGroup: styled.div`
+        display: flex;
+        gap: ${spacing.lg};
+        margin-top: ${spacing.sm};
+    `,
+
+    CheckboxOption: styled.label`
+        display: flex;
+        align-items: center;
+        gap: ${spacing.xs};
+        cursor: pointer;
+        padding: ${spacing.xs};
+        border-radius: ${borderRadius.small};
+        background-color: ${props => props.$isSelected ? colors.primarySuperLight : 'transparent'};
+        
+        input {
+            accent-color: ${colors.primary};
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+    `,
+
+    RiskPanel: styled.div`
+        display: flex;
+        flex-direction: column;
+        gap: ${spacing.lg};
+    `,
+
+    FloodPanel: styled.div`
+        background-color: #e6f7ff;
+        padding: ${spacing.lg};
+        border-radius: ${borderRadius.medium};
+        border: 1px solid #bae7ff;
+    `,
+
+    LandslidePanel: styled.div`
+        background-color: #f9f0ff;
+        padding: ${spacing.lg};
+        border-radius: ${borderRadius.medium};
+        border: 1px solid #d3adf7;
+    `,
+
+    RiskPanelHeading: styled.h3`
+        margin: 0 0 ${spacing.md} 0;
+        font-size: 1.2rem;
+        padding-bottom: ${spacing.xs};
+        display: flex;
+        align-items: center;
+        gap: ${spacing.xs};
+        border-bottom: 2px solid;
+        
+        ${props => props.$type === 'flood' ? `
+            color: #0066cc;
+            border-bottom-color: #0066cc;
+        ` : `
+            color: #722ed1;
+            border-bottom-color: #722ed1;
+        `}
+    `,
+
+    RiskIcon: styled.span`
+        font-size: 1.2em;
+    `,
+
+    WeightControl: styled.div`
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: ${spacing.xs};
+        align-items: center;
+    `,
+
+    WeightLabel: styled.label`
+        font-weight: 500;
+    `,
+
+    FloodWeightBadge: styled.span`
+        font-weight: 600;
+        background-color: #0066cc;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+    `,
+
+    LandslideWeightBadge: styled.span`
+        font-weight: 600;
+        background-color: #722ed1;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+    `,
+
+    FloodWeightSlider: styled.input`
+        width: 100%;
+        height: 8px;
+        appearance: none;
+        background: ${props => `linear-gradient(to right, #0066cc 0%, #0066cc ${props.$percentage}%, #e0e0e0 ${props.$percentage}%, #e0e0e0 100%)`};
+        border-radius: 4px;
+        
+        &::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #0066cc;
+            cursor: pointer;
+        }
+        
+        &::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #0066cc;
+            cursor: pointer;
+            border: none;
+        }
+    `,
+
+    LandslideWeightSlider: styled.input`
+        width: 100%;
+        height: 8px;
+        appearance: none;
+        background: ${props => `linear-gradient(to right, #722ed1 0%, #722ed1 ${props.$percentage}%, #e0e0e0 ${props.$percentage}%, #e0e0e0 100%)`};
+        border-radius: 4px;
+        
+        &::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #722ed1;
+            cursor: pointer;
+        }
+        
+        &::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #722ed1;
+            cursor: pointer;
+            border: none;
+        }
+    `,
+
+    WeightGroup: styled.div`
+        display: flex;
+        flex-direction: column;
+        gap: ${spacing.md};
+    `,
+
+    WeightNote: styled.div`
+        font-size: 0.85rem;
+        margin-top: ${spacing.md};
+        padding: ${spacing.sm};
+        background-color: rgba(255, 255, 255, 0.7);
+        border-radius: ${borderRadius.small};
+    `,
+
+    ButtonGroup: styled.div`
+        display: flex;
+        justify-content: center;
+        margin-top: ${spacing.lg};
+        padding: ${spacing.md};
+        border-top: 1px solid ${colors.border};
+        
+        .update-button {
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    `,
+};
+
 const appStyles = {
     colors,
     spacing,
     shadows,
     borderRadius,
     login: loginStyles,
-    dashboard: dashboardStyles,
     common: commonStyles,
     layout: layoutStyles,
     settings: settingsStyles,
@@ -1027,6 +1689,7 @@ const appStyles = {
     results: resultStyles,
     assess: assessStyles,
     search: searchBarStyles,
+    advanced: advancedStyles,
 };
 
 
