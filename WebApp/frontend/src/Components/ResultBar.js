@@ -8,31 +8,9 @@ const ResultBar = ({
                        gauges = [],
                        isFullScreen = false,
                        onToggleFullScreen,
-                       children, // Add children prop to accept additional content
-                       hideIfOtherExpanded = false
+                       children
                    }) => {
 
-
-    // If we should hide when another component is expanded
-    if (hideIfOtherExpanded) {
-        return (
-            <div style={{
-                width: '50px',
-                height: '50px',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: styles.colors.primary,
-                borderRadius: '50%',
-                position: 'absolute',
-                bottom: '10px',
-                cursor: 'pointer',
-                color: 'white'
-            }} onClick={() => onToggleFullScreen(true)}>
-                <span>📊</span>
-            </div>
-        );
-    }
 
 
     return (

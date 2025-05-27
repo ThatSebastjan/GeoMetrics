@@ -12,7 +12,6 @@ function ResultDetails() {
     const exportTemplateRef = useRef(null);
 
     useEffect(() => {
-        // Mock data - same as your current implementation
         const mockResult = {
             id: parseInt(id) || 1,
             title: `Property Assessment #${id || 1}`,

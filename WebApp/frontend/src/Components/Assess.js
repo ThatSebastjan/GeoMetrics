@@ -97,7 +97,7 @@ function Assess() {
                     onSearch={handleSearch}
                 />
             </styles.search.SearchBarWrapper>
-            <styles.assess.MapWrapper $isFullScreen={isFullScreen}>
+            <styles.assess.MapWrapper $isFullScreen={param === "advanced" ? isAdvancedFullScreen : isFullScreen}>
                 <Map searchTerm={searchTerm}/>
             </styles.assess.MapWrapper>
 

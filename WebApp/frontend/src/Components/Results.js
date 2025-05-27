@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import styles from '../styles';
 import icons from './Icons';
+import {useNavigate} from "react-router-dom";
 
 function Results() {
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     // Mock data for demonstration
     useEffect(() => {
@@ -151,7 +153,7 @@ function Results() {
 
                             <styles.results.ResultActions>
                                 {/*<styles.common.Button onClick={() => window.location.href = `/result-details/${result.id}`}>View Details</styles.common.Button> */} {/*after we implement backend */}
-                                <styles.common.Button onClick={() => window.location.href = `/result-details`} >View Details</styles.common.Button> {/*for testing*/}
+                                <styles.common.Button onClick={() => navigate("/result-details")} >View Details</styles.common.Button> {/*for testing*/}
                             </styles.results.ResultActions>
                         </styles.results.ResultCard>
                     ))}
