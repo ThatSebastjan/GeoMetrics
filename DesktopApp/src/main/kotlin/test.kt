@@ -52,7 +52,7 @@ fun main() = runBlocking {
             println("\nSample earthquake document:")
             val earthquake = Database.earthquakeCollection.find().limit(1).toList().firstOrNull()
             earthquake?.let {
-                println("ID: ${it.id}")
+                println("ID: ${it._id}")
                 println("Type: ${it.type}")
                 println("Timestamp: ${it.properties.timestamp}")
                 println("Magnitude: ${it.properties.magnitude}")

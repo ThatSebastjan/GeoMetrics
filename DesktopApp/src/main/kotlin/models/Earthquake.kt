@@ -2,6 +2,7 @@ package models
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Contextual
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
@@ -10,7 +11,7 @@ import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 import java.time.Instant
 
-// Date serializer for timestamps
+// Date serializer for timestamps (not used, but kept for reference)
 object DateSerializer : KSerializer<Instant> {
     override val descriptor = PrimitiveSerialDescriptor("Date", PrimitiveKind.STRING)
 
@@ -33,16 +34,16 @@ data class GeoJsonPoint(
 
 @Serializable
 data class EarthquakeProperties(
-    @Serializable(with = DateSerializer::class)
+    @Contextual
     val timestamp: Instant,
     val magnitude: Double,
-    val depth: Int
+    val depth: Double
 )
 
 @Serializable
 data class Earthquake(
     @Serializable(with = ObjectIdSerializer::class)
-    @BsonId val id: ObjectId = ObjectId(),
+    @BsonId val _id: ObjectId = ObjectId(),
     val type: String,
     val documentId: Int? = null,
     val geometry: GeoJsonPoint,

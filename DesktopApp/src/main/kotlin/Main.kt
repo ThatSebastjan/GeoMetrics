@@ -11,7 +11,153 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.border
 import kotlin.random.Random
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.toList
+import db.Database
+import models.FireStation
+import models.FireStationProperties
+import models.GeoJsonPoint
+import models.Earthquake
+import models.EarthquakeProperties
+import java.time.Instant
+import models.Scraper
 
+// Function to check if DB is up to date compared to scraped data
+suspend fun checkDatabaseUpToDate(): String {
+    return withContext(Dispatchers.IO) {
+        try {
+            var status = "Database is "
+            var isUpToDate = true
+
+            // Check fire stations
+            val fireStationsMissingCount = checkFireStations()
+            if (fireStationsMissingCount > 0) {
+                status += "missing $fireStationsMissingCount fire stations. "
+                isUpToDate = false
+            }
+
+            // Check earthquakes
+            val earthquakesMissingCount = checkEarthquakes()
+            if (earthquakesMissingCount > 0) {
+                status += "missing $earthquakesMissingCount earthquakes. "
+                isUpToDate = false
+            }
+
+            if (isUpToDate) {
+                status = "Database is up to date! All fire stations and earthquakes are present."
+            } else {
+                status += "Click 'Update DB' to add missing data."
+            }
+
+            status
+        } catch (e: Exception) {
+            "Error checking database: ${e.message}"
+        }
+    }
+}
+
+// Check fire stations in database vs scraped
+private suspend fun checkFireStations(): Int {
+    val scraper = Scraper()
+    val scrapedStations = scraper.scrapeFireStations()
+    val dbStations = Database.fireStationCollection.find().toList()
+
+    var missingCount = 0
+
+    for (scraped in scrapedStations) {
+        val exists = dbStations.any {
+            it.properties.location == scraped.location &&
+                    it.properties.address == scraped.address
+        }
+        if (!exists) missingCount++
+    }
+
+    return missingCount
+}
+
+// Check earthquakes in database vs scraped
+private suspend fun checkEarthquakes(): Int {
+    val dbEarthquakes = Database.earthquakeCollection.find().toList()
+
+    // Find the newest earthquake timestamp in the database
+    val latestTimestamp = dbEarthquakes
+        .maxByOrNull { it.properties.timestamp.toEpochMilli() }
+        ?.properties?.timestamp?.toEpochMilli() ?: 0
+
+    val scraper = Scraper()
+    val scrapedEarthquakes = scraper.scrapeEarthQuakes(latestTimestamp)
+
+    return scrapedEarthquakes.size
+}
+
+// Update database with missing data
+suspend fun updateDatabase(): String {
+    return withContext(Dispatchers.IO) {
+        try {
+            var addedFireStations = 0
+            var addedEarthquakes = 0
+            val scraper = Scraper()
+
+            // Update fire stations
+            val scrapedStations = scraper.scrapeFireStations()
+            val dbStations = Database.fireStationCollection.find().toList()
+
+            for (scraped in scrapedStations) {
+                val exists = dbStations.any {
+                    it.properties.location == scraped.location &&
+                            it.properties.address == scraped.address
+                }
+
+                if (!exists) {
+                    // Convert scraped FireStation to DB FireStation model
+                    val fireStation = FireStation(
+                        type = "Feature",
+                        geometry = GeoJsonPoint(
+                            coordinates = arrayListOf(scraped.longitude, scraped.latitude)
+                        ),
+                        properties = FireStationProperties(
+                            location = scraped.location,
+                            address = scraped.address,
+                            city = scraped.city,
+                            description = scraped.description,
+                            telephoneNumber = scraped.telephoneNum
+                        )
+                    )
+                    Database.fireStationCollection.insertOne(fireStation)
+                    addedFireStations++
+                }
+            }
+
+            // Update earthquakes - find latest timestamp from database
+            val dbEarthquakes = Database.earthquakeCollection.find().toList()
+            val latestTimestamp = dbEarthquakes
+                .maxByOrNull { it.properties.timestamp.toEpochMilli() }
+                ?.properties?.timestamp?.toEpochMilli() ?: 0
+
+            val scrapedEarthquakes = scraper.scrapeEarthQuakes(latestTimestamp)
+
+            for (scraped in scrapedEarthquakes) {
+                val earthquake = Earthquake(
+                    type = "Feature",
+                    geometry = GeoJsonPoint(
+                        coordinates = arrayListOf(scraped.longitude, scraped.latitude)
+                    ),
+                    properties = EarthquakeProperties(
+                        timestamp = Instant.ofEpochMilli(scraped.timestamp.toLong()),
+                        magnitude = scraped.magnitude,
+                        depth = scraped.depth.toDouble()
+                    )
+                )
+                Database.earthquakeCollection.insertOne(earthquake)
+                addedEarthquakes++
+            }
+
+            "Database updated: Added $addedFireStations fire stations and $addedEarthquakes earthquakes"
+        } catch (e: Exception) {
+            "Error updating database: ${e.message}"
+        }
+    }
+}
 // Model for location with risk levels
 data class LocationRisk(
     val id: Int,
@@ -26,18 +172,31 @@ data class LocationRisk(
 fun DataManagerTab(
     locations: List<LocationRisk>,
     dbStatus: String,
+    isLoading: Boolean,
     onCheckDb: () -> Unit,
     onUpdateDb: () -> Unit
 ) {
     Column(Modifier.padding(16.dp)) {
         Text("Data Management", style = MaterialTheme.typography.h6)
         Row(Modifier.padding(vertical = 8.dp)) {
-            Button(onClick = onCheckDb) { Text("Check if DB is up to date") }
+            Button(onClick = onCheckDb, enabled = !isLoading) {
+                Text("Check if DB is up to date")
+            }
             Spacer(Modifier.width(8.dp))
-            Button(onClick = onUpdateDb) { Text("Update DB") }
+            Button(onClick = onUpdateDb, enabled = !isLoading) {
+                Text("Update DB")
+            }
         }
         Spacer(Modifier.height(8.dp))
-        Text("DB Status: $dbStatus")
+        if (isLoading) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Working on it...")
+            }
+        } else {
+            Text("DB Status: $dbStatus")
+        }
         Spacer(Modifier.height(8.dp))
         Text("Current locations in DB:")
         LazyColumn {
@@ -275,6 +434,8 @@ fun App() {
     var generatedData by remember { mutableStateOf(listOf<LocationRisk>()) }
     var tabIndex by remember { mutableStateOf(0) }
     var dbStatus by remember { mutableStateOf("Unknown") }
+    var isLoading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     MaterialTheme {
         Column {
@@ -289,8 +450,21 @@ fun App() {
                 0 -> DataManagerTab(
                     locations = locations,
                     dbStatus = dbStatus,
-                    onCheckDb = { dbStatus = if (locations.isNotEmpty()) "Up to date" else "Not up to date" },
-                    onUpdateDb = { dbStatus = "DB updated" }
+                    isLoading = isLoading,
+                    onCheckDb = {
+                        isLoading = true
+                        scope.launch {
+                            dbStatus = checkDatabaseUpToDate()
+                            isLoading = false
+                        }
+                    },
+                    onUpdateDb = {
+                        isLoading = true
+                        scope.launch {
+                            dbStatus = updateDatabase()
+                            isLoading = false
+                        }
+                    }
                 )
                 1 -> GeneratorTab(
                     locations = locations,
