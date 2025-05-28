@@ -26,20 +26,17 @@ MulDiv' ::= * NumericType MulDiv'
 NumericType ::= - <number>
                 | <number>
                 | ( AddSub )
-                | ConstNumericType       # Type has to be checked!
+                | CallOrPropertyOrConstant       # Type has to be checked!
 
-
-ConstNumericType ::= <identifier> ConstNumericProperty       # Either a const with numeric value or a point with property access specifier or a function call
-
-ConstNumericProperty ::= . ConstNumericProperty' 
-                         | CallArgs
-                         | <epsilon>
-
-ConstNumericProperty' ::= longitude | latitude
 
 
 CallArgs ::= ( NumericExpr CallArgs' )      # Maybe check if identifier is a function
 CallArgs' ::= , NumericExpr CallArgs' | <epsilon>
+
+
+CallOrPropertyOrConstant ::= <identifier> CallOrPropertyOrConstant'
+
+CallOrPropertyOrConstant' ::= . <identifier> | CallArgs | <epsilon>
 
 
 
@@ -65,12 +62,7 @@ BoundsType ::= PolygonType
                | CircleType
                | BoxType
                | PolyLineType
-               | <identifier> BoundsType'      # Return type has to be checked to be a bounds type!
-
-BoundsType' ::= CallArgs | ConstArrayIndexed
-
-
-ConstArrayIndexed ::= [ <integer> ] | <epsilon>     # Constant type needs to be checked to be imported array or a bounds constant
+               | <identifier> CallArgs     # Return type has to be checked to be a bounds type!
 
 
 ConstDef ::= const <identifier> = ConstValue ;
@@ -87,11 +79,14 @@ ConstValue ::= NumericExpr
 
 PropertyDef ::= . <identifier> : PropertyValue ;
 
-PropertyValue ::= <number>
-                  | <integer>
-                  | <string>
-                  | BoundsType
+PropertyValue ::= NumericExpr   # Type has to be checked
+                  |<string>
+                  | PolygonType
+                  | CircleType
+                  | BoxType
+                  | PolyLineType
                   | null
+
 
 
 
@@ -110,7 +105,12 @@ ConstDefList ::= ConstDef ConstDefList | <epsilon>      # List of 0 or more Cons
 
 ReturnValue ::= return ReturnType
 
-ReturnType ::= <number> | BoundsType
+ReturnType ::= NumericExpr      # Type has to be checked and recursion disallowed!
+               | PointType
+               | PolygonType
+               | CircleType
+               | BoxType
+               | PolyLineType
 
 
 

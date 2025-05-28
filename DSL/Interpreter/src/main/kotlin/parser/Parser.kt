@@ -189,39 +189,8 @@ class Parser(private val scanner: Scanner) {
                 return value
             }
 
-            else -> return constNumericType()
+            else -> return callOrPropertyOrConstant()
         }
-    }
-
-
-    private fun constNumericType() : Node {
-        val identifier = expect(TokenType.IDENTIFIER)
-        return constNumericProperty(Node.Identifier(identifier.getLexeme()))
-    }
-
-
-    private fun constNumericProperty(identifier: Node.Identifier) : Node {
-
-        when(current().getType()){
-
-            TokenType.DOT -> {
-                advance()
-
-                val propertyNode = constNumericPropertyP()
-                return Node.PropertyAccess(identifier, propertyNode)
-            }
-
-            TokenType.LPAREN -> return callArgs(identifier)
-
-            else -> return identifier //Epsilon, return input constant identifier
-        }
-    }
-
-
-    //TODO("Maybe make this return separate Node types for latitude and longitude?!")
-    private fun constNumericPropertyP() : Node.Identifier {
-        val propertyToken = expectTypes(TokenType.LONGITUDE, TokenType.LATITUDE)
-        return Node.Identifier(propertyToken.getLexeme())
     }
 
 
@@ -246,6 +215,30 @@ class Parser(private val scanner: Scanner) {
         }
 
         return args //Epsilon, return list
+    }
+
+
+    private fun callOrPropertyOrConstant() : Node {
+        val identifier = expect(TokenType.IDENTIFIER)
+        return callOrPropertyOrConstantP(Node.Identifier(identifier.getLexeme()))
+    }
+
+
+    private fun callOrPropertyOrConstantP(identifier: Node.Identifier) : Node {
+
+        when(current().getType()){
+
+            TokenType.DOT -> {
+                advance()
+
+                val propertyToken = expect(TokenType.IDENTIFIER)
+                return Node.PropertyAccess(identifier, propertyToken.getLexeme())
+            }
+
+            TokenType.LPAREN -> return callArgs(identifier)
+
+            else -> return identifier //Epsilon, return input constant identifier
+        }
     }
 
 
@@ -333,7 +326,7 @@ class Parser(private val scanner: Scanner) {
     }
 
 
-    private fun boundsType() : Node { //Either one of Polygon, Circle, Box, PolyLine or a function call, indexed imported data access or a constant
+    private fun boundsType() : Node { //Either one of Polygon, Circle, Box, PolyLine or a function call
 
         when(current().getType()){
             TokenType.POLYGON -> return polygonType()
@@ -343,34 +336,10 @@ class Parser(private val scanner: Scanner) {
 
             else -> {
                 val identifier = expect(TokenType.IDENTIFIER)
-                return boundsTypeP(Node.Identifier(identifier.getLexeme()))
+                return callArgs(Node.Identifier(identifier.getLexeme())) //Call
             }
         }
     }
-
-
-    private fun boundsTypeP(identifier: Node.Identifier) : Node {
-        if(current().isOfType(TokenType.LPAREN)){
-             return callArgs(identifier)
-        }
-
-        return constArrayIndexed(identifier)
-    }
-
-
-    private fun constArrayIndexed(identifier: Node.Identifier) : Node {
-        if(current().isOfType(TokenType.LSQUARE)){
-            advance()
-
-            val index = expect(TokenType.INTEGER)
-            expect(TokenType.RSQUARE)
-
-            return Node.IndexAccess(identifier, Node.Integer(index.getLexeme().toInt()))
-        }
-
-        return identifier //Epsilon, identifier is a constant of bounds type (type checked at runtime)
-    }
-
 
 
     private fun constDef() : Node.ConstantDefinition {
@@ -426,16 +395,18 @@ class Parser(private val scanner: Scanner) {
     private fun propertyValue() : Node {
 
         when(current().getType()){
-            TokenType.NUMBER -> return Node.Number(advance().getLexeme().toDouble())
-            TokenType.INTEGER -> return Node.Integer(advance().getLexeme().toInt())
             TokenType.STRING -> return Node.StringValue(advance().getLexeme().drop(1).dropLast(1)) //Discard quotes
+            TokenType.POLYGON -> return polygonType()
+            TokenType.CIRCLE -> return circleType()
+            TokenType.BOX -> return boxType()
+            TokenType.POLY_LINE -> return polyLineType()
 
             TokenType.NULL -> {
                 advance()
                 return Node.Null()
             }
 
-            else -> return boundsType() //Other types are checked first as they have a single element in First set
+            else -> return numericExpr()
         }
     }
 
@@ -455,21 +426,19 @@ class Parser(private val scanner: Scanner) {
     }
 
 
-    private fun lambdaParams() : List<Node.Identifier> {
+    private fun lambdaParams() : List<String> {
         val paramToken = expect(TokenType.IDENTIFIER)
-        val param = Node.Identifier(paramToken.getLexeme())
 
-        return lambdaParamsP(mutableListOf(param))
+        return lambdaParamsP(mutableListOf(paramToken.getLexeme()))
     }
 
 
-    private fun lambdaParamsP(params: MutableList<Node.Identifier>) : MutableList<Node.Identifier> {
+    private fun lambdaParamsP(params: MutableList<String>) : MutableList<String> {
         if(current().isOfType(TokenType.COMMA)){
             advance()
 
             val newParamToken = expect(TokenType.IDENTIFIER)
-            val newParam = Node.Identifier(newParamToken.getLexeme())
-            params.add(newParam)
+            params.add(newParamToken.getLexeme())
 
             return lambdaParamsP(params)
         }
@@ -504,12 +473,17 @@ class Parser(private val scanner: Scanner) {
     }
 
 
-    private fun returnType() : Node { //Lambdas can return a number or a bounds type (cannot return a point)
-        if(current().isOfType(TokenType.NUMBER)){
-            return Node.Number(advance().getLexeme().toDouble())
-        }
+    private fun returnType() : Node { //Lambdas can return a numeric expression, point, any form of polygon (also a function call -> TODO("Check recursion!!"))
 
-        return boundsType()
+        when(current().getType()){
+            TokenType.LT -> return pointType()
+            TokenType.POLYGON -> return polygonType()
+            TokenType.CIRCLE -> return circleType()
+            TokenType.BOX -> return boxType()
+            TokenType.POLY_LINE -> return polyLineType()
+
+            else -> return numericExpr()
+        }
     }
 
 
@@ -520,13 +494,14 @@ class Parser(private val scanner: Scanner) {
         val varName = expect(TokenType.IDENTIFIER)
         expect(TokenType.IN)
 
-        val arrayName = expect(TokenType.IDENTIFIER)
+        val arrayToken = expect(TokenType.IDENTIFIER)
+        val arrayIdent = Node.Identifier(arrayToken.getLexeme())
         expect(TokenType.LCURLY)
 
         val content = controlFlowBlockContent()
         expect(TokenType.RCURLY)
 
-        return Node.ForEach(varName.getLexeme(), arrayName.getLexeme(), content)
+        return Node.ForEach(varName.getLexeme(), arrayIdent, content)
     }
 
 
@@ -620,7 +595,7 @@ class Parser(private val scanner: Scanner) {
 
         val blockData = cadastreContent()
         expect(TokenType.RCURLY)
-        return Node.Cadastre(blockData)
+        return Node.Cadastre(Node.Block(blockData))
     }
 
 
@@ -693,7 +668,7 @@ class Parser(private val scanner: Scanner) {
         expect(TokenType.LPAREN)
 
         val lotIdToken = expect(TokenType.STRING)
-        val lotId = Node.StringValue(lotIdToken.getLexeme())
+        val lotId = Node.StringValue(lotIdToken.getLexeme().drop(1).dropLast(1))
         expect(TokenType.COMMA)
 
         val lotBounds = boundsType()

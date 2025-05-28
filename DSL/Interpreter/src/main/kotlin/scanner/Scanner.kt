@@ -87,8 +87,8 @@ class Scanner(private val input: ScannerInput) {
 
 
             //Reserved keywords
-            State(Pattern.fromLiteral("longitude"), TokenType.LONGITUDE).markReserved(),
-            State(Pattern.fromLiteral("latitude"), TokenType.LATITUDE).markReserved(),
+            //State(Pattern.fromLiteral("longitude"), TokenType.LONGITUDE).markReserved(),
+            //State(Pattern.fromLiteral("latitude"), TokenType.LATITUDE).markReserved(),
 
             State(Pattern.fromLiteral("Polygon"), TokenType.POLYGON).markReserved(),
             State(Pattern.fromLiteral("Circle"), TokenType.CIRCLE).markReserved(),

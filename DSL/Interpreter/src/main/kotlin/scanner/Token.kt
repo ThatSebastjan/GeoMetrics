@@ -31,8 +31,8 @@ enum class TokenType {
     STRING,
     IDENTIFIER,
 
-    LONGITUDE,
-    LATITUDE,
+    //LONGITUDE,
+    //LATITUDE,
 
     POLYGON,
     CIRCLE,

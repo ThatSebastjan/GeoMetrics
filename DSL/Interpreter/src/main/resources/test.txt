@@ -1,0 +1,43 @@
+
+const iAmGlobalLambda = lambda(x, y, w, h){
+
+    const nestedLambda = lambda(a, b){ return a + b; };
+
+    return Box(<x, y>, <nestedLambda(x, w), y - h>);
+}; //Yes there must be a semicolon here because it's a constant definition, and it must end with ";"
+
+
+cadastre {
+
+    .name: "nekaj";
+    .id: "101";
+    .bounds: Box(<16.11535921898235, 23.38464125729371>, <43.411258029927154, 1.6360040513418426>);
+    .tag: "SquareLot";
+
+
+    const importedData = import "./exampleImportData.json"; //This file is in project root directory
+
+    foreach feature in importedData {
+
+        lot {
+            .id: feature.id;
+            .type: Forest;
+            .bounds: feature.geometry; //geometry prop = Polygon
+
+            .other: feature.someProp;
+        }
+
+    }
+
+
+
+
+}
+
+
+risk {
+    .type: Flood;
+    .bounds: iAmGlobalLambda(32.48956996423021, 20.994293425751735, 4, 3);
+    .frequency: 0.24;
+    .probability: 0.4;
+}
