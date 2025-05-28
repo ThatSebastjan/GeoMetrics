@@ -28,6 +28,9 @@ dependencies {
     // MongoDB Kotlin Driver with coroutine support
     implementation("org.mongodb:mongodb-driver-kotlin-coroutine:4.11.0")
 
+    // KMongo coroutine extension (needed for descending, etc.)
+    implementation("org.litote.kmongo:kmongo-coroutine:4.11.0")
+
     // Kotlin coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("it.skrape:skrapeit:1.2.2")

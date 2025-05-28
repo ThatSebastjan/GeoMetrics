@@ -5,10 +5,8 @@ import it.skrape.core.htmlDocument
 import it.skrape.fetcher.*
 import it.skrape.selects.*
 import kotlinx.coroutines.*
-import kotlin.math.ceil
-import java.time.Instant
 import kotlinx.coroutines.coroutineScope
-import kotlin.collections.get
+
 
 // Data models for scraped entities
 data class ScrapedFireStation(

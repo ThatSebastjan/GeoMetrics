@@ -1,5 +1,7 @@
 package models
 
+// Earthquake data model for MongoDB and serialization
+
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Contextual
@@ -11,27 +13,8 @@ import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 import java.time.Instant
 
-// Date serializer for timestamps (not used, but kept for reference)
-object DateSerializer : KSerializer<Instant> {
-    override val descriptor = PrimitiveSerialDescriptor("Date", PrimitiveKind.STRING)
 
-    override fun serialize(encoder: Encoder, value: Instant) {
-        encoder.encodeString(value.toString())
-    }
-
-    override fun deserialize(decoder: Decoder): Instant {
-        return Instant.parse(decoder.decodeString())
-    }
-}
-
-@Serializable
-data class GeoJsonPoint(
-    val type: String = "Point",
-    val coordinates: ArrayList<Double> = ArrayList(),
-    @Serializable(with = ObjectIdSerializer::class)
-    val _id: ObjectId? = null
-)
-
+// Earthquake properties
 @Serializable
 data class EarthquakeProperties(
     @Contextual
@@ -40,11 +23,13 @@ data class EarthquakeProperties(
     val depth: Double
 )
 
+// Earthquake document
 @Serializable
 data class Earthquake(
     @Serializable(with = ObjectIdSerializer::class)
     @BsonId val _id: ObjectId = ObjectId(),
     val type: String,
+    val id: Int? = null,
     val documentId: Int? = null,
     val geometry: GeoJsonPoint,
     val properties: EarthquakeProperties,

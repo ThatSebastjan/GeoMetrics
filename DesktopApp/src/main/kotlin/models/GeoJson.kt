@@ -10,3 +10,12 @@ data class GeoJsonPolygon(
     @Serializable(with = ObjectIdSerializer::class)
     val _id: ObjectId? = null
 )
+
+// GeoJSON Point
+@Serializable
+data class GeoJsonPoint(
+    val type: String = "Point",
+    val coordinates: ArrayList<Double> = ArrayList(),
+    @Serializable(with = ObjectIdSerializer::class)
+    val _id: ObjectId? = null
+)
