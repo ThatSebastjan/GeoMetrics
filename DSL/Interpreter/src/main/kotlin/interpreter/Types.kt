@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import parser.Node
 import java.io.File
 import java.io.InputStream
+import kotlin.math.*
 
 
 interface GeoJSONExport {
@@ -62,9 +63,28 @@ class PolygonObject(val points: List<PointObject>) {
 
     companion object {
 
+        private fun toRad(deg: Double) = deg * (Math.PI / 180)
+        private fun toDeg(rad: Double) = rad * (180 / Math.PI)
+
         fun fromCircle(center: PointObject, radius: Double) : PolygonObject {
-            TODO("Implement me!")
-            //return PolygonObject(listOf())
+            val c = radius / 6371000.0 //radius in meters to radians
+
+            val cLon = toRad(center.longitude)
+            val cLat = toRad(center.latitude)
+            val points = mutableListOf<PointObject>()
+
+            for(i in 0..360 step 10){
+                val ang = toRad(i.toDouble());
+                val latitude = asin(sin(cLat) * cos(c) + cos(cLat) * sin(c) * cos(ang))
+                val longitude = cLon + atan2(sin(ang) * sin(c) * cos(cLat), cos(c) - sin(cLat) * sin(latitude))
+
+                points.add(PointObject(toDeg(longitude), toDeg(latitude)))
+            }
+
+            points.add(points[0])
+            points.reverse()
+
+            return PolygonObject(points)
         }
 
         fun fromBox(topLeft: PointObject, bottomRight: PointObject) : PolygonObject {
@@ -79,9 +99,60 @@ class PolygonObject(val points: List<PointObject>) {
             )
         }
 
+
+        //This mostly works (breaks at extreme angles). Implementation is on the questionable side
         fun fromPolyLine(width: Double, points: List<PointObject>) : PolygonObject {
-            TODO("Implement me!")
-            //return PolygonObject(listOf())
+            val thickness = (width / 6371000.0) * (180 / Math.PI) //radius in meters to degrees
+            val startPoints = mutableListOf<Vector2>()
+            val endPoints = mutableListOf<Vector2>()
+
+            for(i in points.indices){
+                val p = Vector2(points[i].longitude, points[i].latitude)
+
+                //First point
+                if(i == 0){
+                    val next = Vector2(points[i + 1].longitude, points[i + 1].latitude)
+                    val dir = next.clone().sub(p).normalize()
+                    val normal = Vector2(dir.y, -dir.x).normalize()
+
+                    startPoints.add(p.clone().add(normal.clone().multiplyScalar(thickness)))
+                    endPoints.add(p.clone().add(normal.clone().multiplyScalar(-thickness)))
+                    continue
+                }
+
+                //Last point
+                else if(i == points.lastIndex){
+                    val prev = Vector2(points[i - 1].longitude, points[i - 1].latitude)
+                    val dir = p.clone().sub(prev).normalize()
+                    val normal = Vector2(dir.y, -dir.x).normalize()
+
+                    startPoints.add(p.clone().add(normal.clone().multiplyScalar(thickness)))
+                    endPoints.add(p.clone().add(normal.clone().multiplyScalar(-thickness)))
+                    continue
+                }
+
+                //Points in between
+                val prev = Vector2(points[i - 1].longitude, points[i - 1].latitude)
+                val next = Vector2(points[i + 1].longitude, points[i + 1].latitude)
+
+                val dir1 = prev.clone().sub(p).normalize()
+                val dir2 = next.clone().sub(p).normalize()
+
+                val normal1 = Vector2(-dir1.y, dir1.x)
+                val normal2 = Vector2(dir2.y, -dir2.x)
+                val normal = normal1.clone().add(normal2).normalize()
+
+                val angle = acos(dir1.dot(dir2))
+                val len = thickness / sin(angle/2)
+
+                startPoints.add(p.clone().add(normal.clone().multiplyScalar(len)))
+                endPoints.add(p.clone().add(normal.clone().multiplyScalar(-len)))
+            }
+
+            endPoints.reverse()
+            val pointList = (startPoints + endPoints).map { PointObject(it.x, it.y) }
+
+            return PolygonObject(pointList + pointList[0])
         }
     }
 }
