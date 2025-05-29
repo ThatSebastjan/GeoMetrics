@@ -17,6 +17,7 @@ import models.Earthquake
 import models.FireStationProperties
 import models.EarthquakeProperties
 import org.litote.kmongo.descending
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 data class DbCheckResult(
     val status: String,
@@ -157,6 +158,67 @@ fun EarthquakeGeneratorTab() {
 }
 
 @Composable
+fun ScraperTab() {
+    val scope = rememberCoroutineScope()
+    var isRunning by remember { mutableStateOf(false) }
+    var progressMessages by remember { mutableStateOf(listOf<String>()) }
+    val listState = rememberLazyListState()
+
+    // Auto-scroll to the last message when progressMessages changes
+    LaunchedEffect(progressMessages.size) {
+        if (progressMessages.isNotEmpty()) {
+            listState.animateScrollToItem(progressMessages.lastIndex)
+        }
+    }
+
+    Column(Modifier.padding(16.dp)) {
+        Text("Scraper Progress", style = MaterialTheme.typography.h6)
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = {
+                isRunning = true
+                progressMessages = listOf("Starting scraper...")
+                scope.launch {
+                    try {
+                        val scraper = models.Scraper()
+                        progressMessages = progressMessages + "Scraping fire stations..."
+                        val fireStations = scraper.scrapeFireStations()
+                        progressMessages = progressMessages + "Found ${fireStations.size} fire stations."
+
+                        progressMessages = progressMessages + "Scraping earthquakes (last 0)..."
+                        val earthquakes = scraper.scrapeEarthQuakes(0)
+                        progressMessages = progressMessages + "Found ${earthquakes.size} earthquakes."
+
+                        progressMessages = progressMessages + "Scraping complete!"
+                    } catch (e: Exception) {
+                        progressMessages = progressMessages + "Error: ${e.message}"
+                    } finally {
+                        isRunning = false
+                    }
+                }
+            },
+            enabled = !isRunning
+        ) {
+            Text("Run Scraper")
+        }
+        Spacer(Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 60.dp, max = 200.dp)
+                .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f))
+                .padding(8.dp)
+        ) {
+            LazyColumn(state = listState) {
+                items(progressMessages) { msg ->
+                    Text(msg)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 @Preview
 fun App() {
     var dbStatus by remember { mutableStateOf("Unknown") }
@@ -174,6 +236,7 @@ fun App() {
             ) {
                 Tab(selected = tabIndex == 0, onClick = { tabIndex = 0 }) { Text("Management") }
                 Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }) { Text("Generator") }
+                Tab(selected = tabIndex == 2, onClick = { tabIndex = 2 }) { Text("Scraper") }
             }
             when (tabIndex) {
                 0 -> DataManagerTab(
@@ -200,6 +263,7 @@ fun App() {
                     missingEarthquakes = missingEarthquakes
                 )
                 1 -> EarthquakeGeneratorTab()
+                2 -> ScraperTab()
             }
         }
     }
