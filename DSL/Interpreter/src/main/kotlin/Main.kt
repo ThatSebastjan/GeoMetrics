@@ -18,6 +18,7 @@ fun main() {
         val interpreter = Interpreter()
         val geoJsonStr = interpreter.interpret(astTree)
 
-        File("./outFeatures.json").writeText(geoJsonStr)
+        File("./outFeatures.json").writeText(geoJsonStr.toFeatureCollection().json())
+        File("./outFeatures.txt").writeText(geoJsonStr.toString())
     }
 }

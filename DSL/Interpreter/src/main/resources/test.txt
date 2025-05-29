@@ -7,24 +7,30 @@ const iAmGlobalLambda = lambda(x, y, w, h){
 }; //Yes there must be a semicolon here because it's a constant definition, and it must end with ";"
 
 
+
+const cadastreData = import "./singleFeature.json";
+
 cadastre {
 
-    .name: "nekaj";
-    .id: "101";
-    .bounds: Box(<16.11535921898235, 23.38464125729371>, <43.411258029927154, 1.6360040513418426>);
-    .tag: "SquareLot";
+    .name: cadastreData.name;
+    .id: cadastreData.id;
+    .bounds: cadastreData.geometry;
+    .tag: cadastreData.tag;
 
 
     const importedData = import "./exampleImportData.json"; //This file is in project root directory
 
     foreach feature in importedData {
 
-        lot {
-            .id: feature.id;
-            .type: Forest;
-            .bounds: feature.geometry; //geometry prop = Polygon
+        if(area(feature.geometry) > 10){
 
-            .other: feature.someProp;
+            lot {
+                .id: feature.id;
+                .type: Forest;
+                .bounds: feature.geometry; //geometry prop = Polygon
+
+                .other: feature.someProp;
+            }
         }
 
     }

@@ -158,18 +158,34 @@ class PolygonObject(val points: List<PointObject>) {
 }
 
 
-class ImportedFeatureCollection(filePath: String) {
-    val data: FeatureCollection
+data class ImportedFeatureCollection(val data: FeatureCollection) {
 
-    init {
-        val inputStream: InputStream = File(filePath).inputStream()
-        val inputString = inputStream.bufferedReader().use { it.readText() }
-        data = FeatureCollection.fromJson(inputString)
+    companion object {
+
+        fun fromFile(filePath: String) : ImportedFeatureCollection? {
+            val inputStream: InputStream = File(filePath).inputStream()
+            val inputString = inputStream.bufferedReader().use { it.readText() }
+
+            val maybeData = FeatureCollection.fromJsonOrNull(inputString) ?: return null
+            return ImportedFeatureCollection(maybeData)
+        }
     }
 }
 
 
-data class ImportedFeature(val data: Feature)
+data class ImportedFeature(val data: Feature) {
+
+    companion object {
+
+        fun fromFile(filePath: String) : ImportedFeature? {
+            val inputStream: InputStream = File(filePath).inputStream()
+            val inputString = inputStream.bufferedReader().use { it.readText() }
+
+            val maybeData = Feature.fromJsonOrNull(inputString) ?: return null
+            return ImportedFeature(maybeData)
+        }
+    }
+}
 
 
 
@@ -211,6 +227,27 @@ class LandLot(val id: String, val type: String, val bounds: PolygonObject, val a
 
             props[it.name] = value
         }
+
+
+        //Color
+        props["stroke-width"] = JsonPrimitive(2.0)
+        props["stroke-opacity"] = JsonPrimitive(1.0)
+        props["fill-opacity"] = JsonPrimitive(0.5)
+
+        val color = when(type){
+            "Road" -> Pair("#AFB5C7", "#A5A5A5")
+            "BuildingLot" -> Pair("#F4F0EF", "#CDD1DE")
+            "FarmLand" -> Pair("#E3CD84", "#388659")
+            "Forest" -> Pair("#137547", "#2A9134")
+            "Meadow" -> Pair("#5BBA6F", "#3FA34D")
+            "River" -> Pair("#98DCFE", "#49C6E5")
+            "Lake" -> Pair("#0077B6", "#0070AC")
+
+            else -> throw IllegalArgumentException("Illegal land lot type: $type")
+        }
+
+        props["fill"] = JsonPrimitive(color.first)
+        props["stroke"] = JsonPrimitive(color.second)
 
         return listOf(Feature(bounds.toGeoJSONPolygon(), props))
     }
@@ -257,6 +294,11 @@ class Cadastre(val name: String, val id: String, val bounds: PolygonObject, val 
             props[it.name] = value
         }
 
+        props["stroke-width"] = JsonPrimitive(1.0)
+        props["stroke-opacity"] = JsonPrimitive(1.0)
+        props["fill-opacity"] = JsonPrimitive(0.0)
+        props["stroke"] = JsonPrimitive("#FF0000")
+
         val cadastreFeature = Feature(bounds.toGeoJSONPolygon(), props)
         val lotFeatures = lots.map { it.toGeoJSON()[0] }
         return listOf(cadastreFeature) + lotFeatures
@@ -299,12 +341,54 @@ class Risk(val type: String, val bounds: PolygonObject, val probability: Double,
             props[it.name] = value
         }
 
+        //Color
+        props["stroke-width"] = JsonPrimitive(2.0)
+        props["stroke-opacity"] = JsonPrimitive(1.0)
+        props["fill-opacity"] = JsonPrimitive(0.5)
+
+        val color = when(type){
+            "Flood" -> Pair("#6495ED", "#BB0099")
+            "LandSlide" -> Pair("#ED8B64", "#E05858")
+            "Earthquake" -> Pair("#ED6464", "#E44949")
+
+            else -> throw IllegalArgumentException("Illegal risk type: $type")
+        }
+
+        props["fill"] = JsonPrimitive(color.first)
+        props["stroke"] = JsonPrimitive(color.second)
+
         return listOf(Feature(bounds.toGeoJSONPolygon(), props))
     }
 }
 
 
 class Block(val data: List<Object>) : GeoJSONExport {
+
+
+    override fun toString(): String {
+        var str = "Block {\n"
+
+        data.forEach {
+
+            when(it.dataType){
+                ObjectType.CADASTRE -> {
+                    val obj = it.value as Cadastre
+                    str += "${obj.toString().split("\n").joinToString("\n") { "\t\t$it" }},\n"
+                }
+
+                ObjectType.RISK -> {
+                    val obj = it.value as Risk
+                    str += "${obj.toString().split("\n").joinToString("\n") { "\t\t$it" }},\n"
+                }
+
+                else -> throw InvalidTypeException("Invalid object type in block at time of export")
+            }
+        }
+        str += "}"
+
+        return str
+    }
+
 
     override fun toGeoJSON() : List<Feature> {
         val features = mutableListOf<Feature>()

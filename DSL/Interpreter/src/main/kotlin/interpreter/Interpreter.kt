@@ -43,7 +43,7 @@ class Interpreter : Node.Visitor<Object> {
 
 
     //Entry
-    fun interpret(root: Node) : String {
+    fun interpret(root: Node) : Block {
 
         //Create global scope
         scopes.add(ProgramScope("GLOBAL"))
@@ -58,7 +58,7 @@ class Interpreter : Node.Visitor<Object> {
         //Evaluate the root node to get the result (block of all features)
         val result = evaluate(root).expectType(ObjectType.BLOCK).value as Block
 
-        return result.toFeatureCollection().json()
+        return result
     }
 
 
@@ -329,7 +329,9 @@ class Interpreter : Node.Visitor<Object> {
             throw InterpreterRuntimeException("Redefinition of constant '${node.name}'", node)
         }
 
-        val value = evaluate(node.value).expectOneOfTypes(ObjectType.NUMBER, ObjectType.POINT, ObjectType.POLYGON, ObjectType.IMPORTED_FEATURE_COLLECTION, ObjectType.LAMBDA)
+        val value = evaluate(node.value).expectOneOfTypes(ObjectType.NUMBER, ObjectType.POINT, ObjectType.POLYGON,
+            ObjectType.IMPORTED_FEATURE_COLLECTION, ObjectType.IMPORTED_FEATURE, ObjectType.LAMBDA)
+
         declareConstant(node.name, value)
 
         return Object.NullObject //No return value
@@ -337,12 +339,22 @@ class Interpreter : Node.Visitor<Object> {
 
 
     override fun visitImport(node: Node.Import): Object {
-        try {
-            return Object(ImportedFeatureCollection(node.file), ObjectType.IMPORTED_FEATURE_COLLECTION)
+
+        //Is it a FeatureCollection import?
+        val fcImport = ImportedFeatureCollection.fromFile(node.file)
+
+        if(fcImport != null){
+            return Object(fcImport, ObjectType.IMPORTED_FEATURE_COLLECTION)
         }
-        catch (e: IllegalArgumentException){
-            throw InterpreterRuntimeException("Only FeatureCollection imports are allowed", node)
+
+        //Otherwise it must be a Feature import
+        val feature = ImportedFeature.fromFile(node.file)
+
+        if(feature != null){
+            return Object(feature, ObjectType.IMPORTED_FEATURE)
         }
+
+        throw InterpreterRuntimeException("Only FeatureCollection and Feature imports are allowed", node)
     }
 
 
