@@ -1,57 +1,41 @@
+const genBox = lambda(x, y, w, h){
 
-const iAmGlobalLambda = lambda(x, y, w, h){
+    const add = lambda(x, y){ return x + y; };
+    const sub = lambda(a, b){ return a - b; };
 
-    const nestedLambda = lambda(a, b){ return a + b; };
+    return Box(<x, y>, <add(x, w), sub(y, h)>);
+};
 
-    return Box(<x, y>, <nestedLambda(x, w), y - h>);
-}; //Yes there must be a semicolon here because it's a constant definition, and it must end with ";"
+//earthQuake(genBox(16.051035, 46.716355, 0.246, 0.137), 0.001, 0);
 
 
-
-const cadastreData = import "./singleFeature.json";
 
 cadastre {
+    const MS_DATA = import "./testData/MS.json";
 
-    .name: cadastreData.name;
-    .id: cadastreData.id;
-    .bounds: cadastreData.geometry;
-    .tag: cadastreData.tag;
+    .name: "Murska Sobota";
+    .id: "105";
+    .bounds: MS_DATA.geometry;
 
 
-    const importedData = import "./exampleImportData.json"; //This file is in project root directory
+    const lotList = import "./testData/MSLots.json";
 
-    foreach feature in importedData {
+    foreach lotEntry in lotList {
+        const poly = lotEntry.geometry;
 
-        if(area(feature.geometry) > 10){
+        if(area(poly) > 0){
 
             lot {
-                .id: feature.id;
-                .type: Forest;
-                .bounds: feature.geometry; //geometry prop = Polygon
-
-                .other: feature.someProp;
+                .id: lotEntry.ST_PARCELE;
+                .type: lotEntry.type;
+                .bounds: lotEntry.geometry;
+                .index: index;
+                .area: poly.area;
             }
         }
-
+        else {
+            //Something else...
+        }
     }
-
 }
 
-
-
-cadastre {
-    .name: "Maribor";
-    .id: "123";
-    .bounds: Circle(<15.645881, 46.55465>, 5000);
-
-    road("123/21", PolyLine(2, <15.643109766995565, 46.54963762218787>,<15.643713800074494, 46.54949888183128>,<15.643569217583433, 46.54917119261518>));
-}
-
-
-
-risk {
-    .type: Flood;
-    .bounds: iAmGlobalLambda(32.48956996423021, 20.994293425751735, 4, 3);
-    .frequency: 0.24;
-    .probability: 0.4;
-}

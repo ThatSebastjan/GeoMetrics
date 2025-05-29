@@ -294,7 +294,7 @@ class Cadastre(val name: String, val id: String, val bounds: PolygonObject, val 
             props[it.name] = value
         }
 
-        props["stroke-width"] = JsonPrimitive(1.0)
+        props["stroke-width"] = JsonPrimitive(5.0)
         props["stroke-opacity"] = JsonPrimitive(1.0)
         props["fill-opacity"] = JsonPrimitive(0.0)
         props["stroke"] = JsonPrimitive("#FF0000")

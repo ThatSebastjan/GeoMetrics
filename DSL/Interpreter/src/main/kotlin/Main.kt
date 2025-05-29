@@ -20,5 +20,7 @@ fun main() {
 
         File("./outFeatures.json").writeText(geoJsonStr.toFeatureCollection().json())
         File("./outFeatures.txt").writeText(geoJsonStr.toString())
+
+        println("Done")
     }
 }

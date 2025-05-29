@@ -157,6 +157,13 @@ class Interpreter : Node.Visitor<Object> {
                 }
             }
 
+            ObjectType.POLYGON -> {
+                return when(node.property){
+                    "area" -> area(listOf(obj))
+                    else -> throw InterpreterRuntimeException("Attempted to access invalid property '${node.property}' on Polygon", node)
+                }
+            }
+
             ObjectType.IMPORTED_FEATURE -> {
                 val importObj = obj.value as ImportedFeature
 
@@ -178,7 +185,7 @@ class Interpreter : Node.Visitor<Object> {
                 val prop = importObj.data.properties[node.property]
 
                 if(prop !is JsonPrimitive){ //We only allow primitives as there is no way to represent other types
-                    throw InterpreterRuntimeException("Only primitive property access is supported on imported features", node)
+                    throw InterpreterRuntimeException("Only primitive property access is supported on imported features: '${node.property}'", node)
                 }
 
                 if(prop.isString){
@@ -540,21 +547,23 @@ class Interpreter : Node.Visitor<Object> {
         val featureList = featureListObj.value as ImportedFeatureCollection
         val result = mutableListOf<Object>()
 
-        //Begin scope
-        scopes.add(ProgramScope("FOR_EACH"))
 
-        featureList.data.forEach {
+        featureList.data.forEachIndexed { index, it ->
+
+            //Begin scope
+            scopes.add(ProgramScope("FOR_EACH"))
 
             //Declare variable prop without checking for name conflicts as we allow shadowing here
             declareConstant(node.variableName, Object(ImportedFeature(it), ObjectType.IMPORTED_FEATURE))
+            declareConstant("index", Object(index.toDouble(), ObjectType.NUMBER)) //Declare loop index constant
 
             //Evaluate body for each iteration, accumulating results
             val block = evaluate(node.content).value as Block
             result.addAll(block.data)
-        }
 
-        //End scope
-        scopes.removeLast()
+            //End scope
+            scopes.removeLast()
+        }
 
         return Object(Block(result), ObjectType.BLOCK)
     }

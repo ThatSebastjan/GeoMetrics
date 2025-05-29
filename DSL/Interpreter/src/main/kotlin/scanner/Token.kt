@@ -65,8 +65,6 @@ enum class TokenType {
     LANDSLIDE,
     EARTHQUAKE
 
-
-    //TODO("Other token types!")
 }
 
 
