@@ -11,7 +11,6 @@ data class GeoJsonPolygon(
     val _id: ObjectId? = null
 )
 
-// GeoJSON Point
 @Serializable
 data class GeoJsonPoint(
     val type: String = "Point",

@@ -9,7 +9,6 @@ import kotlinx.serialization.encoding.Encoder
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 
-// Custom serializer for ObjectId
 object ObjectIdSerializer : KSerializer<ObjectId> {
     override val descriptor = PrimitiveSerialDescriptor("ObjectId", PrimitiveKind.STRING)
 

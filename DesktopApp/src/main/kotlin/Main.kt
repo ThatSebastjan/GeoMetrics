@@ -1,15 +1,18 @@
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import androidx.compose.ui.Alignment
-import androidx.compose.foundation.border
 import kotlinx.coroutines.*
 import db.*
 import kotlinx.coroutines.flow.toList
@@ -17,7 +20,6 @@ import models.Earthquake
 import models.FireStationProperties
 import models.EarthquakeProperties
 import org.litote.kmongo.descending
-import androidx.compose.foundation.lazy.rememberLazyListState
 
 data class DbCheckResult(
     val status: String,
@@ -34,18 +36,49 @@ fun DataManagerTab(
     missingFireStations: List<FireStationProperties>,
     missingEarthquakes: List<EarthquakeProperties>
 ) {
-    Column(Modifier.padding(16.dp)) {
-        Text("Data Management", style = MaterialTheme.typography.h6)
-        Row(Modifier.padding(vertical = 8.dp)) {
-            Button(onClick = onCheckDb, enabled = !isLoading) {
-                Text("Check if DB is up to date")
-            }
-            Spacer(Modifier.width(8.dp))
-            Button(onClick = onUpdateDb, enabled = !isLoading) {
-                Text("Update DB")
+    val buttonWidth = 220.dp
+    val buttonHeight = 52.dp
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            "Data Management",
+            style = MaterialTheme.typography.h6,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+
+        Box(
+            Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Button(
+                    onClick = onCheckDb,
+                    enabled = !isLoading,
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White),
+                    modifier = Modifier
+                        .width(buttonWidth)
+                        .height(buttonHeight)
+                ) {
+                    Text("Check DB", fontSize =  16.sp)
+                }
+                Button(
+                    onClick = onUpdateDb,
+                    enabled = !isLoading,
+                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White),
+                    modifier = Modifier
+                        .width(buttonWidth)
+                        .height(buttonHeight)
+                ) {
+                    Text("Update DB", fontSize =  16.sp)
+                }
             }
         }
-        Spacer(Modifier.height(8.dp))
+
         if (isLoading) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
@@ -53,18 +86,18 @@ fun DataManagerTab(
                 Text("Working on it...")
             }
         } else {
-            Text("DB Status: $dbStatus")
+            Text("DB Status: $dbStatus", modifier = Modifier.align(Alignment.CenterHorizontally))
         }
-        Spacer(Modifier.height(8.dp))
+
         if (missingFireStations.isNotEmpty() || missingEarthquakes.isNotEmpty()) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 60.dp, max = 200.dp)
+                    .fillMaxSize()
                     .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f))
-                    .padding(8.dp)
+                    .padding(12.dp)
             ) {
-                LazyColumn {
+                val listState = rememberLazyListState()
+                LazyColumn(state = listState) {
                     if (missingFireStations.isNotEmpty()) {
                         item { Text("Missing Fire Stations:", style = MaterialTheme.typography.subtitle1) }
                         items(missingFireStations) { fs ->
@@ -79,7 +112,8 @@ fun DataManagerTab(
                     }
                 }
             }
-            Spacer(Modifier.height(8.dp))
+        } else {
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -93,67 +127,63 @@ fun EarthquakeGeneratorTab() {
     var status by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    Column(Modifier.padding(16.dp)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text("Earthquake Generator", style = MaterialTheme.typography.h6)
-        OutlinedTextField(
-            value = magnitude,
-            onValueChange = { magnitude = it },
-            label = { Text("Magnitude (1.0 - 6.0)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = depth,
-            onValueChange = { depth = it },
-            label = { Text("Depth (1.0 - 20.0)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = longitude,
-            onValueChange = { longitude = it },
-            label = { Text("Longitude (13.35 - 16.60)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = latitude,
-            onValueChange = { latitude = it },
-            label = { Text("Latitude (45.42 - 46.88)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(8.dp))
-        Button(onClick = {
-            scope.launch {
-                try {
-                    val maxEarthquakeId: Int = Database.earthquakeCollection.find()
-                        .sort(descending(Earthquake::id))
-                        .limit(1)
-                        .toList()
-                        .firstOrNull()?.id ?: 0
 
-                    val eq = models.Earthquake(
-                        type = "Feature",
-                        id = maxEarthquakeId + 1,
-                        geometry = models.GeoJsonPoint(
-                            coordinates = arrayListOf(longitude.toDouble(), latitude.toDouble())
-                        ),
-                        properties = models.EarthquakeProperties(
-                            timestamp = java.time.Instant.now(),
-                            magnitude = magnitude.toDouble(),
-                            depth = depth.toDouble()
+        val fieldModifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = 400.dp)
+
+        OutlinedTextField(value = magnitude, onValueChange = { magnitude = it }, label = { Text("Magnitude (1.0 - 6.0)") }, modifier = fieldModifier)
+        OutlinedTextField(value = depth, onValueChange = { depth = it }, label = { Text("Depth (1.0 - 20.0)") }, modifier = fieldModifier)
+        OutlinedTextField(value = longitude, onValueChange = { longitude = it }, label = { Text("Longitude (13.35 - 16.60)") }, modifier = fieldModifier)
+        OutlinedTextField(value = latitude, onValueChange = { latitude = it }, label = { Text("Latitude (45.42 - 46.88)") }, modifier = fieldModifier)
+
+        Button(
+            onClick = {
+                scope.launch {
+                    try {
+                        val maxEarthquakeId: Int = Database.earthquakeCollection.find()
+                            .sort(descending(Earthquake::id))
+                            .limit(1)
+                            .toList()
+                            .firstOrNull()?.id ?: 0
+
+                        val eq = models.Earthquake(
+                            type = "Feature",
+                            id = maxEarthquakeId + 1,
+                            geometry = models.GeoJsonPoint(
+                                coordinates = arrayListOf(longitude.toDouble(), latitude.toDouble())
+                            ),
+                            properties = models.EarthquakeProperties(
+                                timestamp = java.time.Instant.now(),
+                                magnitude = magnitude.toDouble(),
+                                depth = depth.toDouble()
+                            )
                         )
-                    )
-                    db.Database.earthquakeCollection.insertOne(eq)
-                    status = "✅ Earthquake inserted!"
-                } catch (e: Exception) {
-                    status = "❌ Error: ${e.message}"
+                        db.Database.earthquakeCollection.insertOne(eq)
+                        status = "✅ Earthquake inserted!"
+                    } catch (e: Exception) {
+                        status = "❌ Error: ${e.message}"
+                    }
                 }
-            }
-        }) {
+            },
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White)
+        ) {
             Text("Generate Earthquake")
         }
+
         status?.let {
-            Spacer(Modifier.height(8.dp))
             Text(it)
         }
+
+        Spacer(modifier = Modifier.weight(1f))
     }
 }
 
@@ -164,17 +194,22 @@ fun ScraperTab() {
     var progressMessages by remember { mutableStateOf(listOf<String>()) }
     val listState = rememberLazyListState()
 
-    // Auto-scroll to the last message when progressMessages changes
     LaunchedEffect(progressMessages.size) {
         if (progressMessages.isNotEmpty()) {
             listState.animateScrollToItem(progressMessages.lastIndex)
         }
     }
 
-    Column(Modifier.padding(16.dp)) {
-        Text("Scraper Progress", style = MaterialTheme.typography.h6)
-        Spacer(Modifier.height(8.dp))
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text("Scraper Progress", style = MaterialTheme.typography.h6, modifier = Modifier.align(Alignment.CenterHorizontally))
+
         Button(
+            modifier =  Modifier.height(48.dp).width(250.dp).align(Alignment.CenterHorizontally),
             onClick = {
                 isRunning = true
                 progressMessages = listOf("Starting scraper...")
@@ -185,10 +220,11 @@ fun ScraperTab() {
                         val fireStations = scraper.scrapeFireStations()
                         progressMessages = progressMessages + "Found ${fireStations.size} fire stations."
 
-                        progressMessages = progressMessages + "Scraping earthquakes (last 0)..."
-                        val earthquakes = scraper.scrapeEarthQuakes(0)
+                        progressMessages = progressMessages + "Scraping earthquakes..."
+                        val earthquakes = scraper.scrapeEarthQuakes(0) { batchIndex, totalBatches ->
+                            progressMessages = progressMessages + "Processed batch $batchIndex of $totalBatches"
+                        }
                         progressMessages = progressMessages + "Found ${earthquakes.size} earthquakes."
-
                         progressMessages = progressMessages + "Scraping complete!"
                     } catch (e: Exception) {
                         progressMessages = progressMessages + "Error: ${e.message}"
@@ -197,17 +233,18 @@ fun ScraperTab() {
                     }
                 }
             },
-            enabled = !isRunning
+            enabled = !isRunning,
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White)
         ) {
             Text("Run Scraper")
         }
-        Spacer(Modifier.height(8.dp))
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 60.dp, max = 200.dp)
+                .weight(1f)
                 .border(1.dp, MaterialTheme.colors.onSurface.copy(alpha = 0.12f))
-                .padding(8.dp)
+                .padding(12.dp)
         ) {
             LazyColumn(state = listState) {
                 items(progressMessages) { msg ->
@@ -229,41 +266,47 @@ fun App() {
     val scope = rememberCoroutineScope()
 
     MaterialTheme {
-        Column {
-            TabRow(
-                selectedTabIndex = tabIndex,
-                modifier = Modifier.height(64.dp)
-            ) {
-                Tab(selected = tabIndex == 0, onClick = { tabIndex = 0 }) { Text("Management") }
-                Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }) { Text("Generator") }
-                Tab(selected = tabIndex == 2, onClick = { tabIndex = 2 }) { Text("Scraper") }
+        Column(Modifier.fillMaxSize()) {
+            Surface(color = Color.Black) {
+                TabRow(
+                    selectedTabIndex = tabIndex,
+                    modifier = Modifier.height(64.dp),
+                    backgroundColor = Color.Black,
+                    contentColor = Color.White
+                ) {
+                    Tab(selected = tabIndex == 0, onClick = { tabIndex = 0 }) { Text("Management") }
+                    Tab(selected = tabIndex == 1, onClick = { tabIndex = 1 }) { Text("Generator") }
+                    Tab(selected = tabIndex == 2, onClick = { tabIndex = 2 }) { Text("Scraper") }
+                }
             }
-            when (tabIndex) {
-                0 -> DataManagerTab(
-                    dbStatus = dbStatus,
-                    isLoading = isLoading,
-                    onCheckDb = {
-                        isLoading = true
-                        scope.launch {
-                            val result = checkDatabaseUpToDate()
-                            dbStatus = result.status
-                            missingFireStations = result.missingFireStations
-                            missingEarthquakes = result.missingEarthquakes
-                            isLoading = false
-                        }
-                    },
-                    onUpdateDb = {
-                        isLoading = true
-                        scope.launch {
-                            dbStatus = updateDatabase()
-                            isLoading = false
-                        }
-                    },
-                    missingFireStations = missingFireStations,
-                    missingEarthquakes = missingEarthquakes
-                )
-                1 -> EarthquakeGeneratorTab()
-                2 -> ScraperTab()
+            Box(Modifier.fillMaxSize()) {
+                when (tabIndex) {
+                    0 -> DataManagerTab(
+                        dbStatus = dbStatus,
+                        isLoading = isLoading,
+                        onCheckDb = {
+                            isLoading = true
+                            scope.launch {
+                                val result = checkDatabaseUpToDate()
+                                dbStatus = result.status
+                                missingFireStations = result.missingFireStations
+                                missingEarthquakes = result.missingEarthquakes
+                                isLoading = false
+                            }
+                        },
+                        onUpdateDb = {
+                            isLoading = true
+                            scope.launch {
+                                dbStatus = updateDatabase()
+                                isLoading = false
+                            }
+                        },
+                        missingFireStations = missingFireStations,
+                        missingEarthquakes = missingEarthquakes
+                    )
+                    1 -> EarthquakeGeneratorTab()
+                    2 -> ScraperTab()
+                }
             }
         }
     }

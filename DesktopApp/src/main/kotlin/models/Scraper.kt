@@ -8,7 +8,6 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.coroutineScope
 
 
-// Data models for scraped entities
 data class ScrapedFireStation(
     val longitude: Double,
     val latitude: Double,
@@ -54,10 +53,12 @@ class Scraper {
         return list
     }
 
-    suspend fun scrapeEarthQuakes(latestTimestampInDb: Long = 0): List<ScrapedEarthQuake> {
+    suspend fun scrapeEarthQuakes(
+        latestTimestampInDb: Long = 0,
+        onBatchProcessed: ((batchIndex: Int, totalBatches: Int) -> Unit)? = null
+    ): List<ScrapedEarthQuake> {
         val earthquakes = mutableListOf<DocElement>()
 
-        // Step 1: Scrape the earthquake table and collect new earthquakes
         skrape(HttpFetcher) {
             request { url = "https://www.potresi.com/country/slovenia" }
             response {
@@ -72,7 +73,6 @@ class Scraper {
             }
         }
 
-        // Step 2: Process in coroutine context
         suspend fun scrapePos(pageUrl: String): Pair<Double, Double> {
             var result = Pair(0.0, 0.0)
             skrape(HttpFetcher) {
@@ -91,7 +91,8 @@ class Scraper {
 
         val batchSize = 20
         val result = mutableListOf<ScrapedEarthQuake>()
-        for (batch in earthquakes.chunked(batchSize)) {
+        val batches = earthquakes.chunked(batchSize)
+        for ((batchIndex, batch) in batches.withIndex()) {
             coroutineScope {
                 val batchResults = batch.map { earthquake ->
                     async(Dispatchers.IO) {
@@ -105,6 +106,7 @@ class Scraper {
                 }
                 result.addAll(batchResults.awaitAll())
             }
+            onBatchProcessed?.invoke(batchIndex + 1, batches.size)
         }
         return result
     }

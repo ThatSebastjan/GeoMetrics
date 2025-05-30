@@ -14,7 +14,6 @@ import org.bson.types.ObjectId
 import java.time.Instant
 
 
-// Earthquake properties
 @Serializable
 data class EarthquakeProperties(
     @Contextual
@@ -23,7 +22,6 @@ data class EarthquakeProperties(
     val depth: Double
 )
 
-// Earthquake document
 @Serializable
 data class Earthquake(
     @Serializable(with = ObjectIdSerializer::class)
