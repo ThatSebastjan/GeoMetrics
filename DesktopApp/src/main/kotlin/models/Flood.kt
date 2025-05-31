@@ -30,8 +30,9 @@ data class FloodProperties(
 @Serializable
 data class Flood(
     @Serializable(with = ObjectIdSerializer::class)
-    @BsonId val id: ObjectId = ObjectId(),
+    @BsonId val _id: ObjectId = ObjectId(),
     val type: String,
+    val id: Int? = null,
     val documentId: Int? = null,
     val geometry: GeoJsonPolygon,
     val properties: FloodProperties,
