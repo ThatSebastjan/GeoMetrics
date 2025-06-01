@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import styles from '../styles';
 import icons from './Icons';
 import {useNavigate} from "react-router-dom";
+import Minimap from "./Minimap";
 
 function Results() {
     const [results, setResults] = useState([]);
@@ -63,21 +64,7 @@ function Results() {
             setLoading(false);
     }, []);
 
-    const renderMapPlaceholder = (coordinates) => {
-        // In a real implementation, this would be a proper map component
-        return (
-            <div style={{
-                backgroundColor: '#b8ffab',
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-            }}>
-                <div>Map: {coordinates.lat}, {coordinates.lng}</div>
-            </div>
-        );
-    };
+
 
     const renderRiskIndicators = (scores) => {
         return (
@@ -142,7 +129,10 @@ function Results() {
                             </styles.results.ResultAddress>
 
                             <styles.results.MapContainer>
-                                {renderMapPlaceholder(result.coordinates)}
+                                <Minimap
+                                    lat={result.coordinates.lat}
+                                    lng={result.coordinates.lng}
+                                    zoom={16}/>
                             </styles.results.MapContainer>
 
                             <styles.results.ResultSummary>

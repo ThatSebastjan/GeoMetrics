@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import styles from '../styles';
 import icons from './Icons';
 import html2pdf from 'html2pdf.js';
+import Minimap from "./Minimap";
 
 function ResultDetails() {
     const { id } = useParams();
@@ -34,9 +35,6 @@ function ResultDetails() {
                 elevation: "125m above sea level",
                 proximityToWater: "500m to nearest stream",
                 proximityToFirstResponders: "5km from nearest Fire station",
-                Something: "sljhfgaldjfhg",
-                SomethingElse: "sljhfgaldjfhg",
-                "Something other Than That": "sljhfgaldjfhg"
             }
         };
 
@@ -48,20 +46,6 @@ function ResultDetails() {
         return Math.round(riskScore / 10);
     };
 
-    const renderMapPlaceholder = (coordinates) => {
-        return (
-            <div style={{
-                backgroundColor: '#b8ffab',
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-            }}>
-                <div>Map: {coordinates.lat}, {coordinates.lng}</div>
-            </div>
-        );
-    };
 
     const exportAsPDF = () => {
         if (!exportTemplateRef.current) {
@@ -172,7 +156,10 @@ function ResultDetails() {
                         <styles.results.DetailMainSection>
                             <styles.results.DetailCard>
                                 <styles.results.MapDetailContainer>
-                                    {renderMapPlaceholder(result.coordinates)}
+                                    <Minimap
+                                        lat={result.coordinates.lat}
+                                        lng={result.coordinates.lng}
+                                        zoom={16}/>
                                 </styles.results.MapDetailContainer>
                                 <styles.results.DetailCardContent>
                                     <styles.results.AddressDetail>

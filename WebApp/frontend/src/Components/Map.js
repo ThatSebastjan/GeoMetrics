@@ -32,7 +32,7 @@ const Map = ({ searchTerm }) => {
 
         map.current = new mapboxgl.Map({
             container: mapContainer.current,
-            style: "mapbox://styles/thatsebastjan/cmal96wtw013501qyglis664t",
+            style: "mapbox://styles/mapbox/standard",
             center: [14.9955, 46.1512], // Slovenia center coordinates
             zoom: 8
         });

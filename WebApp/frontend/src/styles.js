@@ -37,6 +37,7 @@ const spacing = {
 const shadows = {
     small: '0 1px 3px rgba(0, 0, 0, 0.1)',
     medium: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    large: '0 7px 9px rgba(0, 0, 0, 0.1)',
 };
 
 const borderRadius = {
@@ -47,7 +48,7 @@ const borderRadius = {
 };
 
 const loginStyles = {
-        Container: styled.div`
+    Container: styled.div`
         display: flex;
         justify-content: center;
         align-items: center;
@@ -57,7 +58,7 @@ const loginStyles = {
 
     FormWrapper: styled.div`
         width: 100%;
-        max-width: 600px; 
+        max-width: 600px;
         padding: ${spacing.xl} ${spacing.xl} ${spacing.xl};
         background-color: ${colors.white};
         border-radius: ${borderRadius.medium};
@@ -71,7 +72,7 @@ const loginStyles = {
     `,
 
     LogoText: styled.h1`
-        font-size: 2.5rem; /* Increased from 2.2rem */
+        font-size: 2.5rem;
         font-weight: 700;
         color: ${colors.primary};
         margin: 0;
@@ -80,7 +81,7 @@ const loginStyles = {
 
     AppDescription: styled.p`
         color: ${colors.textMedium};
-        font-size: 1.1rem; /* Increased from 1rem */
+        font-size: 1.1rem;
         margin: ${spacing.xs} 0 0;
         padding-bottom: ${spacing.xl};
     `,
@@ -116,7 +117,7 @@ const loginStyles = {
         border-radius: ${borderRadius.small};
         font-size: 1rem;
         transition: all 0.2s;
-        height: 48px; /* Fixed height for consistency */
+        height: 48px;
         box-sizing: border-box;
 
         &:focus {
@@ -191,6 +192,12 @@ const loginStyles = {
 
 const commonStyles = {
 
+    HeroUserName: styled.h1`
+        font-size: 4rem;
+        padding: 0px;
+        margin-bottom: 0px;
+    `,
+
     HeroTitle: styled.h1`
         font-size: 2.5rem;
         padding: 0px;
@@ -198,10 +205,20 @@ const commonStyles = {
     `,
 
     PageTitle: styled.h1`
+        text-align: center;
         margin: 0 0 ${spacing.md} 0;
         color: ${colors.textDark};
         font-size: 1.8rem;
         font-weight: 600;
+        text-align: left;
+    `,
+
+    PageSubtitle: styled.h1`
+        text-align: center;
+        margin: 0 0 ${spacing.md} 0;
+        color: ${colors.secondary};
+        font-size: 1.3rem;
+        font-weight: 500;
         text-align: left;
     `,
 
@@ -242,7 +259,6 @@ const commonStyles = {
         font-size: 1.5rem;
     `,
 
-    // Add these to commonStyles object
     FormGroup: styled.div`
         margin-bottom: 15px;
     `,
@@ -265,19 +281,21 @@ const commonStyles = {
         border: 1px solid ${props => props.$type === 'error' ? '#f44336' : '#4CAF50'};
     `,
 
-// Add this to settingsStyles object
     Button: styled.button`
         background: ${props => props.$secondary ? colors.secondaryLight: colors.primary};
-        // color: ${props => props.$secondary ? '#333' : 'white'};
+            //color: ${props => props.$secondary ? colors.primary : colors.white};
         color: white;
         border: none;
         padding: ${spacing.sm} ${spacing.md};
-        border-radius: ${borderRadius.small};
+        border-radius: ${borderRadius.medium};
         margin-right: 10px;
         cursor: pointer;
+        box-shadow: ${shadows.medium};
+        transition: all 0.3s;
 
         &:hover {
             background: ${props => props.$secondary ? colors.secondary : colors.primarySuperLight};
+            box-shadow: ${shadows.large};
         }
 
         &:disabled {
@@ -499,12 +517,40 @@ const layoutStyles = {
 const settingsStyles = {
     ContainerHero: styled.div`
         align-items: center;
-        background: rgba(0, 0, 0, 0.85);
+        background: rgba(101, 101, 101, 0.65);
         color: ${colors.white};
         padding: ${spacing.xl};
         box-shadow: ${shadows.small};
         margin: 0px;
-        backdrop-filter: blur(5px);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%23ffffff' fill-opacity='0.03' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        &::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(120deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
     `,
 
     Container: styled.div`
@@ -586,15 +632,26 @@ const settingsStyles = {
     `,
 
     LogoutButton: styled.button`
-        padding: ${spacing.xs} ${spacing.md};
-        background-color: ${colors.primary};
-        color: ${colors.white};
+        background: ${colors.secondary};
+        color: white;
         border: none;
-        border-radius: ${borderRadius.small};
+        margin-right: ${spacing.md};
+        padding: ${spacing.sm} ${spacing.md};
+        border-radius: 10px;
+        font-size: 1rem;
         cursor: pointer;
+        transition: all 0.3s;
+        margin-top: ${spacing.md};
+        box-shadow: ${shadows.medium};
 
         &:hover {
-            background-color: ${colors.dangerDark};
+            box-shadow: ${shadows.large};
+            background: ${colors.primaryDark};
+        }
+
+        &:disabled {
+            background: ${colors.disabled};
+            cursor: not-allowed;
         }
     `,
 
@@ -627,23 +684,25 @@ const settingsStyles = {
         }
     `,
 
-    EditButton: styled.button`
-        background: ${colors.primarySuperLight};
+    EditButton: styled.label`
+        background: ${colors.primary};
         color: white;
         border: none;
         padding: ${spacing.sm} ${spacing.md};
         border-radius: 10px;
         font-size: 1rem;
         cursor: pointer;
-        transition: background-color 0.3s;
+        transition: all 0.3s;
         margin-top: ${spacing.md};
+        box-shadow: ${shadows.medium};
 
         &:hover {
-            background: ${colors.primaryDark};
+            box-shadow: ${shadows.large};
+            background: ${colors.primaryLight};
         }
 
         &:disabled {
-            background: ${colors.disabled};
+            background: ${colors.danger};
             cursor: not-allowed;
         }
     `,
@@ -870,296 +929,297 @@ const resultStyles = {
 
     // Add these to resultStyles object
     ResultsGrid: styled.div`
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: ${spacing.lg};
-    width: 100%;
-`,
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: ${spacing.lg};
+        width: 100%;
+    `,
 
     ResultCard: styled.div`
-    background-color: ${colors.white};
-    border-radius: ${borderRadius.medium};
-    box-shadow: ${shadows.small};
-    overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
+        background-color: ${colors.white};
+        border-radius: ${borderRadius.medium};
+        box-shadow: ${shadows.small};
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
 
-    &:hover {
-        transform: translateY(-4px);
-        box-shadow: ${shadows.medium};
-    }
-`,
+        &:hover {
+            transform: scale(1.01);
+            box-shadow: ${shadows.large};
+            z-index: 1;
+        }
+    `,
 
     ResultCardHeader: styled.div`
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: ${spacing.md};
-    border-bottom: 1px solid ${colors.border};
-`,
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: ${spacing.md};
+        border-bottom: 1px solid ${colors.border};
+    `,
 
     ResultTitle: styled.h3`
-    margin: 0;
-    font-size: 1.2rem;
-    color: ${colors.textDark};
-`,
+        margin: 0;
+        font-size: 1.2rem;
+        color: ${colors.textDark};
+    `,
 
     ScoreBadge: styled.div`
-    background-color: ${props => {
-        const score = props.score;
-        if (score >= 90) return colors.success;
-        if (score >= 70) return 'orange';
-        return colors.danger;
-    }};
-    color: white;
-    font-weight: bold;
-    padding: ${spacing.xs} ${spacing.sm};
-    border-radius: ${borderRadius.small};
-`,
+        background-color: ${props => {
+            const score = props.score;
+            if (score >= 90) return colors.success;
+            if (score >= 70) return 'orange';
+            return colors.danger;
+        }};
+        color: white;
+        font-weight: bold;
+        padding: ${spacing.xs} ${spacing.sm};
+        border-radius: ${borderRadius.small};
+    `,
 
     ResultAddress: styled.div`
-    display: flex;
-    align-items: center;
-    gap: ${spacing.xs};
-    padding: ${spacing.sm} ${spacing.md};
-    font-size: 0.9rem;
-    color: ${colors.textMedium};
-`,
+        display: flex;
+        align-items: center;
+        gap: ${spacing.xs};
+        padding: ${spacing.sm} ${spacing.md};
+        font-size: 0.9rem;
+        color: ${colors.textMedium};
+    `,
 
     MapContainer: styled.div`
-    width: 100%;
-    height: 200px;
-    border-top: 1px solid ${colors.border};
-    border-bottom: 1px solid ${colors.border};
-    overflow: hidden;
-`,
+        width: 100%;
+        height: 200px;
+        border-top: 1px solid ${colors.border};
+        border-bottom: 1px solid ${colors.border};
+        overflow: hidden;
+    `,
 
     ResultSummary: styled.div`
-    padding: ${spacing.md};
-`,
+        padding: ${spacing.md};
+    `,
 
     SummaryTitle: styled.h4`
-    margin: 0 0 ${spacing.xs} 0;
-    color: ${colors.textDark};
-`,
+        margin: 0 0 ${spacing.xs} 0;
+        color: ${colors.textDark};
+    `,
 
     ResultActions: styled.div`
-    display: flex;
-    justify-content: center;
-    padding: ${spacing.md};
-    border-top: 1px solid ${colors.border};
-`,
+        display: flex;
+        justify-content: center;
+        padding: ${spacing.md};
+        border-top: 1px solid ${colors.border};
+    `,
 
     // Add these to resultStyles object
 
 // Detail page layout
     DetailGrid: styled.div`
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: ${spacing.lg};
-  width: 100%;
-  
-  @media (max-width: 1024px) {
-    grid-template-columns: 1fr;
-  }
-`,
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: ${spacing.lg};
+        width: 100%;
+
+        @media (max-width: 1024px) {
+            grid-template-columns: 1fr;
+        }
+    `,
 
     DetailMainSection: styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${spacing.md};
-`,
+        display: flex;
+        flex-direction: column;
+        gap: ${spacing.md};
+    `,
 
     DetailSidebar: styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${spacing.md};
-`,
+        display: flex;
+        flex-direction: column;
+        gap: ${spacing.md};
+    `,
 
 // Cards
     DetailCard: styled.div`
-  background-color: ${colors.white};
-  border-radius: ${borderRadius.medium};
-  box-shadow: ${shadows.small};
-  overflow: hidden;
-  margin-bottom: ${spacing.md};
-`,
+        background-color: ${colors.white};
+        border-radius: ${borderRadius.medium};
+        box-shadow: ${shadows.small};
+        overflow: hidden;
+        margin-bottom: ${spacing.md};
+    `,
 
     DetailCardHeader: styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: ${spacing.md};
-  border-bottom: 1px solid ${colors.border};
-  background-color: ${colors.lightGray};
-`,
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: ${spacing.md};
+        border-bottom: 1px solid ${colors.border};
+        background-color: ${colors.lightGray};
+    `,
 
     DetailCardTitle: styled.h3`
-  margin: 0;
-  font-size: 1.2rem;
-  color: ${colors.textDark};
-  font-weight: 600;
-`,
+        margin: 0;
+        font-size: 1.2rem;
+        color: ${colors.textDark};
+        font-weight: 600;
+    `,
 
     DetailCardContent: styled.div`
-  padding: ${spacing.md};
-`,
+        padding: ${spacing.md};
+    `,
 
 // Risk metrics
     RiskMetricsGrid: styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: ${spacing.md};
-  margin-top: ${spacing.lg};
-`,
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: ${spacing.md};
+        margin-top: ${spacing.lg};
+    `,
 
     RiskMetricCard: styled.div`
-  background-color: ${props => {
-        const risk = props.risk;
-        if (risk < 30) return 'rgba(56, 161, 105, 0.1)';
-        if (risk < 70) return 'rgba(221, 107, 32, 0.1)';
-        return 'rgba(229, 62, 62, 0.1)';
-    }};
-  padding: ${spacing.md};
-  border-radius: ${borderRadius.small};
-  position: relative;
-`,
+        background-color: ${props => {
+            const risk = props.risk;
+            if (risk < 30) return 'rgba(56, 161, 105, 0.1)';
+            if (risk < 70) return 'rgba(221, 107, 32, 0.1)';
+            return 'rgba(229, 62, 62, 0.1)';
+        }};
+        padding: ${spacing.md};
+        border-radius: ${borderRadius.small};
+        position: relative;
+    `,
 
     RiskMetricTitle: styled.h4`
-  margin: 0 0 ${spacing.xs} 0;
-  font-size: 0.9rem;
-  color: ${colors.textDark};
-  font-weight: 500;
-`,
+        margin: 0 0 ${spacing.xs} 0;
+        font-size: 0.9rem;
+        color: ${colors.textDark};
+        font-weight: 500;
+    `,
 
     RiskMetricValue: styled.div`
-  font-size: 1.8rem;
-  font-weight: bold;
-  margin-bottom: ${spacing.sm};
-`,
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin-bottom: ${spacing.sm};
+    `,
 
     RiskMetricBar: styled.div`
-  height: 6px;
-  width: 100%;
-  background-color: rgba(255, 255, 255, 0.6);
-  border-radius: 3px;
-  overflow: hidden;
-  position: relative;
-  
-  &:after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: ${props => props.risk}%;
-    background-color: ${props => {
-        const risk = props.risk;
-        if (risk < 30) return colors.success;
-        if (risk < 70) return '#dd6b20';
-        return colors.danger;
-    }};
-    border-radius: 3px;
-  }
-`,
+        height: 6px;
+        width: 100%;
+        background-color: rgba(255, 255, 255, 0.6);
+        border-radius: 3px;
+        overflow: hidden;
+        position: relative;
+
+        &:after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: ${props => props.risk}%;
+            background-color: ${props => {
+                const risk = props.risk;
+                if (risk < 30) return colors.success;
+                if (risk < 70) return '#dd6b20';
+                return colors.danger;
+            }};
+            border-radius: 3px;
+        }
+    `,
 
 // Map
     MapDetailContainer: styled.div`
-  width: 100%;
-  height: 250px;
-  border-bottom: 1px solid ${colors.border};
-  overflow: hidden;
-`,
+        width: 100%;
+        height: 250px;
+        border-bottom: 1px solid ${colors.border};
+        overflow: hidden;
+    `,
 
     AddressDetail: styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${spacing.xs};
-  font-size: 1rem;
-  color: ${colors.textMedium};
-  padding: ${spacing.sm} 0;
-`,
+        display: flex;
+        align-items: center;
+        gap: ${spacing.xs};
+        font-size: 1rem;
+        color: ${colors.textMedium};
+        padding: ${spacing.sm} 0;
+    `,
 
 // Detail sections
     DetailSection: styled.div`
-  margin-bottom: ${spacing.lg};
-  
-  &:last-child {
-    margin-bottom: 0;
-  }
-`,
+        margin-bottom: ${spacing.lg};
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    `,
 
     DetailSectionTitle: styled.h4`
-  margin: 0 0 ${spacing.sm} 0;
-  font-size: 1.1rem;
-  color: ${colors.textDark};
-  font-weight: 500;
-`,
+        margin: 0 0 ${spacing.sm} 0;
+        font-size: 1.1rem;
+        color: ${colors.textDark};
+        font-weight: 500;
+    `,
 
 // Property info
     PropertyInfoList: styled.ul`
-  list-style: none;
-  padding: 0;
-  margin: 0;
-`,
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    `,
 
     PropertyInfoItem: styled.li`
-  display: flex;
-  padding: ${spacing.xs} 0;
-  border-bottom: 1px solid ${colors.border};
-  
-  &:last-child {
-    border-bottom: none;
-  }
-`,
+        display: flex;
+        padding: ${spacing.xs} 0;
+        border-bottom: 1px solid ${colors.border};
+
+        &:last-child {
+            border-bottom: none;
+        }
+    `,
 
     PropertyInfoLabel: styled.span`
-  font-weight: 500;
-  flex: 1;
-  color: ${colors.textDark};
-`,
+        font-weight: 500;
+        flex: 1;
+        color: ${colors.textDark};
+    `,
 
     PropertyInfoValue: styled.span`
-  flex: 2;
-  color: ${colors.textMedium};
-`,
+        flex: 2;
+        color: ${colors.textMedium};
+    `,
 
 // Actions
     ActionButtonsContainer: styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${spacing.sm};
-  
-  & > button {
-    width: 100%;
-  }
-`,
+        display: flex;
+        flex-direction: column;
+        gap: ${spacing.sm};
+
+        & > button {
+            width: 100%;
+        }
+    `,
 
 // Navigation
     BackButton: styled.button`
-  background: transparent;
-  border: none;
-  display: flex;
-  align-items: center;
-  gap: ${spacing.xs};
-  color: ${colors.white};
-  font-size: 1rem;
-  cursor: pointer;
-  padding: ${spacing.xs} ${spacing.sm};
-  margin-right: ${spacing.md};
-  border-radius: ${borderRadius.small};
-  
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-  
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`,
+        background: transparent;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: ${spacing.xs};
+        color: ${colors.white};
+        font-size: 1rem;
+        cursor: pointer;
+        padding: ${spacing.xs} ${spacing.sm};
+        margin-right: ${spacing.md};
+        border-radius: ${borderRadius.small};
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        svg {
+            width: 16px;
+            height: 16px;
+        }
+    `,
     AssessmentSummary: styled.div`
-    padding: ${spacing.sm};
-    background: ${colors.offWhite};`
+        padding: ${spacing.sm};
+        background: ${colors.offWhite};`
 
 };
 
@@ -1316,7 +1376,7 @@ const searchBarStyles = {
         transition: color 0.2s ease;
         height: 100%;
         border-radius: 0 50px 50px 0;
-        
+
         &:hover {
             color: ${colors.dangerDark};
         }
@@ -1455,7 +1515,7 @@ const advancedStyles = {
             #e0e0e0 100%)`};
         border-radius: 4px;
         cursor: pointer;
-        
+
         &::-webkit-slider-thumb {
             appearance: none;
             width: 16px;
@@ -1464,7 +1524,7 @@ const advancedStyles = {
             background: ${colors.primary};
             cursor: pointer;
         }
-        
+
         &::-moz-range-thumb {
             width: 16px;
             height: 16px;
@@ -1514,7 +1574,7 @@ const advancedStyles = {
         padding: ${spacing.xs};
         border-radius: ${borderRadius.small};
         background-color: ${props => props.$isSelected ? colors.primarySuperLight : 'transparent'};
-        
+
         input {
             accent-color: ${colors.primary};
             width: 18px;
@@ -1551,7 +1611,7 @@ const advancedStyles = {
         align-items: center;
         gap: ${spacing.xs};
         border-bottom: 2px solid;
-        
+
         ${props => props.$type === 'flood' ? `
             color: #0066cc;
             border-bottom-color: #0066cc;
@@ -1600,7 +1660,7 @@ const advancedStyles = {
         appearance: none;
         background: ${props => `linear-gradient(to right, #0066cc 0%, #0066cc ${props.$percentage}%, #e0e0e0 ${props.$percentage}%, #e0e0e0 100%)`};
         border-radius: 4px;
-        
+
         &::-webkit-slider-thumb {
             appearance: none;
             width: 16px;
@@ -1609,7 +1669,7 @@ const advancedStyles = {
             background: #0066cc;
             cursor: pointer;
         }
-        
+
         &::-moz-range-thumb {
             width: 16px;
             height: 16px;
@@ -1626,7 +1686,7 @@ const advancedStyles = {
         appearance: none;
         background: ${props => `linear-gradient(to right, #722ed1 0%, #722ed1 ${props.$percentage}%, #e0e0e0 ${props.$percentage}%, #e0e0e0 100%)`};
         border-radius: 4px;
-        
+
         &::-webkit-slider-thumb {
             appearance: none;
             width: 16px;
@@ -1635,7 +1695,7 @@ const advancedStyles = {
             background: #722ed1;
             cursor: pointer;
         }
-        
+
         &::-moz-range-thumb {
             width: 16px;
             height: 16px;
@@ -1666,13 +1726,111 @@ const advancedStyles = {
         margin-top: ${spacing.lg};
         padding: ${spacing.md};
         border-top: 1px solid ${colors.border};
-        
+
         .update-button {
             padding: 12px 24px;
             font-size: 1.1rem;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
     `,
+};
+
+// Add this new object to styles.js before the final export
+const savedStyles = {
+    LotsGrid: styled.div`
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: ${spacing.lg};
+        width: 100%;
+    `,
+
+    LotCard: styled.div`
+        display: flex;
+        flex-direction: column;
+        background-color: ${colors.white};
+        border-radius: ${borderRadius.medium};
+        box-shadow: ${shadows.medium};
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.3s ease;
+        height: 100%;
+        position: relative;
+        transform-origin: center;
+
+        &:hover {
+            transform: scale(1.04);
+            box-shadow: ${shadows.large};
+            z-index: 1;
+        }
+    `,
+
+    MapContainer: styled.div`
+        width: 100%;
+        height: 220px;
+        position: relative;
+        overflow: hidden;
+    `,
+
+    LotInfo: styled.div`
+        padding: ${spacing.md};
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        justify-content: space-evenly;
+        align-items: center;
+    `,
+
+    LotTitle: styled.h3`
+        margin: 0 0 ${spacing.xs} 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: ${colors.textDark};
+    `,
+
+    LotAddress: styled.div`
+        color: ${colors.textMedium};
+        font-size: 0.9rem;
+        margin-bottom: ${spacing.sm};
+    `,
+
+    RiskScores: styled.div`
+        display: flex;
+        gap: ${spacing.xs};
+        flex-wrap: wrap;
+        margin-bottom: ${spacing.md};
+    `,
+
+    RiskBadge: styled.span`
+        padding: ${spacing.xs} ${spacing.sm};
+        border-radius: ${borderRadius.small};
+        font-size: 0.8rem;
+        font-weight: 500;
+        background-color: ${props => {
+            const risk = props.$risk;
+            if (risk < 30) return 'rgba(56, 161, 105, 0.2)';
+            if (risk < 70) return 'rgba(221, 107, 32, 0.2)';
+            return 'rgba(229, 62, 62, 0.2)';
+        }};
+        color: ${props => {
+            const risk = props.$risk;
+            if (risk < 30) return '#2f855a';
+            if (risk < 70) return '#c05621';
+            return '#c53030';
+        }};
+    `,
+
+    ButtonGroup: styled.div`
+        display: flex;
+        gap: ${spacing.sm};
+        flex-wrap: wrap;
+        padding: 0;
+        margin: 0;
+
+        button {
+            flex: 1;
+            padding: ${spacing.xs} ${spacing.sm};
+            font-size: 0.9rem;
+        }
+    `
 };
 
 const appStyles = {
@@ -1690,6 +1848,7 @@ const appStyles = {
     assess: assessStyles,
     search: searchBarStyles,
     advanced: advancedStyles,
+    saved: savedStyles, // Add this line
 };
 
 

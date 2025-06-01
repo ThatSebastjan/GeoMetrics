@@ -72,7 +72,7 @@ function AppRoutes() {
                         <Route path="settings" element={<Settings />} />
                         <Route path="settings/edit-profile" element={<Edit />} />
                         <Route path="results" element={<Results />} />
-                        <Route path="result-details" element={<ResultDetails/>}/>
+                        <Route path="result-details/:id?" element={<ResultDetails/>}/>
                         <Route path="saved-lots" element={<SavedLots />} />
                     </Route>
                 </Routes>

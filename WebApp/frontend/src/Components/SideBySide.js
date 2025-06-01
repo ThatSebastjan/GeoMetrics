@@ -73,7 +73,7 @@ function SideBySide() {
 
     return (
         <styles.assess.Container>
-            <styles.assess.MapWrapper $isFullScreen={leftFullScreen || rightFullScreen}>
+            <styles.assess.MapWrapper $isFullScreen={leftFullScreen && rightFullScreen}>
                 <Map />
             </styles.assess.MapWrapper>
 

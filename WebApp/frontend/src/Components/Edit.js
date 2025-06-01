@@ -9,6 +9,7 @@ function Edit() {
 
     const [formData, setFormData] = useState({
         username: '',
+        email: '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
@@ -21,26 +22,67 @@ function Edit() {
     const [showPasswordSection, setShowPasswordSection] = useState(false);
     const [passwordMatchError, setPasswordMatchError] = useState('');
 
-    // Add new state variables for animation
+    // State variables for animation
     const [passwordSectionVisible, setPasswordSectionVisible] = useState(false);
     const [passwordSectionHeight, setPasswordSectionHeight] = useState(0);
     const passwordSectionRef = useRef(null);
 
     useEffect(() => {
-        if (!user) {
-            navigate('/login');
-            return;
-        }
+        const checkAuth = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                navigate('/login');
+                return;
+            }
 
-        setFormData(prev => ({
-            ...prev,
-            username: user.username || ''
-        }));
+            try {
+                // Verify the token is still valid with the server
+                const response = await fetch("http://localhost:3001/users/check-session", {
+                    headers: { authorization: token }
+                });
 
-        if (user.profileImage && user.profileImage.path) {
-            setImagePreview(`http://localhost:3001${user.profileImage.path}`);
+                if (!response.ok) {
+                    navigate('/login');
+                    return;
+                }
+
+                // Get user data directly from the server response
+                const userData = await response.json();
+
+                // Update user context with fresh data from server
+                setUserContext({ user: userData.user, token });
+
+                // Set form data using the fresh user data
+                setFormData(prev => ({
+                    ...prev,
+                    username: userData.user.username || '',
+                    email: userData.email || '',
+                }));
+
+                if (userData.user.profileImage && userData.user.profileImage.path) {
+                    setImagePreview(`http://localhost:3001${userData.user.profileImage.path}`);
+                }
+            } catch (error) {
+                console.error("Authentication error:", error);
+                navigate('/login');
+            }
+        };
+
+        // Only run the authentication check if we don't already have user data
+        if (!user || !user.username) {
+        checkAuth();
+        } else {
+            // If we already have user data, just set form data accordingly
+            setFormData(prev => ({
+                ...prev,
+                username: user.username || ''
+            }));
+
+            if (user.profileImage && user.profileImage.path) {
+                setImagePreview(`http://localhost:3001${user.profileImage.path}`);
+            }
         }
-    }, [navigate, user]);
+    }, [navigate, setUserContext, user]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -152,6 +194,7 @@ function Edit() {
             }
 
             if (formData.username) updateData.username = formData.username;
+            if (formData.email) updateData.email = formData.email;
 
             let updatedUser = user;
 
@@ -253,9 +296,6 @@ function Edit() {
             alignItems: 'center',
             padding: '2rem 1rem'
         }}>
-            <styles.settings.Header style={{ maxWidth: '500px', width: '100%', textAlign: 'center' }}>
-                <styles.common.PageTitle>Edit Profile</styles.common.PageTitle>
-            </styles.settings.Header>
 
             {error && <styles.common.Message $type="error" style={{ maxWidth: '500px', width: '100%' }}>{error}</styles.common.Message>}
             {success && <styles.common.Message $type="success" style={{ maxWidth: '500px', width: '100%' }}>{success}</styles.common.Message>}
@@ -276,64 +316,215 @@ function Edit() {
             }}>
                 {/* Profile picture section */}
                 <styles.settings.FormGroup style={{ alignItems: 'center', maxWidth: '380px', margin: '0 auto', width: '100%' }}>
+
+                    <styles.common.PageTitle>Edit Profile</styles.common.PageTitle>
                     <styles.settings.Label style={{ marginBottom: '0.75rem', fontSize: '1.05rem' }}>Profile Picture</styles.settings.Label>
-                    {imagePreview && (
-                        <img
-                            src={imagePreview}
-                            alt="Profile"
-                            style={{
-                                width: '160px',    // Increased from 140px
-                                height: '160px',   // Increased from 140px
-                                borderRadius: '50%',
-                                objectFit: 'cover',
-                                border: `3px solid ${styles.colors.primary}`,
-                                margin: '1.8rem 0 1.2rem 0',  // Increased margins
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-                            }}
-                        />
-                    )}
-                    <div style={{ 
-                        display: 'flex', 
-                        gap: '15px',   // Increased from 10px
-                        justifyContent: 'center', 
-                        width: '100%', 
-                        marginTop: '0.8rem'  // Increased from 0.5rem
-                    }}>
-                        <styles.settings.Button
-                            type="button"
+                    {imagePreview ? (
+                        <div
                             onClick={() => document.getElementById('imageInput').click()}
-                            style={{
-                                ...buttonStyle,
+                            onDragOver={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.currentTarget.classList.add('drag-active');
                             }}
-                            onMouseOver={e => e.currentTarget.style.backgroundColor = styles.colors.primaryLight}
-                            onMouseOut={e => e.currentTarget.style.backgroundColor = ''}
+                            onDragLeave={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.currentTarget.classList.remove('drag-active');
+                            }}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                e.currentTarget.classList.remove('drag-active');
+                                const file = e.dataTransfer.files[0];
+                                if (file && file.type.startsWith('image/')) {
+                                    setProfileImage(file);
+                                    setImagePreview(URL.createObjectURL(file));
+                                }
+                            }}
+                            className="dropzone-image"
+                            style={{
+                                width: '160px',
+                                height: '160px',
+                                borderRadius: '50%',
+                                position: 'relative',
+                                margin: '1.8rem auto 1.2rem auto',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                                cursor: 'pointer',
+                                overflow: 'hidden',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center'
+                            }}
                         >
-                            Choose Image
-                            <input
-                                id="imageInput"
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageChange}
-                                style={{ display: 'none' }}
-                            />
-                        </styles.settings.Button>
-                        {imagePreview && (
-                            <styles.settings.Button
-                                type="button"
-                                onClick={handleDeleteImage}
-                                disabled={loading}
-                                style={{
-                                    ...buttonStyle,
-                                    backgroundColor: styles.colors.danger
-                                }}
-                                onMouseOver={e => e.currentTarget.style.backgroundColor = '#ff4d4f'}
-                                onMouseOut={e => e.currentTarget.style.backgroundColor = styles.colors.danger}
-                            >
-                                Delete
-                            </styles.settings.Button>
-                        )}
-                    </div>
-                </styles.settings.FormGroup>
+                       <img
+                           src={imagePreview}
+                           alt="Profile"
+                           style={{
+                                    width: '100%',
+                                    height: '100%',
+                               objectFit: 'cover',
+                               border: `3px solid ${styles.colors.primary}`,
+                                    borderRadius: '50%',
+                                    boxSizing: 'border-box'
+                           }}
+                       />
+                            <div className="overlay">
+                                <div>Drop new image here<br/>or click to browse</div>
+                            </div>
+                            <style jsx="true">{`
+                                .dropzone-image .overlay {
+                                    position: absolute;
+                                    top: 0;
+                                    left: 0;
+                                    width: 100%;
+                                    height: 100%;
+                                    background: rgba(0, 0, 0, 0.5);
+                                    display: none;
+                                    justify-content: center;
+                                    align-items: center;
+                                    border-radius: 50%;
+                                    color: white;
+                                    font-size: 0.9rem;
+                                    text-align: center;
+                                    padding: 10px;
+                                    box-sizing: border-box;
+                                }
+                                .dropzone-image:hover .overlay {
+                                    display: flex;
+                                }
+                                .drag-active .overlay {
+                                    display: flex !important;
+                                    background: rgba(0, 0, 0, 0.7) !important;
+                                }
+                            `}</style>
+                        </div>
+                    ) : (
+                               <div
+                                   onDragOver={(e) => {
+                                       e.preventDefault();
+                                       e.stopPropagation();
+                                       e.currentTarget.classList.add('drag-active');
+                                   }}
+                                   onDragLeave={(e) => {
+                                       e.preventDefault();
+                                       e.stopPropagation();
+                                       e.currentTarget.classList.remove('drag-active');
+                                   }}
+                                   onDrop={(e) => {
+                                       e.preventDefault();
+                                       e.stopPropagation();
+                                       e.currentTarget.classList.remove('drag-active');
+                                       const file = e.dataTransfer.files[0];
+                                       if (file && file.type.startsWith('image/')) {
+                                           setProfileImage(file);
+                                           setImagePreview(URL.createObjectURL(file));
+                                       }
+                                   }}
+                            onClick={() => document.getElementById('imageInput').click()}
+                                   className="dropzone"
+                                   style={{
+                                       display: 'flex',
+                                       justifyContent: 'center',
+                                       alignItems: 'center',
+                                width: '160px',
+                                height: '160px',
+                                borderRadius: '50%',
+                                       border: '2px dashed #ccc',
+                                margin: '1.8rem auto 1.2rem auto',
+                                       cursor: 'pointer',
+                                       transition: 'all 0.2s ease',
+                                       boxSizing: 'border-box',
+                                       position: 'relative',
+                                       overflow: 'hidden'
+                                   }}
+                               >
+                                   <div className="default-message">
+                                Drag & Drop<br/>Image Here<br/>or Click to Browse
+                                   </div>
+                                   <div className="drag-message">
+                                       Drop Here
+                               </div>
+                               <style jsx="true">{`
+                                   .dropzone .default-message {
+                                       display: flex;
+                                       justify-content: center;
+                                       align-items: center;
+                                       width: 100%;
+                                       height: 100%;
+                                    text-align: center;
+                                    padding: 10px;
+                                    box-sizing: border-box;
+                                   }
+                                   .dropzone .drag-message {
+                                       display: none;
+                                       justify-content: center;
+                                       align-items: center;
+                                       position: absolute;
+                                       top: 0;
+                                       left: 0;
+                                       right: 0;
+                                       bottom: 0;
+                                       font-size: 1.2rem;
+                                       font-weight: bold;
+                                       color: ${styles.colors.primary};
+                                   }
+                                   .drag-active {
+                                       border: 2px dashed ${styles.colors.primary} !important;
+                                       background-color: ${styles.colors.primarySuperLight};
+                                   }
+                                   .drag-active .default-message {
+                                       display: none;
+                                   }
+                                   .drag-active .drag-message {
+                                       display: flex;
+                                   }
+                               `}</style>
+                           </div>
+                    )}
+
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        gap: '15px',
+                        marginTop: '0.8rem'
+                    }}>
+                               <styles.settings.Button
+                                   type="button"
+                                   onClick={() => document.getElementById('imageInput').click()}
+                                   style={{
+                                       ...buttonStyle,
+                                       backgroundColor: styles.colors.secondary
+                                   }}
+                               >
+                                   Choose Image
+                               </styles.settings.Button>
+
+                               {imagePreview && (
+                                   <styles.settings.Button
+                                       type="button"
+                                       onClick={handleDeleteImage}
+                                       disabled={loading}
+                                       style={{
+                                           ...buttonStyle,
+                                           backgroundColor: styles.colors.danger
+                                       }}
+                                       onMouseOver={e => e.currentTarget.style.backgroundColor = '#ff4d4f'}
+                                       onMouseOut={e => e.currentTarget.style.backgroundColor = styles.colors.danger}
+                                   >
+                                       Delete
+                                   </styles.settings.Button>
+                               )}
+                           </div>
+
+                           <input
+                               id="imageInput"
+                               type="file"
+                               accept="image/*"
+                               onChange={handleImageChange}
+                               style={{ opacity: 0, position: "absolute", left: "-9999px" }}
+                           />
+                           </styles.settings.FormGroup>
 
                 {/* Username form group */}
                 <styles.settings.FormGroup style={{ 
@@ -363,7 +554,26 @@ function Edit() {
                             fontSize: "1rem"         // Increased font size
                         }}
                     />
-                </styles.settings.FormGroup>
+                        <styles.settings.Label htmlFor="email" style={{
+                            alignSelf: 'flex-start',
+                            fontSize: '1.05rem',
+                            marginBottom: '0.5rem'
+                        }}>
+                            Email
+                        </styles.settings.Label>
+                        <styles.settings.Input
+                            id="email"
+                            name="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            style={{
+                                width: "100%",
+                                padding: "0.7rem 1rem",
+                                fontSize: "1rem"
+                            }}
+                        />
+                    </styles.settings.FormGroup>
 
 
                 {/* Password toggle button */}
