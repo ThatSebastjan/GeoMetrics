@@ -101,7 +101,7 @@ function SavedLots() {
                                             View on Map
                                         </styles.common.Button>
                                         <styles.common.Button onClick={() => handleCompare(lot)}>
-                                            Compare
+                                            Add to Compare
                                         </styles.common.Button>
                                         <styles.common.Button $secondary onClick={() => handleUnsave(lot.id)}>
                                             Unsave

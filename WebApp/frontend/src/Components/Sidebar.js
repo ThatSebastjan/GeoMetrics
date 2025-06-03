@@ -134,6 +134,14 @@ function Sidebar() {
               </styles.layout.DropdownItem>
             </styles.layout.DropdownMenu>
           </styles.layout.DropdownContainer>
+          <styles.layout.DropdownContainer>
+            <styles.layout.StyledNavItem onClick={() => navigate('/risk-lens')}>
+              <styles.layout.NavItemContent>
+                <styles.layout.IconWrapper><icons.UmbrellaIcon /></styles.layout.IconWrapper>
+                Risk Lens
+              </styles.layout.NavItemContent>
+            </styles.layout.StyledNavItem>
+          </styles.layout.DropdownContainer>
         </styles.layout.NavMenu>
 
         {!user ? (

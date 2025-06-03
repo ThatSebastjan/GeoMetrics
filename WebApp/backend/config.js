@@ -6,7 +6,7 @@ module.exports = {
 	
 	
 	//DB config
-	dbURL: "mongodb://mongodb:27017/GeoMetricsDB",
+	dbURL: "mongodb://localhost:27017/GeoMetricsDB",
 	
 	
 	//Session storage config

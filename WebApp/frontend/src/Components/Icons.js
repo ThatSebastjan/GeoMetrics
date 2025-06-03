@@ -115,7 +115,7 @@ export const SearchIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
         <path d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+    </svg>
 )
 
 
@@ -128,9 +128,9 @@ export const CancelIcon = () => (
 )
 
 export const RippleIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="18" viewBox="0 0 22 18" fill="none">
-        <path d="M15.24 4.75993C15.7979 5.31717 16.2404 5.9789 16.5424 6.70729C16.8443 7.43568 16.9997 8.21644 16.9997 9.00493C16.9997 9.79342 16.8443 10.5742 16.5424 11.3026C16.2404 12.031 15.7979 12.6927 15.24 13.2499M6.76 13.2399C6.20214 12.6827 5.75959 12.021 5.45764 11.2926C5.1557 10.5642 5.00028 9.78342 5.00028 8.99493C5.00028 8.20644 5.1557 7.42568 5.45764 6.69729C5.75959 5.9689 6.20214 5.30717 6.76 4.74993M18.07 1.92993C19.9447 3.80521 20.9979 6.34829 20.9979 8.99993C20.9979 11.6516 19.9447 14.1947 18.07 16.0699M3.93 16.0699C2.05529 14.1947 1.00214 11.6516 1.00214 8.99993C1.00214 6.34829 2.05529 3.80521 3.93 1.92993" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="11" cy="9" r="3" fill="currentColor" />
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M12 14C13.1046 14 14 13.1046 14 12C14 10.8954 13.1046 10 12 10C10.8954 10 10 10.8954 10 12C10 13.1046 10.8954 14 12 14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M16.24 7.75993C16.7979 8.31717 17.2404 8.9789 17.5424 9.70729C17.8443 10.4357 17.9997 11.2164 17.9997 12.0049C17.9997 12.7934 17.8443 13.5742 17.5424 14.3026C17.2404 15.031 16.7979 15.6927 16.24 16.2499M7.76 16.2399C7.20214 15.6827 6.75959 15.021 6.45764 14.2926C6.1557 13.5642 6.00028 12.7834 6.00028 11.9949C6.00028 11.2064 6.1557 10.4257 6.45764 9.69729C6.75959 8.9689 7.20214 8.30717 7.76 7.74993M19.07 4.92993C20.9447 6.80521 21.9979 9.34829 21.9979 11.9999C21.9979 14.6516 20.9447 17.1947 19.07 19.0699M4.93 19.0699C3.05529 17.1947 2.00214 14.6516 2.00214 11.9999C2.00214 9.34829 3.05529 6.80521 4.93 4.92993" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
 )
 
@@ -138,6 +138,33 @@ export  const BackIcon = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M19 12H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         <path d="M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+)
+
+export const UmbrellaIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M18 19C18 19.7956 17.6839 20.5587 17.1213 21.1213C16.5587 21.6839 15.7956 22 15 22C14.2044 22 13.4413 21.6839 12.8787 21.1213C12.3161 20.5587 12 19.7956 12 19V12M23 12C22.7388 9.26357 21.467 6.72275 19.433 4.87366C17.399 3.02458 14.7489 2 12 2C9.25114 2 6.60096 3.02458 4.56697 4.87366C2.53297 6.72275 1.2612 9.26357 1 12H23Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+)
+
+export const DropIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2.69L17.66 8.35C18.7793 9.46861 19.5418 10.8941 19.8509 12.4461C20.16 13.998 20.0019 15.6069 19.3965 17.069C18.7912 18.5311 17.7658 19.7808 16.4501 20.6601C15.1344 21.5394 13.5875 22.0087 12.005 22.0087C10.4225 22.0087 8.8756 21.5394 7.55989 20.6601C6.24419 19.7808 5.21881 18.5311 4.61346 17.069C4.00812 15.6069 3.85 13.998 4.1591 12.4461C4.46821 10.8941 5.23066 9.46861 6.35 8.35L12 2.69Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+)
+
+export const WaveIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+)
+
+export const LandslideIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 17l6-8 3 5 5-8 3 5" />
+        <path d="M2 20h20" />
     </svg>
 )
 
@@ -160,6 +187,10 @@ const icons = {
     CancelIcon,
     RippleIcon,
     BackIcon,
+    UmbrellaIcon,
+    DropIcon,
+    WaveIcon,
+    LandslideIcon,
 }
 
 export default icons;

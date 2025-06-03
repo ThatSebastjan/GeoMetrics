@@ -20,8 +20,8 @@ function ResultDetails() {
             date: new Date(2024, 4, 21, 12,30,60,23),
             scores: {
                 floodRisk: 20,
-                landslideRisk: 50,
-                earthquakeRisk: 92
+                landslideRisk: 20,
+                earthquakeRisk: 12
             },
             coordinates: { lat: 40.7128, lng: -74.0060 },
             summary: "AI generated summary shall be generated here :)",

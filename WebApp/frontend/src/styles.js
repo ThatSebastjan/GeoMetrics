@@ -303,6 +303,42 @@ const commonStyles = {
             cursor: not-allowed;
         }
     `,
+    RiskPill: styled.div`
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        background-color: rgba(255, 255, 255, 0.9);
+        border-radius: 30px;
+        padding: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        z-index: 10;
+    `,
+
+    RiskButton: styled.button`
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        margin: 5px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+            background-color: ${props => props.$isActive ? props.$customColor || '#3498db' : 'white'};
+        color: ${props => props.$isActive ? 'white' : '#333'};
+        transition: all 0.2s ease;
+            box-shadow: ${props => props.$isActive ? 
+                `0 0 10px ${props.$customColor ? props.$customColor.replace(')', ', 0.7)').replace('rgb', 'rgba') : 'rgba(52, 152, 219, 0.7)'}` : 
+                '0 1px 3px rgba(0, 0, 0, 0.1)'};
+
+        &:hover {
+            transform: scale(1.1);
+        }
+    `
 };
 
 const layoutStyles = {
@@ -338,6 +374,7 @@ const layoutStyles = {
 
     NavMenu: styled.nav`
         flex: 1;
+        width: ;
     `,
 
     NavItem: styled.div`
@@ -446,6 +483,26 @@ const layoutStyles = {
         }
     `,
 
+    SingleNavItemWithIcon: styled.div`
+        text-indent: ${spacing.xs};
+        background-color: ${colors.white};
+        padding: ${spacing.md} ${spacing.lg};
+        border-radius: ${borderRadius.medium};
+        cursor: pointer;
+        color: ${colors.text};
+        font-weight: bold;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        transition: all 0.25s;
+
+        &:hover {
+            background: ${colors.primary};
+            color: white;
+
+        }
+    `,
+
     DropdownItem: styled.div`
         text-indent: ${spacing.xs};
         padding: ${spacing.md} ${spacing.md};
@@ -475,6 +532,7 @@ const layoutStyles = {
     `,
 
     StyledNavItem: styled.div`
+        background-color: ${colors.white};
         text-indent: ${spacing.xs};
         padding: ${spacing.md} ${spacing.lg};
         border-radius: ${borderRadius.medium};
@@ -1757,7 +1815,7 @@ const savedStyles = {
         transform-origin: center;
 
         &:hover {
-            transform: scale(1.04);
+            transform: scale(1.02);
             box-shadow: ${shadows.large};
             z-index: 1;
         }

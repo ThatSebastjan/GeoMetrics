@@ -13,6 +13,7 @@ import Edit from "./Components/Edit";
 import Results from "./Components/Results";
 import SavedLots from "./Components/SavedLots";
 import ResultDetails from "./Components/ResultDetails";
+import RiskLens from "./Components/RiskLens";
 
 
 // Create a separate component for routes that uses the context
@@ -73,6 +74,7 @@ function AppRoutes() {
                         <Route path="settings/edit-profile" element={<Edit />} />
                         <Route path="results" element={<Results />} />
                         <Route path="result-details/:id?" element={<ResultDetails/>}/>
+                        <Route path="risk-lens/:risk?" element={<RiskLens/>}/>
                         <Route path="saved-lots" element={<SavedLots />} />
                     </Route>
                 </Routes>
