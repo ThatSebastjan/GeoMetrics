@@ -34,6 +34,7 @@ dependencies {
     // Kotlin coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("it.skrape:skrapeit:1.2.2")
+    implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
 }
 
 compose.desktop {
