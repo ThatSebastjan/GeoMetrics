@@ -16,12 +16,7 @@ import androidx.compose.ui.window.application
 import kotlinx.coroutines.*
 import db.*
 import kotlinx.coroutines.flow.toList
-import models.Earthquake
-import models.FireStationProperties
-import models.EarthquakeProperties
-import org.litote.kmongo.descending
-import models.Flood
-import models.LandSlide
+import models.*
 import org.litote.kmongo.descending
 
 data class DbCheckResult(
@@ -366,83 +361,186 @@ fun ScraperTab() {
 @Composable
 fun DatabaseViewerTab() {
     var subTabIndex by remember { mutableStateOf(0) }
+    var page by remember { mutableStateOf(0) }
+    var totalCount by remember { mutableStateOf(0) }
     var earthquakes by remember { mutableStateOf<List<Earthquake>>(emptyList()) }
     var fireStations by remember { mutableStateOf<List<models.FireStation>>(emptyList()) }
     var floods by remember { mutableStateOf<List<Flood>>(emptyList()) }
     var landslides by remember { mutableStateOf<List<LandSlide>>(emptyList()) }
+    var landLots by remember { mutableStateOf<List<LandLot>>(emptyList()) }
+    var landUses by remember { mutableStateOf<List<LandUse>>(emptyList()) }
     val scope = rememberCoroutineScope()
+    val pageSize = 10
 
-    // Fetch data when subTabIndex changes
-    LaunchedEffect(subTabIndex) {
+    LaunchedEffect(subTabIndex, page) {
         when (subTabIndex) {
             0 -> scope.launch {
+                totalCount = Database.earthquakeCollection.countDocuments().toInt()
                 earthquakes = Database.earthquakeCollection
                     .find()
                     .sort(descending(models.Earthquake::id))
-                    .limit(5)
+                    .skip(page * pageSize)
+                    .limit(pageSize)
                     .toList()
                     .asReversed()
             }
             1 -> scope.launch {
+                totalCount = Database.fireStationCollection.countDocuments().toInt()
                 fireStations = Database.fireStationCollection
                     .find()
                     .sort(descending(models.FireStation::id))
-                    .limit(5)
+                    .skip(page * pageSize)
+                    .limit(pageSize)
                     .toList()
                     .asReversed()
             }
             2 -> scope.launch {
+                totalCount = Database.floodCollection.countDocuments().toInt()
                 floods = Database.floodCollection
                     .find()
                     .sort(descending(models.Flood::id))
-                    .limit(5)
+                    .skip(page * pageSize)
+                    .limit(pageSize)
                     .toList()
                     .asReversed()
             }
             3 -> scope.launch {
+                totalCount = Database.landSlideCollection.countDocuments().toInt()
                 landslides = Database.landSlideCollection
                     .find()
                     .sort(descending(models.LandSlide::id))
-                    .limit(5)
+                    .skip(page * pageSize)
+                    .limit(pageSize)
+                    .toList()
+                    .asReversed()
+            }
+            4 -> scope.launch {
+                totalCount = Database.landLotCollection.countDocuments().toInt()
+                landLots = Database.landLotCollection
+                    .find()
+                    .sort(descending(models.LandLot::id))
+                    .skip(page * pageSize)
+                    .limit(pageSize)
+                    .toList()
+                    .asReversed()
+            }
+            5 -> scope.launch {
+                totalCount = Database.landUseCollection.countDocuments().toInt()
+                landUses = Database.landUseCollection
+                    .find()
+                    .sort(descending(models.LandUse::id))
+                    .skip(page * pageSize)
+                    .limit(pageSize)
                     .toList()
                     .asReversed()
             }
         }
     }
 
+    fun resetPage() {
+        page = 0
+    }
+
     Column(Modifier.fillMaxSize().padding(24.dp)) {
-        TabRow(selectedTabIndex = subTabIndex) {
-            Tab(selected = subTabIndex == 0, onClick = { subTabIndex = 0 }) { Text("Earthquakes") }
-            Tab(selected = subTabIndex == 1, onClick = { subTabIndex = 1 }) { Text("Fire Stations") }
-            Tab(selected = subTabIndex == 2, onClick = { subTabIndex = 2 }) { Text("Floods") }
-            Tab(selected = subTabIndex == 3, onClick = { subTabIndex = 3 }) { Text("Landslides") }
+        TabRow(
+            selectedTabIndex = subTabIndex,
+            backgroundColor = Color.Black,
+            contentColor = Color.White
+        ) {
+            Tab(
+                selected = subTabIndex == 0,
+                onClick = { subTabIndex = 0; resetPage() },
+                selectedContentColor = Color.White,
+                unselectedContentColor = Color.White
+            ) { Text("Earthquakes") }
+            Tab(
+                selected = subTabIndex == 1,
+                onClick = { subTabIndex = 1; resetPage() },
+                selectedContentColor = Color.White,
+                unselectedContentColor = Color.White
+            ) { Text("Fire Stations") }
+            Tab(
+                selected = subTabIndex == 2,
+                onClick = { subTabIndex = 2; resetPage() },
+                selectedContentColor = Color.White,
+                unselectedContentColor = Color.White
+            ) { Text("Floods") }
+            Tab(
+                selected = subTabIndex == 3,
+                onClick = { subTabIndex = 3; resetPage() },
+                selectedContentColor = Color.White,
+                unselectedContentColor = Color.White
+            ) { Text("Landslides") }
+            Tab(
+                selected = subTabIndex == 4,
+                onClick = { subTabIndex = 4; resetPage() },
+                selectedContentColor = Color.White,
+                unselectedContentColor = Color.White
+            ) { Text("Land Lots") }
+            Tab(
+                selected = subTabIndex == 5,
+                onClick = { subTabIndex = 5; resetPage() },
+                selectedContentColor = Color.White,
+                unselectedContentColor = Color.White
+            ) { Text("Land Uses") }
         }
         Spacer(Modifier.height(16.dp))
-        when (subTabIndex) {
-            0 -> LazyColumn {
-                items(earthquakes) { eq ->
-                    Text("ID: ${eq.id}, Mag: ${eq.properties.magnitude}, Depth: ${eq.properties.depth}, Time: ${eq.properties.timestamp}")
-                    Divider()
+        Box(Modifier.weight(1f)) {
+            when (subTabIndex) {
+                0 -> LazyColumn {
+                    items(earthquakes) { eq ->
+                        Text("ID: ${eq.id}, Mag: ${eq.properties.magnitude}, Depth: ${eq.properties.depth}, Time: ${eq.properties.timestamp}")
+                        Divider()
+                    }
+                }
+                1 -> LazyColumn {
+                    items(fireStations) { fs ->
+                        Text("ID: ${fs.id}, Location: ${fs.properties.location}, Address: ${fs.properties.address}, City: ${fs.properties.city}")
+                        Divider()
+                    }
+                }
+                2 -> LazyColumn {
+                    items(floods) { f ->
+                        Text("ID: ${f.id}, Type: ${f.properties.FloodType}, ObjectID: ${f.properties.OBJECTID}")
+                        Divider()
+                    }
+                }
+                3 -> LazyColumn {
+                    items(landslides) { l ->
+                        Text("ID: ${l.id}, Type: ${l.properties.LandSlideType}, ObjectID: ${l.properties.OBJECTID}")
+                        Divider()
+                    }
+                }
+                4 -> LazyColumn {
+                    items(landLots) { lot ->
+                        Text("ID: ${lot.id}, ST_PARCELE: ${lot.properties.ST_PARCELE}, EID_PARCELA: ${lot.properties.EID_PARCELA}, KO_ID: ${lot.properties.KO_ID}, POVRSINA: ${lot.properties.POVRSINA}")
+                        Divider()
+                    }
+                }
+                5 -> LazyColumn {
+                    items(landUses) { use ->
+                        Text("ID: ${use.id}, OBJECTID: ${use.properties.OBJECTID}, RABA_ID: ${use.properties.RABA_ID}")
+                        Divider()
+                    }
                 }
             }
-            1 -> LazyColumn {
-                items(fireStations) { fs ->
-                    Text("ID: ${fs.id}, Location: ${fs.properties.location}, Address: ${fs.properties.address}, City: ${fs.properties.city}")
-                    Divider()
-                }
-            }
-            2 -> LazyColumn {
-                items(floods) { f ->
-                    Text("ID: ${f.id}, Type: ${f.properties.FloodType}, ObjectID: ${f.properties.OBJECTID}")
-                    Divider()
-                }
-            }
-            3 -> LazyColumn {
-                items(landslides) { l ->
-                    Text("ID: ${l.id}, Type: ${l.properties.LandSlideType}, ObjectID: ${l.properties.OBJECTID}")
-                    Divider()
-                }
-            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(
+                onClick = { if (page > 0) page-- },
+                enabled = page > 0,
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White)
+            ) { Text("Previous") }
+            Text("Page ${page + 1} of ${((totalCount - 1) / pageSize) + 1}")
+            Button(
+                onClick = { if ((page + 1) * pageSize < totalCount) page++ },
+                enabled = (page + 1) * pageSize < totalCount,
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White)
+            ) { Text("Next") }
         }
     }
 }
