@@ -181,8 +181,22 @@ const loginStyles = {
         color: ${colors.primary};
         cursor: pointer;
         font-size: 1rem;
+							
         font-weight: 500;
         text-decoration: none;
+	   
+								   
+								  
+	  
+  
+
+				   
+						 
+
+
+
+
+			
 
         &:hover {
             text-decoration: underline;
