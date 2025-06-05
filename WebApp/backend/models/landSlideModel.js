@@ -35,7 +35,7 @@ const landSlideSchema = new Schema({
 landSlideSchema.index({ geometry: "2dsphere" });
 
 
-landUseSchema.methods.getType = () => {
+landSlideSchema.methods.getType = () => {
     return LAND_SLIDE_TYPE_MAP[this.properties.LandSlideType];
 };
 

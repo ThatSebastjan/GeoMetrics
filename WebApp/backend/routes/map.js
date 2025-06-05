@@ -7,5 +7,7 @@ const router = express.Router();
 router.get("/query/:bbox_data", mapController.mapQuery);
 router.get("/find/:land_lot_id/:ko_id?", mapController.mapFind);
 
+router.get("/earthquakes", mapController.queryEarthquakes);
+
 
 module.exports = router;

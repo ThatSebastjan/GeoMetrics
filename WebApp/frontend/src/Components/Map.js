@@ -4,26 +4,30 @@ import * as turf from "@turf/turf";
 import "mapbox-gl/dist/mapbox-gl.css";
 import styles from "../styles";
 
+import addFloodHeatmap from "../RiskLens/floods";
+import addLandslideHeatmap from "../RiskLens/landslides";
+import addEarthquakeHeatmap from "../RiskLens/earthquakes";
+
 
 
 //searchTerm = GeoJSON feature
-const Map = ({ searchTerm }) => {
+const Map = ({ searchTerm, risk }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
     const previousBounds = useRef({ data: [0,0,0,0] }); //Previous requested bbox for optimization
 
     //Rendered land lot features
-    const landData = useRef({ 
-        type: "FeatureCollection",
-        features: [],
-    });
+    const landData = useRef({ type: "FeatureCollection", features: [] });
 
+    //Label data
+    const labelData = useRef({ type: "FeatureCollection", features: [] }); 
 
-    //Test data
-    const labelData = useRef({ 
-        type: "FeatureCollection",
-        features: [],
-    }); 
+    //Heat map points for risk lens tab
+    const floodPointsData = useRef({ type: "FeatureCollection", features: [] }); 
+    const landslidePointsData = useRef({ type: "FeatureCollection", features: [] });  
+    const earthquakePointsData = useRef({ type: "FeatureCollection", features: [] });  
+
+    const loadedData = useRef({ value: false }); //...
 
 
 
@@ -40,7 +44,6 @@ const Map = ({ searchTerm }) => {
 
         //Add events
         map.current.on("moveend", handleViewChange); //Zoom, drag
-        //map.current.on("zoomend", () => { console.log("zoomend"); handleViewChange() });
 
         map.current.on("load", () => {
 
@@ -98,8 +101,8 @@ const Map = ({ searchTerm }) => {
 
                 minzoom: 13.5,
             });
-        });
 
+        });
 
 
         //Hover interactions
@@ -227,6 +230,82 @@ const Map = ({ searchTerm }) => {
         });
 
         map.current.getSource("label_data").setData(labelData.current);
+    };
+
+
+
+
+
+    //This code only gets executed on risk lens sub-page
+    useEffect(() => {
+
+        if(risk == null){
+            return; 
+        };
+
+        if(loadedData.current.value === true){
+            toggleRiskLayerVisiblity(risk); //Risk type has been switched
+            return; //Only fetch data on risk lens tab and only once!
+        };
+
+
+        map.current.on("load", () => {
+            loadedData.current.value = true; //Only load once
+
+            //Add risk heatmap layers
+            addFloodHeatmap(map.current, floodPointsData.current);
+            addLandslideHeatmap(map.current, landslidePointsData.current);
+            addEarthquakeHeatmap(map.current, earthquakePointsData.current, mapboxgl);
+
+            //Show default layer
+            toggleRiskLayerVisiblity(risk);
+
+        
+            //Load heatmap data points
+            (async () => {
+
+                //Flood data is static as there is just so much processing that needs to be done in order to generate heatmap points from it
+                const floodReq = await fetch("http://localhost:3001/flood_point_features.geojson");
+                floodPointsData.current = await floodReq.json();
+                map.current.getSource("flood_heatmap").setData(floodPointsData.current);
+
+
+                //Landslide data is also static. Same reason as above
+                const lsReq = await fetch("http://localhost:3001/landslide_point_features.geojson");
+                landslidePointsData.current = await lsReq.json();
+                map.current.getSource("landslide_heatmap").setData(landslidePointsData.current);
+
+
+                const eqReq = await fetch("http://localhost:3001/map/earthquakes");
+                earthquakePointsData.current.features = await eqReq.json();
+                map.current.getSource("earthquake_heatmap").setData(earthquakePointsData.current);
+
+            })();
+
+        });
+        
+    }, [risk]);
+
+
+
+    const toggleRiskLayerVisiblity = (risk_name) => {
+        const all_layers = {
+            "flood": ["flood_heatmap"],
+            "landslide": ["landslide_heatmap"],
+            "earthquake": ["earthquake_heatmap", "earthquake_points"],
+        };
+
+        Object.keys(all_layers).forEach(k => {
+            if(k !== risk_name){
+                all_layers[k].forEach(layerId => {
+                    map.current.setLayoutProperty(layerId, "visibility", "none");
+                });
+            };
+        });
+
+        all_layers[risk_name].forEach(layerId => {
+            map.current.setLayoutProperty(layerId, "visibility", "visible");
+        });
     };
 
 

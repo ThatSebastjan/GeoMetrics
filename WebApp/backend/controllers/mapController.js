@@ -3,6 +3,7 @@ const LandLotModel = require("../models/landLotModel.js");
 const LandUseModel = require("../models/landUseModel.js");
 const WaterBodyModel = require("../models/waterBodyModel.js");
 const KoModel = require("../models/koModel.js");
+const EarthquakeModel = require("../models/earthquakeModel.js");
 
 
 
@@ -224,6 +225,20 @@ module.exports = {
             console.log("Error in mapFind:", err);
             return res.status(500).json({ message: "Search error" });
         };
+    },
+
+
+    //Query earthquake points for heatmap
+    queryEarthquakes: async (req, res) => {
+
+        try {
+            const list = await EarthquakeModel.find();
+            return res.json(list);
+        }
+        catch(err){
+            console.log("Error in queryEarthquakes:", err);
+            return res.status(500).json({ message: "Query error" });
+        }
     },
     
 };

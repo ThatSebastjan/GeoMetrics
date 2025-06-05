@@ -27,7 +27,7 @@ function RiskLens() {
     return (
         <styles.assess.Container style={{ border: "none" }}>
             <styles.assess.MapWrapper>
-                <Map/>
+                <Map risk={risk}/>
                 <styles.common.RiskPill>
                     <styles.common.RiskButton
                         onClick={() => handleModeChange('flood')}
