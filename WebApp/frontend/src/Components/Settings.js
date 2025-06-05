@@ -72,42 +72,99 @@ function Settings() {
         <div>
             {/* User info at the top */}
             <styles.settings.ContainerHero>
-                {/* Profile Image */}
                 <div style={{
                     display: 'flex',
-                    flexDirection: 'column',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    marginBottom: '20px'
+                    width: '100%',
+                    maxWidth: '85%',
+                    margin: '0 40px',
+                    padding: '40px 20px'
                 }}>
-                    <img
-                        src={profileImageUrl || '/default-avatar.png'}
-                        alt={`${context.user.username}'s profile`}
-                        style={{
-                            width: '150px',
-                            height: '150px',
-                            objectFit: 'cover',
-                            borderRadius: '50%',
-                            border: `3px solid ${styles.colors.primary}`,
-                            marginBottom: '20px'
-                        }}
-                    />
-                    <styles.common.HeroTitle>{context.user.username}</styles.common.HeroTitle>
-                    <styles.common.SectionTitleHero>{context.user.email}</styles.common.SectionTitleHero>
-                </div>
+                    {/* User Info and Buttons on the Left */}
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        justifyContent: 'center',
+                        maxWidth: '80%'
+                    }}>
+                        {context.user ? (
+                            <>
+                                <div>
+                                    <styles.common.HeroUserName style={{ textAlign: 'left'}}>
+                                        {context.user.username}
+                                    </styles.common.HeroUserName>
+                                    <styles.common.PageTitleHero style={{ textAlign: 'left' }}>
+                                        {context.user.email}
+                                    </styles.common.PageTitleHero>
+                                </div>
 
-                <styles.settings.Button
-                    onClick={() => handleLogout()}
-                >
-                    Logout
-                </styles.settings.Button>
-                <styles.settings.EditButton
-                    onClick={() => {navigate('/settings/edit-profile');}}>
-                    Edit Profile
-                </styles.settings.EditButton>
+                                <div style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    width: '100px'
+                                }}>
+                                    <styles.settings.EditButton
+                                        onClick={() => {navigate('/settings/edit-profile');}}
+                                        style={{ width: '100%' }}
+                                    >
+                                        Edit Profile
+                                    </styles.settings.EditButton>
+                                    <styles.settings.LogoutButton
+                                        onClick={() => handleLogout()}
+                                        style={{ width: '100%' }}
+                                    >
+                                        Sign Out
+                                    </styles.settings.LogoutButton>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div style={{ marginBottom: '20px' }}>
+                                    <styles.common.PageTitleHero style={{ textAlign: 'left' }}>
+                                        Here is where your user profile lives...
+                                    </styles.common.PageTitleHero>
+                                    <styles.common.SectionTitleHero style={{ textAlign: 'left' }}>
+                                        Once you login that is.
+                                    </styles.common.SectionTitleHero>
+                                </div>
+                                <styles.settings.LoginButton
+                                    onClick={() => { window.location.href = '/login'; }}
+                                    style={{ width: '200px' }}
+                                >
+                                    Login
+                                </styles.settings.LoginButton>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Profile Image on the Right */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        minWidth: '180px',
+                        maxWidth: '0%'
+                    }}>
+                        <img
+                            src={profileImageUrl || '/default-avatar.png'}
+                            alt={`${context.user?.username || 'User'}'s profile`}
+                            style={{
+                                width: '300px',
+                                height: '300px',
+                                objectFit: 'cover',
+                                borderRadius: '50%',
+                                boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.25)',
+                            }}
+                        />
+                    </div>
+                </div>
             </styles.settings.ContainerHero>
 
             <styles.settings.TitleSection>
                 <styles.common.PageTitle>Preferences</styles.common.PageTitle>
+                <styles.common.PageSubtitle>Manage app and account settings</styles.common.PageSubtitle>
             </styles.settings.TitleSection>
 
             <styles.settings.Section>

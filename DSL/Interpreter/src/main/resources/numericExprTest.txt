@@ -1,0 +1,56 @@
+cadastre {
+    const lambdaExpr = lambda(a, b){
+        const result = a + b;
+        return result;
+    };
+
+    .name: "nekaj"; // comment
+    .id: "123";
+    .bounds: Circle(<2, 3>, 21);
+
+    const abc = Box(<1, 2>, <2, 3>);
+
+    .someOtherProperty: null;
+
+
+    lot {
+        .id: "123/2";
+        .type: BuildingLot;
+        .bounds: abc;
+        .something: "yes";
+    }
+
+
+    farmLand("144/2", abc);
+    forest("21/1", Box(<1, 2>, <12, lambdaExpr(4, 5)>));
+}
+
+
+risk {
+    .type: Flood;
+    .bounds: Circle(<10, 10>, 12);
+    .frequency: 0.5;
+    .probability: 0.2;
+}
+
+
+const squareNum = lambda(a){
+    const result = a*a;
+    return result;
+};
+
+landSlide(
+    Box(<1, 2>, <3*4+1, 21>),
+    squareNum(1.23),
+    1.23
+);
+
+
+
+const importedFloods = import "./floods.json";
+
+foreach f in importedFloods {
+    if(area(f) > 1000){
+        flood(f, 0.1, 0.2);
+    }
+}

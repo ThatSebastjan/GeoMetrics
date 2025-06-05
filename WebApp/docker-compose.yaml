@@ -19,7 +19,7 @@ services:
       - ./backend:/app
       - /app/node_modules
     environment:
-      - MONGODB_URI=mongodb://mongodb:27017/mydatabase
+      - MONGODB_URI=mongodb://mongodb:27017/GeoMetricsDB
     depends_on:
       - mongodb
 

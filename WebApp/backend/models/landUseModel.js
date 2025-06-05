@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { polygon } = require("./GeoJsonSchema.js");
+const { polygonSchema } = require("./GeoJsonSchema.js");
 const Schema = mongoose.Schema;
 
 const RABA_ID_MAP = {
@@ -43,7 +43,7 @@ const landUseSchema = new Schema({
         unique: true,
     },
 
-    geometry: polygon,
+    geometry: polygonSchema,
 
     properties: {
         OBJECTID: Number,

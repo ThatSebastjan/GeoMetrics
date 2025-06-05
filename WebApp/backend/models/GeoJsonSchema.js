@@ -15,6 +15,21 @@ const polygonSchema = new Schema({
 });
 
 
+const pointSchema = new Schema({
+    type: {
+        type: String,
+        enum: ["Point"],
+        required: true
+    },
+    coordinates: {
+        type: [Number],
+        required: true
+    }
+});
+
+
+
 module.exports = {
-    polygon: polygonSchema,
+    polygonSchema,
+    pointSchema,
 };

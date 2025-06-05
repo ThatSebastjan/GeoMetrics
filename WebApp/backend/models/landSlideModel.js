@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { polygon } = require("./GeoJsonSchema.js");
+const { polygonSchema } = require("./GeoJsonSchema.js");
 const Schema = mongoose.Schema;
 
 const LAND_SLIDE_TYPE_MAP = {
@@ -24,7 +24,7 @@ const landSlideSchema = new Schema({
         unique: true,
     },
 
-    geometry: polygon,
+    geometry: polygonSchema,
 
     properties: {
         OBJECTID: Number,
@@ -35,7 +35,7 @@ const landSlideSchema = new Schema({
 landSlideSchema.index({ geometry: "2dsphere" });
 
 
-landUseSchema.methods.getType = () => {
+landSlideSchema.methods.getType = () => {
     return LAND_SLIDE_TYPE_MAP[this.properties.LandSlideType];
 };
 

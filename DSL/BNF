@@ -1,0 +1,218 @@
+
+
+# Non-terminal definitions
+
+Start ::= ProgramBlock         # Entry point
+
+
+
+NumericExpr ::= AddSub
+
+
+AddSub ::= MulDiv AddSub'
+ 
+AddSub' ::= + MulDiv AddSub'
+            | - MulDiv AddSub'
+            | <epsilon>
+
+
+MulDiv ::= NumericType MulDiv'
+
+MulDiv' ::= * NumericType MulDiv' 
+            | / NumericType MulDiv' 
+            | <epsilon>
+
+
+NumericType ::= - <number>
+                | <number>
+                | ( AddSub )
+                | CallOrPropertyOrConstant       # Type has to be checked!
+
+
+
+CallArgs ::= ( NumericExpr CallArgs' )      # Maybe check if identifier is a function
+CallArgs' ::= , NumericExpr CallArgs' | <epsilon>
+
+
+CallOrPropertyOrConstant ::= <identifier> CallOrPropertyOrConstant'
+
+CallOrPropertyOrConstant' ::= . <identifier> | CallArgs | <epsilon>
+
+
+
+PointType ::= < NumericExpr , NumericExpr >    # Declared this way to prevent collisions with numeric expressions wrapped in () and to add extra clarity
+
+
+PolygonType ::= Polygon ( PolygonPoints )
+
+PolygonPoints ::= PointType PolygonPoints'
+
+PolygonPoints' ::= , PointType PolygonPoints'
+                   | <epsilon>
+
+
+CircleType ::= Circle ( PointType , NumericExpr )
+
+BoxType ::= Box ( PointType , PointType )
+
+PolyLineType ::= PolyLine ( NumericExpr , PolygonPoints )
+
+
+BoundsType ::= PolygonType
+               | CircleType
+               | BoxType
+               | PolyLineType
+               | <identifier> CallArgs     # Return type has to be checked to be a bounds type!
+
+
+ConstDef ::= const <identifier> = ConstValue ;
+
+ConstValue ::= NumericExpr
+               | PointType
+               | PolygonType
+               | CircleType
+               | BoxType
+               | PolyLineType
+               | import <string>
+               | LambdaExpr
+
+
+PropertyDef ::= . <identifier> : PropertyValue ;
+
+PropertyValue ::= NumericExpr   # Type has to be checked
+                  |<string>
+                  | PolygonType
+                  | CircleType
+                  | BoxType
+                  | PolyLineType
+                  | null
+
+
+
+
+
+
+LambdaExpr ::= lambda ( LambdaParams ) { LambdaBody }
+
+LambdaParams ::= <identifier> LambdaParams'
+
+LambdaParams' ::= , <identifier> LambdaParams'
+                  | <epsilon>
+
+LambdaBody ::= ConstDefList ReturnValue ;        # We either have some constant definitions followed by a return statement or only a return statement
+
+ConstDefList ::= ConstDef ConstDefList | <epsilon>      # List of 0 or more ConstDef-s
+
+ReturnValue ::= return ReturnType
+
+ReturnType ::= NumericExpr      # Type has to be checked and recursion disallowed!
+               | PointType
+               | PolygonType
+               | CircleType
+               | BoxType
+               | PolyLineType
+
+
+
+# Flow control
+
+ForEachLoop ::= foreach <identifier> in <identifier> { ControlFlowBlockContent }
+
+
+IfStatement ::= if ( BooleanExpr ) { ControlFlowBlockContent } ElseBlock
+
+ElseBlock ::= else { ControlFlowBlockContent }       # else block is optional
+              | <epsilon>
+
+
+ControlFlowBlockContent ::= ControlFlowBlockContent' ControlFlowBlockContent | <epsilon>        # This allows for empty blocks
+
+ControlFlowBlockContent' ::= ConstDef
+                           | ControlFlowDef
+                           | LotBlock          # Block type has to be checked at runtime; Cannot define risk in cadastre or lot in global scope
+                           | RiskBlock
+
+
+ControlFlowDef ::= ForEachLoop
+                   | IfStatement
+
+
+BooleanExpr ::= NumericExpr BooleanOperator NumericExpr
+
+BooleanOperator ::= > | <
+
+
+
+                  
+# Main feature blocks
+
+CadastreBlock ::= cadastre { CadastreContent }
+
+CadastreContent ::= CadastreContent' CadastreContent | <epsilon>       # This allows for empty cadastre blocks which will have to be checked for
+
+CadastreContent' ::= ConstDef
+                     | PropertyDef
+                     | ControlFlowDef
+                     | LotBlock
+
+
+
+PropertyDefList ::= PropertyDef PropertyDefList | <epsilon>
+
+
+# Lot block and syntactic sugar for it
+LotBlock ::= lot { PropertyDefList }
+             | RoadLot
+             | BuildingLot
+             | FarmLandLot
+             | ForestLot
+             | MeadowLot
+             | RiverLot
+             | LakeLot
+
+LotSimplifiedArgs ::= ( <string> , BoundsType ) ;
+
+RoadLot ::= road LotSimplifiedArgs
+BuildingLot ::= buildingLot LotSimplifiedArgs
+FarmLandLot ::= farmLand LotSimplifiedArgs
+ForestLot ::= forest LotSimplifiedArgs
+MeadowLot ::= meadow LotSimplifiedArgs
+RiverLot ::= river LotSimplifiedArgs
+LakeLot ::= lake LotSimplifiedArgs
+
+
+# Risk block with syntactic sugar
+RiskBlock ::= risk { PropertyDefList }
+              | FloodRisk
+              | LandSlideRisk
+              | EarthQuakeRisk
+
+RiskSimplifiedArgs ::= ( BoundsType , NumericExpr , NumericExpr ) ;          # bounds, probability, frequency
+
+FloodRisk ::= flood RiskSimplifiedArgs
+LandSlideRisk ::= landSlide RiskSimplifiedArgs
+EarthQuakeRisk ::= earthQuake RiskSimplifiedArgs
+
+
+ProgramBlock ::= ProgramBlock' ProgramBlock | <epsilon>
+
+ProgramBlock' ::= ConstDef
+                  | CadastreBlock
+                  | RiskBlock
+                  | ControlFlowDef
+
+
+
+
+
+# Terminal definitions
+
+<epsilon> = <void of space>
+
+<number> = \d+(?:\.\d+)?
+
+<integer> = \d+
+
+<string> = "([^"]*)"   #match group = string data
+
+<identifier> = [a-zA-Z_$][a-zA-Z_$0-9]*

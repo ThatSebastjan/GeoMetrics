@@ -29,6 +29,10 @@ module.exports = {
 		{
 			file: "users.js",
 			route: "/users",
-		}
+		},
+		{
+			file: "map.js",
+			route: "/map",
+		},
 	]
 };

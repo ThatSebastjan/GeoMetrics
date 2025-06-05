@@ -53,6 +53,11 @@ function Register() {
     return (
         <styles.login.Container>
             <styles.login.FormWrapper>
+                <styles.login.LogoSection>
+                    <styles.login.LogoText>GeoMetrics</styles.login.LogoText>
+                    <styles.login.AppDescription>Smart risk assessment app</styles.login.AppDescription>
+                </styles.login.LogoSection>
+
                 <styles.login.FormTitle>Create Account</styles.login.FormTitle>
 
                 {error && <styles.login.ErrorMessage>{error}</styles.login.ErrorMessage>}

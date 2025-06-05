@@ -36,3 +36,39 @@
     transform: rotate(360deg);
   }
 }
+
+
+
+.eq-table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 300px;
+}
+
+.eq-table thead, tbody { display: block; width: auto; }
+
+.eq-table tbody {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.eq-table td, th {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+    white-space: nowrap;
+    width: 100%
+}
+
+.eq-table tr:nth-child(even) {
+    background-color: #dddddd;
+}
+
+.eq-table tr td:nth-child(2) {
+    text-align: right;
+}
+
+
+.eq-table tr th:nth-child(2) {
+    text-align: right;
+}

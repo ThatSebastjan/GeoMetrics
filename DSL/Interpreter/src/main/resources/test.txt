@@ -1,0 +1,41 @@
+const genBox = lambda(x, y, w, h){
+
+    const add = lambda(x, y){ return x + y; };
+    const sub = lambda(a, b){ return a - b; };
+
+    return Box(<x, y>, <add(x, w), sub(y, h)>);
+};
+
+//earthQuake(genBox(16.051035, 46.716355, 0.246, 0.137), 0.001, 0);
+
+
+
+cadastre {
+    const MS_DATA = import "./testData/MS.json";
+
+    .name: "Murska Sobota";
+    .id: "105";
+    .bounds: MS_DATA.geometry;
+
+
+    const lotList = import "./testData/MSLots.json";
+
+    foreach lotEntry in lotList {
+        const poly = lotEntry.geometry;
+
+        if(area(poly) > 0){
+
+            lot {
+                .id: lotEntry.ST_PARCELE;
+                .type: lotEntry.type;
+                .bounds: lotEntry.geometry;
+                .index: index;
+                .area: poly.area;
+            }
+        }
+        else {
+            //Something else...
+        }
+    }
+}
+

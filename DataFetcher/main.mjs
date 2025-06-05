@@ -379,13 +379,66 @@ const land_use_update = async () => {
 
 
 
+const water_bodies_update = async () => {
+
+    const num_x_chunks = 128;
+    const num_y_chunks = 128;
+
+    const water_service = new ArcGis.MapService(arc_gis, "DRSV", "Zun", config.service_layers.ploskovni_podatki_povrsinske_vode);
+
+    const grab_layer_data = async (x_counter, y_counter) => {
+
+        const test = await water_service.query({
+            geometry: {
+                rings:[ gen_chunk_bounds(x_counter, y_counter, config.SI_BBOX, num_x_chunks, num_y_chunks) ],
+            },
+            geometryType: "esriGeometryPolygon",
+            outFields: "OBJECTID,IME,STALN_ID,SIRINA_ID,VRSTA_IM,TIPTV_ID",
+            inSR: ArcGis.WKID.Slovenia,
+            outSR: ArcGis.WKID.WGS,
+        });
+
+        return test.features;
+    };
+
+
+    ensure_exists_dir("./data/water_bodies_data/");
+    log_info(`Querying water bodies data in ${num_x_chunks * num_y_chunks} chunks`);
+
+
+    //Grab data in paralel (rows)
+    for(let y_counter = 0; y_counter < num_y_chunks; y_counter++){
+
+        try {
+            log_info(`Querying water bodies row ${y_counter + 1} / ${num_y_chunks}`);
+
+            const promises = new Array(num_x_chunks).fill().map((e, x_counter) => grab_layer_data(x_counter, y_counter));
+            const results = await Promise.all(promises);
+
+            fs.writeFileSync(`./data/water_bodies_data/chunk_${y_counter}.json`, JSON.stringify(results.flat()));
+            log_succcess(`Grabbed water bodies chunk ${y_counter+1}`);
+
+        }
+        catch(err){
+            log_error(`Query for row ${y_counter + 1} failed. Retrying`);
+            y_counter--;
+            await delay(5000);
+        };
+    };
+
+
+    remove_duplicates("water_bodies_data");
+};
+
+
+
 
 
 const main = async (args) => {
 
     if(args.length != 1){
         console.log("Invalid usage!");
-        console.log("Usage: main.mjs <land_lots | floods | land_slides | land_use>")
+        console.log("Usage: main.mjs <land_lots | floods | land_slides | land_use | water_bodies>")
     };
 
 
@@ -415,6 +468,10 @@ const main = async (args) => {
 
         case "land_use":
             await land_use_update();
+        break;
+
+        case "water_bodies":
+            await water_bodies_update();
         break;
 
         default:
