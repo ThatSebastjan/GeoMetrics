@@ -2,22 +2,14 @@ package models
 
 // Earthquake data model for MongoDB and serialization
 
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Contextual
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
-import java.time.Instant
 
 
 @Serializable
 data class EarthquakeProperties(
-    @Contextual
-    val timestamp: Instant,
+    val timestamp: kotlinx.datetime.Instant,
     val magnitude: Double,
     val depth: Double
 )

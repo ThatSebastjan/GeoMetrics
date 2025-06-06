@@ -4,13 +4,13 @@ import DbCheckResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Instant
 import models.Earthquake
 import models.EarthquakeProperties
 import models.FireStation
 import models.FireStationProperties
 import models.GeoJsonPoint
 import models.Scraper
-import java.time.Instant
 import org.litote.kmongo.descending
 
 suspend fun checkDatabaseUpToDate(): DbCheckResult {
@@ -68,15 +68,15 @@ private suspend fun checkFireStations(): List<FireStationProperties> {
 private suspend fun checkEarthquakes(): List<EarthquakeProperties> {
     val dbEarthquakes = Database.earthquakeCollection.find().toList()
     val latestTimestamp = dbEarthquakes
-        .maxByOrNull { it.properties.timestamp.toEpochMilli() }
-        ?.properties?.timestamp?.toEpochMilli() ?: 0
+        .maxByOrNull { it.properties.timestamp.toEpochMilliseconds() }
+        ?.properties?.timestamp?.toEpochMilliseconds() ?: 0
 
     val scraper = Scraper()
     val scrapedEarthquakes = scraper.scrapeEarthQuakes(latestTimestamp)
 
     return scrapedEarthquakes.map {
         EarthquakeProperties(
-            timestamp = Instant.ofEpochMilli(it.timestamp.toLong()),
+            timestamp = Instant.fromEpochMilliseconds(it.timestamp.toLong()),
             magnitude = it.magnitude,
             depth = it.depth.toDouble()
         )
@@ -127,8 +127,8 @@ suspend fun updateDatabase(): String {
 
             val dbEarthquakes = Database.earthquakeCollection.find().toList()
             val latestTimestamp = dbEarthquakes
-                .maxByOrNull { it.properties.timestamp.toEpochMilli() }
-                ?.properties?.timestamp?.toEpochMilli() ?: 0
+                .maxByOrNull { it.properties.timestamp.toEpochMilliseconds() }
+                ?.properties?.timestamp?.toEpochMilliseconds() ?: 0
 
             val scrapedEarthquakes = scraper.scrapeEarthQuakes(latestTimestamp)
 
@@ -148,7 +148,7 @@ suspend fun updateDatabase(): String {
                         coordinates = arrayListOf(scraped.longitude, scraped.latitude)
                     ),
                     properties = EarthquakeProperties(
-                        timestamp = Instant.ofEpochMilli(scraped.timestamp.toLong()),
+                        timestamp = Instant.fromEpochMilliseconds(scraped.timestamp.toLong()),
                         magnitude = scraped.magnitude,
                         depth = scraped.depth.toDouble()
                     )

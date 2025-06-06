@@ -13,10 +13,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import api.ApiClient
 import kotlinx.coroutines.*
 import db.*
 import kotlinx.coroutines.flow.toList
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import models.*
+import org.bson.types.ObjectId
 import org.litote.kmongo.descending
 
 data class DbCheckResult(
@@ -225,7 +229,7 @@ fun UniversalGeneratorTab() {
                                         id = maxId + 1,
                                         geometry = models.GeoJsonPoint(coordinates = arrayListOf(longitude.toDouble(), latitude.toDouble())),
                                         properties = models.EarthquakeProperties(
-                                            timestamp = java.time.Instant.now(),
+                                            timestamp = Clock.System.now(),
                                             magnitude = eqMagnitude.toDouble(),
                                             depth = eqDepth.toDouble()
                                         )
@@ -605,7 +609,51 @@ fun App() {
 }
 
 fun main() = application {
+
     Window(onCloseRequest = ::exitApplication) {
         App()
     }
+
+
+    //Get example
+    /*
+    val eqs = ApiClient.get<Earthquake>(0, 10);
+
+    for(e in eqs){
+        println(e);
+    }
+    */
+
+
+    //Count examples
+    /*
+    println("Earthquakes: ${ApiClient.count<Earthquake>()}")
+    println("FireStations: ${ApiClient.count<FireStation>()}")
+    println("Floods: ${ApiClient.count<Flood>()}")
+    println("LandLots: ${ApiClient.count<LandLot>()}")
+    println("LandSlides: ${ApiClient.count<LandSlide>()}")
+    println("LandUse: ${ApiClient.count<LandUse>()}")
+    */
+
+
+    //Insert example
+    /*
+    val eq = models.Earthquake(
+        type = "Feature",
+        id = 999,
+        geometry = models.GeoJsonPoint(coordinates = arrayListOf(12.34, 23.45)),
+        properties = models.EarthquakeProperties(
+            timestamp = Clock.System.now(),
+            magnitude = 9.21,
+            depth = 12.34
+        )
+    )
+
+    if(ApiClient.insert<Earthquake>(eq)){
+        println("OK")
+    }
+    else {
+        println("Error")
+    }
+    */
 }

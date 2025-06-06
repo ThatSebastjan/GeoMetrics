@@ -1,71 +1,86 @@
 package api
 
 import com.mongodb.ConnectionString
+import com.sun.jdi.InvalidTypeException
 import io.github.cdimascio.dotenv.dotenv
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import models.Earthquake
-import models.FireStation
+import models.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-
+import java.util.concurrent.TimeUnit
 
 
 object ApiClient {
-    private val client = OkHttpClient()
+    val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     private val dotenv = dotenv()
-    private val BASE_URL = ConnectionString(
-        dotenv["API_URL"] ?: "http://localhost:3000/"
+    val BASE_URL = dotenv["API_URL"] ?: "http://localhost:3001/manegement"
+
+    val ENDPOINT_MAP = mapOf(
+        Pair(Earthquake::class, "earthquakes"),
+        Pair(FireStation::class, "fireStations"),
+        Pair(Flood::class, "floods"),
+        Pair(LandLot::class, "landLots"),
+        Pair(LandSlide::class, "landSlides"),
+        Pair(LandUse::class, "landUse"),
     )
 
-    private val json = Json { ignoreUnknownKeys = true }
+    val json = Json { ignoreUnknownKeys = true }
 
-    fun getEarthquakes(): List<Earthquake> {
+
+
+    inline fun <reified T> count() : Int {
+        val endpoint = ENDPOINT_MAP[T::class] ?: throw InvalidTypeException("Invalid type passed to ApiClient.count")
+
         val request = Request.Builder()
-            .url("$BASE_URL/earthquakes")
+            .url("$BASE_URL/$endpoint/count")
             .build()
+
+        client.newCall(request).execute().use { response ->
+            val body = response.body?.string() ?: "0"
+            return body.toInt()
+        }
+    }
+
+
+
+    inline fun <reified T> get(offset: Int, count: Int) : List<T> {
+        val endpoint = ENDPOINT_MAP[T::class] ?: throw InvalidTypeException("Invalid type passed to ApiClient.get")
+
+        val request = Request.Builder()
+            .url("$BASE_URL/$endpoint/$offset/$count")
+            .build()
+
         client.newCall(request).execute().use { response ->
             val body = response.body?.string() ?: "[]"
             return json.decodeFromString(body)
         }
     }
 
-    fun getFireStations(): List<FireStation> {
+
+
+    inline fun <reified T> insert(obj: T) : Boolean {
+        val endpoint = ENDPOINT_MAP[obj!!::class] ?: throw InvalidTypeException("Invalid type passed to ApiClient.insert")
+
+        val requestBody = json.encodeToString(obj)
+            .toRequestBody("application/json".toMediaType())
+
         val request = Request.Builder()
-            .url("$BASE_URL/firestations")
+            .url("$BASE_URL/$endpoint/insert")
+            .post(requestBody)
             .build()
+
         client.newCall(request).execute().use { response ->
-            val body = response.body?.string() ?: "[]"
-            return json.decodeFromString(body)
+            return response.code == 200
         }
     }
 
-    fun addEarthquake(eq: Earthquake): Earthquake {
-        val requestBody = json.encodeToString(eq)
-            .toRequestBody("application/json".toMediaType())
-        val request = Request.Builder()
-            .url("$BASE_URL/earthquakes")
-            .post(requestBody)
-            .build()
-        client.newCall(request).execute().use { response ->
-            val body = response.body?.string() ?: "{}"
-            return json.decodeFromString(body)
-        }
-    }
 
-    fun addFireStation(fs: FireStation): FireStation {
-        val requestBody = json.encodeToString(fs)
-            .toRequestBody("application/json".toMediaType())
-        val request = Request.Builder()
-            .url("$BASE_URL/firestations")
-            .post(requestBody)
-            .build()
-        client.newCall(request).execute().use { response ->
-            val body = response.body?.string() ?: "{}"
-            return json.decodeFromString(body)
-        }
-    }
 }

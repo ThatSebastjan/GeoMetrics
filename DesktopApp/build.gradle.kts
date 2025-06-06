@@ -24,6 +24,7 @@ dependencies {
 
     // Kotlin Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
 
     // MongoDB Kotlin Driver with coroutine support
     implementation("org.mongodb:mongodb-driver-kotlin-coroutine:4.11.0")
