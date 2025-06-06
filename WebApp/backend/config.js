@@ -23,16 +23,16 @@ module.exports = {
 	//Routers and API paths
 	routes: [
 		{
-			file: "index.js",
-			route: "/",
-		},
-		{
 			file: "users.js",
 			route: "/users",
 		},
 		{
 			file: "map.js",
 			route: "/map",
+		},
+		{
+			file: "manegement.js",
+			route: "/manegement",
 		},
 	]
 };
