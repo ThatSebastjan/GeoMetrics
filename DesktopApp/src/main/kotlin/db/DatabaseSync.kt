@@ -2,16 +2,10 @@ package db
 
 import DbCheckResult
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Instant
-import models.Earthquake
-import models.EarthquakeProperties
-import models.FireStation
-import models.FireStationProperties
-import models.GeoJsonPoint
-import models.Scraper
-import org.litote.kmongo.descending
+import models.*
+import api.ApiClient
 
 suspend fun checkDatabaseUpToDate(): DbCheckResult {
     return withContext(Dispatchers.IO) {
@@ -19,13 +13,13 @@ suspend fun checkDatabaseUpToDate(): DbCheckResult {
             var status = "Database is "
             var isUpToDate = true
 
-            val missingFireStations = checkFireStations()
+            val missingFireStations = checkFireStationsApi()
             if (missingFireStations.isNotEmpty()) {
                 status += "missing ${missingFireStations.size} fire stations. "
                 isUpToDate = false
             }
 
-            val missingEarthquakes = checkEarthquakes()
+            val missingEarthquakes = checkEarthquakesApi()
             if (missingEarthquakes.isNotEmpty()) {
                 status += "missing ${missingEarthquakes.size} earthquakes. "
                 isUpToDate = false
@@ -44,10 +38,10 @@ suspend fun checkDatabaseUpToDate(): DbCheckResult {
     }
 }
 
-private suspend fun checkFireStations(): List<FireStationProperties> {
+private suspend fun checkFireStationsApi(): List<FireStationProperties> {
     val scraper = Scraper()
     val scrapedStations = scraper.scrapeFireStations()
-    val dbStations = Database.fireStationCollection.find().toList()
+    val dbStations = ApiClient.get<FireStation>(0, ApiClient.count<FireStation>())
 
     return scrapedStations.filter { scraped ->
         dbStations.none {
@@ -65,8 +59,8 @@ private suspend fun checkFireStations(): List<FireStationProperties> {
     }
 }
 
-private suspend fun checkEarthquakes(): List<EarthquakeProperties> {
-    val dbEarthquakes = Database.earthquakeCollection.find().toList()
+private suspend fun checkEarthquakesApi(): List<EarthquakeProperties> {
+    val dbEarthquakes = ApiClient.get<Earthquake>(0, ApiClient.count<Earthquake>())
     val latestTimestamp = dbEarthquakes
         .maxByOrNull { it.properties.timestamp.toEpochMilliseconds() }
         ?.properties?.timestamp?.toEpochMilliseconds() ?: 0
@@ -91,7 +85,9 @@ suspend fun updateDatabase(): String {
             val scraper = Scraper()
 
             val scrapedStations = scraper.scrapeFireStations()
-            val dbStations = Database.fireStationCollection.find().toList()
+            val dbStations = ApiClient.get<FireStation>(0, ApiClient.count<FireStation>())
+
+            var maxId = dbStations.maxOfOrNull { it.id ?: 0 } ?: 0
 
             for (scraped in scrapedStations) {
                 val exists = dbStations.any {
@@ -100,15 +96,10 @@ suspend fun updateDatabase(): String {
                 }
 
                 if (!exists) {
-                    val maxId = Database.fireStationCollection.find()
-                        .sort(descending(FireStation::id))
-                        .limit(1)
-                        .toList()
-                        .firstOrNull()?.id ?: 0
-
+                    maxId++
                     val fireStation = FireStation(
                         type = "Feature",
-                        id = maxId + 1,
+                        id = maxId,
                         geometry = GeoJsonPoint(
                             coordinates = arrayListOf(scraped.longitude, scraped.latitude)
                         ),
@@ -120,30 +111,26 @@ suspend fun updateDatabase(): String {
                             telephoneNumber = scraped.telephoneNum
                         )
                     )
-                    Database.fireStationCollection.insertOne(fireStation)
-                    addedFireStations++
+                    if (ApiClient.insert(fireStation)) {
+                        addedFireStations++
+                    }
                 }
             }
 
-            val dbEarthquakes = Database.earthquakeCollection.find().toList()
+            val dbEarthquakes = ApiClient.get<Earthquake>(0, ApiClient.count<Earthquake>())
             val latestTimestamp = dbEarthquakes
                 .maxByOrNull { it.properties.timestamp.toEpochMilliseconds() }
                 ?.properties?.timestamp?.toEpochMilliseconds() ?: 0
 
             val scrapedEarthquakes = scraper.scrapeEarthQuakes(latestTimestamp)
 
-            val maxEarthquakeId = Database.earthquakeCollection.find()
-                .sort(descending(Earthquake::id))
-                .limit(1)
-                .toList()
-                .firstOrNull()?.id ?: 0
-
-            var nextEarthquakeId = maxEarthquakeId + 1
+            var maxEarthquakeId = dbEarthquakes.maxOfOrNull { it.id ?: 0 } ?: 0
 
             for (scraped in scrapedEarthquakes) {
+                maxEarthquakeId++
                 val earthquake = Earthquake(
                     type = "Feature",
-                    id = nextEarthquakeId++,
+                    id = maxEarthquakeId,
                     geometry = GeoJsonPoint(
                         coordinates = arrayListOf(scraped.longitude, scraped.latitude)
                     ),
@@ -153,8 +140,9 @@ suspend fun updateDatabase(): String {
                         depth = scraped.depth.toDouble()
                     )
                 )
-                Database.earthquakeCollection.insertOne(earthquake)
-                addedEarthquakes++
+                if (ApiClient.insert(earthquake)) {
+                    addedEarthquakes++
+                }
             }
 
             "Database updated: Added $addedFireStations fire stations and $addedEarthquakes earthquakes"

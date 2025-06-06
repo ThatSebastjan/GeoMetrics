@@ -15,13 +15,10 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import api.ApiClient
 import kotlinx.coroutines.*
-import db.*
-import kotlinx.coroutines.flow.toList
 import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import models.*
-import org.bson.types.ObjectId
-import org.litote.kmongo.descending
+import db.checkDatabaseUpToDate
+import db.updateDatabase
 
 data class DbCheckResult(
     val status: String,
@@ -152,7 +149,7 @@ fun UniversalGeneratorTab() {
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Universal Generator", style = MaterialTheme.typography.h6)
 
-        // Type selector (fixed)
+        // Type selector
         Box {
             OutlinedButton(onClick = { expanded = true }) {
                 Text(selectedType)
@@ -223,27 +220,27 @@ fun UniversalGeneratorTab() {
                         try {
                             when (selectedType) {
                                 "Earthquake" -> {
-                                    val maxId = Database.earthquakeCollection.find().sort(descending(models.Earthquake::id)).limit(1).toList().firstOrNull()?.id ?: 0
-                                    val eq = models.Earthquake(
+                                    val maxId = ApiClient.get<Earthquake>(0, 1).maxOfOrNull { it.id ?: 0 } ?: 0
+                                    val eq = Earthquake(
                                         type = "Feature",
                                         id = maxId + 1,
-                                        geometry = models.GeoJsonPoint(coordinates = arrayListOf(longitude.toDouble(), latitude.toDouble())),
-                                        properties = models.EarthquakeProperties(
+                                        geometry = GeoJsonPoint(coordinates = arrayListOf(longitude.toDouble(), latitude.toDouble())),
+                                        properties = EarthquakeProperties(
                                             timestamp = Clock.System.now(),
                                             magnitude = eqMagnitude.toDouble(),
                                             depth = eqDepth.toDouble()
                                         )
                                     )
-                                    Database.earthquakeCollection.insertOne(eq)
-                                    status = "✅ Earthquake inserted!"
+                                    val ok = ApiClient.insert(eq)
+                                    status = if (ok) "✅ Earthquake inserted!" else "❌ Insert failed"
                                 }
                                 "Fire Station" -> {
-                                    val maxId = Database.fireStationCollection.find().sort(descending(models.FireStation::id)).limit(1).toList().firstOrNull()?.id ?: 0
-                                    val fs = models.FireStation(
+                                    val maxId = ApiClient.get<FireStation>(0, 1).maxOfOrNull { it.id ?: 0 } ?: 0
+                                    val fs = FireStation(
                                         type = "Feature",
                                         id = maxId + 1,
-                                        geometry = models.GeoJsonPoint(coordinates = arrayListOf(longitude.toDouble(), latitude.toDouble())),
-                                        properties = models.FireStationProperties(
+                                        geometry = GeoJsonPoint(coordinates = arrayListOf(longitude.toDouble(), latitude.toDouble())),
+                                        properties = FireStationProperties(
                                             location = fsLocation,
                                             address = fsAddress,
                                             city = fsCity,
@@ -251,8 +248,8 @@ fun UniversalGeneratorTab() {
                                             telephoneNumber = fsTelephone
                                         )
                                     )
-                                    Database.fireStationCollection.insertOne(fs)
-                                    status = "✅ Fire Station inserted!"
+                                    val ok = ApiClient.insert(fs)
+                                    status = if (ok) "✅ Fire Station inserted!" else "❌ Insert failed"
                                 }
                                 "Landslide" -> {
                                     val coords = polygonText.split(";").map {
@@ -260,11 +257,24 @@ fun UniversalGeneratorTab() {
                                         arrayListOf(lon, lat)
                                     }
                                     val polygon = arrayListOf(coords as ArrayList<ArrayList<Double>>)
-                                    val inserted = insertLandslideIfUnique(
-                                        geometry = models.GeoJsonPolygon(coordinates = polygon),
-                                        landSlideType = typeInt.toInt()
-                                    )
-                                    status = if (inserted) "✅ Landslide inserted!" else "❌ Landslide insert failed (duplicate OBJECTID)"
+                                    val landslides = ApiClient.get<LandSlide>(0, 10000)
+                                    val maxObjectId = landslides.maxOfOrNull { it.properties.OBJECTID } ?: 0
+                                    val exists = landslides.any { it.properties.OBJECTID == maxObjectId + 1 }
+                                    if (!exists) {
+                                        val landslide = LandSlide(
+                                            type = "Feature",
+                                            id = maxObjectId + 1,
+                                            geometry = GeoJsonPolygon(coordinates = polygon),
+                                            properties = LandSlideProperties(
+                                                OBJECTID = maxObjectId + 1,
+                                                LandSlideType = typeInt.toInt()
+                                            )
+                                        )
+                                        val ok = ApiClient.insert(landslide)
+                                        status = if (ok) "✅ Landslide inserted!" else "❌ Insert failed"
+                                    } else {
+                                        status = "❌ Landslide insert failed (duplicate OBJECTID)"
+                                    }
                                 }
                                 "Flood" -> {
                                     val coords = polygonText.split(";").map {
@@ -272,11 +282,24 @@ fun UniversalGeneratorTab() {
                                         arrayListOf(lon, lat)
                                     }
                                     val polygon = arrayListOf(coords as ArrayList<ArrayList<Double>>)
-                                    val inserted = insertFloodIfUnique(
-                                        geometry = models.GeoJsonPolygon(coordinates = polygon),
-                                        floodType = typeInt.toInt()
-                                    )
-                                    status = if (inserted) "✅ Flood inserted!" else "❌ Flood insert failed (duplicate OBJECTID)"
+                                    val floods = ApiClient.get<Flood>(0, 10000)
+                                    val maxObjectId = floods.maxOfOrNull { it.properties.OBJECTID } ?: 0
+                                    val exists = floods.any { it.properties.OBJECTID == maxObjectId + 1 }
+                                    if (!exists) {
+                                        val flood = Flood(
+                                            type = "Feature",
+                                            id = maxObjectId + 1,
+                                            geometry = GeoJsonPolygon(coordinates = polygon),
+                                            properties = FloodProperties(
+                                                OBJECTID = maxObjectId + 1,
+                                                FloodType = typeInt.toInt()
+                                            )
+                                        )
+                                        val ok = ApiClient.insert(flood)
+                                        status = if (ok) "✅ Flood inserted!" else "❌ Insert failed"
+                                    } else {
+                                        status = "❌ Flood insert failed (duplicate OBJECTID)"
+                                    }
                                 }
                             }
                         } catch (e: Exception) {
@@ -368,7 +391,7 @@ fun DatabaseViewerTab() {
     var page by remember { mutableStateOf(0) }
     var totalCount by remember { mutableStateOf(0) }
     var earthquakes by remember { mutableStateOf<List<Earthquake>>(emptyList()) }
-    var fireStations by remember { mutableStateOf<List<models.FireStation>>(emptyList()) }
+    var fireStations by remember { mutableStateOf<List<FireStation>>(emptyList()) }
     var floods by remember { mutableStateOf<List<Flood>>(emptyList()) }
     var landslides by remember { mutableStateOf<List<LandSlide>>(emptyList()) }
     var landLots by remember { mutableStateOf<List<LandLot>>(emptyList()) }
@@ -379,64 +402,28 @@ fun DatabaseViewerTab() {
     LaunchedEffect(subTabIndex, page) {
         when (subTabIndex) {
             0 -> scope.launch {
-                totalCount = Database.earthquakeCollection.countDocuments().toInt()
-                earthquakes = Database.earthquakeCollection
-                    .find()
-                    .sort(descending(models.Earthquake::id))
-                    .skip(page * pageSize)
-                    .limit(pageSize)
-                    .toList()
-                    .asReversed()
+                totalCount = ApiClient.count<Earthquake>()
+                earthquakes = ApiClient.get<Earthquake>(page * pageSize, pageSize)
             }
             1 -> scope.launch {
-                totalCount = Database.fireStationCollection.countDocuments().toInt()
-                fireStations = Database.fireStationCollection
-                    .find()
-                    .sort(descending(models.FireStation::id))
-                    .skip(page * pageSize)
-                    .limit(pageSize)
-                    .toList()
-                    .asReversed()
+                totalCount = ApiClient.count<FireStation>()
+                fireStations = ApiClient.get<FireStation>(page * pageSize, pageSize)
             }
             2 -> scope.launch {
-                totalCount = Database.floodCollection.countDocuments().toInt()
-                floods = Database.floodCollection
-                    .find()
-                    .sort(descending(models.Flood::id))
-                    .skip(page * pageSize)
-                    .limit(pageSize)
-                    .toList()
-                    .asReversed()
+                totalCount = ApiClient.count<Flood>()
+                floods = ApiClient.get<Flood>(page * pageSize, pageSize)
             }
             3 -> scope.launch {
-                totalCount = Database.landSlideCollection.countDocuments().toInt()
-                landslides = Database.landSlideCollection
-                    .find()
-                    .sort(descending(models.LandSlide::id))
-                    .skip(page * pageSize)
-                    .limit(pageSize)
-                    .toList()
-                    .asReversed()
+                totalCount = ApiClient.count<LandSlide>()
+                landslides = ApiClient.get<LandSlide>(page * pageSize, pageSize)
             }
             4 -> scope.launch {
-                totalCount = Database.landLotCollection.countDocuments().toInt()
-                landLots = Database.landLotCollection
-                    .find()
-                    .sort(descending(models.LandLot::id))
-                    .skip(page * pageSize)
-                    .limit(pageSize)
-                    .toList()
-                    .asReversed()
+                totalCount = ApiClient.count<LandLot>()
+                landLots = ApiClient.get<LandLot>(page * pageSize, pageSize)
             }
             5 -> scope.launch {
-                totalCount = Database.landUseCollection.countDocuments().toInt()
-                landUses = Database.landUseCollection
-                    .find()
-                    .sort(descending(models.LandUse::id))
-                    .skip(page * pageSize)
-                    .limit(pageSize)
-                    .toList()
-                    .asReversed()
+                totalCount = ApiClient.count<LandUse>()
+                landUses = ApiClient.get<LandUse>(page * pageSize, pageSize)
             }
         }
     }
@@ -451,82 +438,22 @@ fun DatabaseViewerTab() {
             backgroundColor = Color.Black,
             contentColor = Color.White
         ) {
-            Tab(
-                selected = subTabIndex == 0,
-                onClick = { subTabIndex = 0; resetPage() },
-                selectedContentColor = Color.White,
-                unselectedContentColor = Color.White
-            ) { Text("Earthquakes") }
-            Tab(
-                selected = subTabIndex == 1,
-                onClick = { subTabIndex = 1; resetPage() },
-                selectedContentColor = Color.White,
-                unselectedContentColor = Color.White
-            ) { Text("Fire Stations") }
-            Tab(
-                selected = subTabIndex == 2,
-                onClick = { subTabIndex = 2; resetPage() },
-                selectedContentColor = Color.White,
-                unselectedContentColor = Color.White
-            ) { Text("Floods") }
-            Tab(
-                selected = subTabIndex == 3,
-                onClick = { subTabIndex = 3; resetPage() },
-                selectedContentColor = Color.White,
-                unselectedContentColor = Color.White
-            ) { Text("Landslides") }
-            Tab(
-                selected = subTabIndex == 4,
-                onClick = { subTabIndex = 4; resetPage() },
-                selectedContentColor = Color.White,
-                unselectedContentColor = Color.White
-            ) { Text("Land Lots") }
-            Tab(
-                selected = subTabIndex == 5,
-                onClick = { subTabIndex = 5; resetPage() },
-                selectedContentColor = Color.White,
-                unselectedContentColor = Color.White
-            ) { Text("Land Uses") }
+            Tab(selected = subTabIndex == 0, onClick = { subTabIndex = 0; resetPage() }) { Text("Earthquakes") }
+            Tab(selected = subTabIndex == 1, onClick = { subTabIndex = 1; resetPage() }) { Text("Fire Stations") }
+            Tab(selected = subTabIndex == 2, onClick = { subTabIndex = 2; resetPage() }) { Text("Floods") }
+            Tab(selected = subTabIndex == 3, onClick = { subTabIndex = 3; resetPage() }) { Text("Landslides") }
+            Tab(selected = subTabIndex == 4, onClick = { subTabIndex = 4; resetPage() }) { Text("Land Lots") }
+            Tab(selected = subTabIndex == 5, onClick = { subTabIndex = 5; resetPage() }) { Text("Land Uses") }
         }
         Spacer(Modifier.height(16.dp))
         Box(Modifier.weight(1f)) {
             when (subTabIndex) {
-                0 -> LazyColumn {
-                    items(earthquakes) { eq ->
-                        Text("ID: ${eq.id}, Mag: ${eq.properties.magnitude}, Depth: ${eq.properties.depth}, Time: ${eq.properties.timestamp}")
-                        Divider()
-                    }
-                }
-                1 -> LazyColumn {
-                    items(fireStations) { fs ->
-                        Text("ID: ${fs.id}, Location: ${fs.properties.location}, Address: ${fs.properties.address}, City: ${fs.properties.city}")
-                        Divider()
-                    }
-                }
-                2 -> LazyColumn {
-                    items(floods) { f ->
-                        Text("ID: ${f.id}, Type: ${f.properties.FloodType}, ObjectID: ${f.properties.OBJECTID}")
-                        Divider()
-                    }
-                }
-                3 -> LazyColumn {
-                    items(landslides) { l ->
-                        Text("ID: ${l.id}, Type: ${l.properties.LandSlideType}, ObjectID: ${l.properties.OBJECTID}")
-                        Divider()
-                    }
-                }
-                4 -> LazyColumn {
-                    items(landLots) { lot ->
-                        Text("ID: ${lot.id}, ST_PARCELE: ${lot.properties.ST_PARCELE}, EID_PARCELA: ${lot.properties.EID_PARCELA}, KO_ID: ${lot.properties.KO_ID}, POVRSINA: ${lot.properties.POVRSINA}")
-                        Divider()
-                    }
-                }
-                5 -> LazyColumn {
-                    items(landUses) { use ->
-                        Text("ID: ${use.id}, OBJECTID: ${use.properties.OBJECTID}, RABA_ID: ${use.properties.RABA_ID}")
-                        Divider()
-                    }
-                }
+                0 -> LazyColumn { items(earthquakes) { eq -> Text("ID: ${eq.id}, Mag: ${eq.properties.magnitude}, Depth: ${eq.properties.depth}, Time: ${eq.properties.timestamp}"); Divider() } }
+                1 -> LazyColumn { items(fireStations) { fs -> Text("ID: ${fs.id}, Location: ${fs.properties.location}, Address: ${fs.properties.address}, City: ${fs.properties.city}"); Divider() } }
+                2 -> LazyColumn { items(floods) { f -> Text("ID: ${f.id}, Type: ${f.properties.FloodType}, ObjectID: ${f.properties.OBJECTID}"); Divider() } }
+                3 -> LazyColumn { items(landslides) { l -> Text("ID: ${l.id}, Type: ${l.properties.LandSlideType}, ObjectID: ${l.properties.OBJECTID}"); Divider() } }
+                4 -> LazyColumn { items(landLots) { lot -> Text("ID: ${lot.id}, ST_PARCELE: ${lot.properties.ST_PARCELE}, EID_PARCELA: ${lot.properties.EID_PARCELA}, KO_ID: ${lot.properties.KO_ID}, POVRSINA: ${lot.properties.POVRSINA}"); Divider() } }
+                5 -> LazyColumn { items(landUses) { use -> Text("ID: ${use.id}, OBJECTID: ${use.properties.OBJECTID}, RABA_ID: ${use.properties.RABA_ID}"); Divider() } }
             }
         }
         Spacer(Modifier.height(16.dp))
@@ -576,29 +503,34 @@ fun App() {
             }
             Box(Modifier.fillMaxSize()) {
                 when (tabIndex) {
-                    0 -> DataManagerTab(
-                        dbStatus = dbStatus,
-                        isLoading = isLoading,
-                        onCheckDb = {
-                            isLoading = true
-                            scope.launch {
-                                val result = checkDatabaseUpToDate()
-                                dbStatus = result.status
-                                missingFireStations = result.missingFireStations
-                                missingEarthquakes = result.missingEarthquakes
-                                isLoading = false
-                            }
-                        },
-                        onUpdateDb = {
-                            isLoading = true
-                            scope.launch {
-                                dbStatus = updateDatabase()
-                                isLoading = false
-                            }
-                        },
-                        missingFireStations = missingFireStations,
-                        missingEarthquakes = missingEarthquakes
-                    )
+                    0 -> // In your App() composable, inside the DataManagerTab call:
+                        DataManagerTab(
+                            dbStatus = dbStatus,
+                            isLoading = isLoading,
+                            onCheckDb = {
+                                isLoading = true
+                                scope.launch {
+                                    val result = checkDatabaseUpToDate()
+                                    dbStatus = result.status
+                                    missingFireStations = result.missingFireStations
+                                    missingEarthquakes = result.missingEarthquakes
+                                    isLoading = false
+                                }
+                            },
+                            onUpdateDb = {
+                                isLoading = true
+                                scope.launch {
+                                    dbStatus = updateDatabase()
+                                    // Optionally, re-check after update:
+                                    val result = checkDatabaseUpToDate()
+                                    missingFireStations = result.missingFireStations
+                                    missingEarthquakes = result.missingEarthquakes
+                                    isLoading = false
+                                }
+                            },
+                            missingFireStations = missingFireStations,
+                            missingEarthquakes = missingEarthquakes
+                        )
                     1 -> UniversalGeneratorTab()
                     2 -> ScraperTab()
                     3 -> DatabaseViewerTab()
