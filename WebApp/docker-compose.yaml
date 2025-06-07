@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   frontend:
-    build: ./frontend
+    image: isebastjan/geometrics:frontend
     ports:
       - "3000:3000"
     volumes:
@@ -12,7 +12,7 @@ services:
       - backend
 
   backend:
-    build: ./backend
+    image: isebastjan/geometrics:backend
     ports:
       - "3001:3001"
     volumes:

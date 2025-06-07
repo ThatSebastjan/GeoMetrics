@@ -23,18 +23,18 @@ jobs:
       - name: Build and push Frontend Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./frontend # Kontekst gradnje za frontend
+          context: ./WebApp/frontend # Kontekst gradnje za frontend
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/frontend-image:latest # Tag za frontend sliko
-          file: ./frontend/Dockerfile # Eksplicitna pot do Dockerfile
+          tags: ${{ secrets.DOCKER_USERNAME }}/geometrics:frontend # Tag za frontend sliko
+          file: ./WebApp/frontend/Dockerfile # Eksplicitna pot do Dockerfile
 
       - name: Build and push Backend Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./backend # Kontekst gradnje za backend
+          context: ./WebApp/backend # Kontekst gradnje za backend
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/backend-image:latest # Tag za backend sliko
-          file: ./backend/Dockerfile # Eksplicitna pot do Dockerfile
+          tags: ${{ secrets.DOCKER_USERNAME }}/geometrics:backend # Tag za backend sliko
+          file: ./WebApp/backend/Dockerfile # Eksplicitna pot do Dockerfile
 
   send-webhook-notification:
     needs: build-and-push-docker
@@ -45,5 +45,7 @@ jobs:
         uses: joelwmale/webhook-action@master
         with:
           url: ${{ secrets.WEBHOOK_URL }}
+          headers: '{"api-key": "${{ secrets.WEBHOOK_API_KEY }}"}'
           body: '{"event": "deployment", "repository": "${{ github.repository }}"}'
+          insecure: true
           github_event_payload: true
