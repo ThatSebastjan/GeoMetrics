@@ -82,5 +82,20 @@ object ApiClient {
         }
     }
 
+    inline fun <reified T> update(obj: T): Boolean {
+        val endpoint = ENDPOINT_MAP[obj!!::class] ?: throw InvalidTypeException("Invalid type passed to ApiClient.update")
+
+        val requestBody = json.encodeToString(obj)
+            .toRequestBody("application/json".toMediaType())
+
+        val request = Request.Builder()
+            .url("$BASE_URL/$endpoint/update")
+            .put(requestBody)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            return response.code == 200
+        }
+    }
 
 }

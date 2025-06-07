@@ -125,31 +125,25 @@ fun UniversalGeneratorTab() {
     var status by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    // Common fields
     var longitude by remember { mutableStateOf("") }
     var latitude by remember { mutableStateOf("") }
 
-    // Fire Station fields
     var fsLocation by remember { mutableStateOf("") }
     var fsAddress by remember { mutableStateOf("") }
     var fsCity by remember { mutableStateOf("") }
     var fsDescription by remember { mutableStateOf("") }
     var fsTelephone by remember { mutableStateOf("") }
 
-    // Earthquake fields
     var eqMagnitude by remember { mutableStateOf("") }
     var eqDepth by remember { mutableStateOf("") }
 
-    // Landslide/Flood fields
     var polygonText by remember { mutableStateOf("") }
 
-    // Landslide/Flood properties
     var typeInt by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Universal Generator", style = MaterialTheme.typography.h6)
 
-        // Type selector
         Box {
             OutlinedButton(onClick = { expanded = true }) {
                 Text(selectedType)
@@ -257,24 +251,19 @@ fun UniversalGeneratorTab() {
                                         arrayListOf(lon, lat)
                                     }
                                     val polygon = arrayListOf(coords as ArrayList<ArrayList<Double>>)
-                                    val landslides = ApiClient.get<LandSlide>(0, 10000)
+                                    val landslides = ApiClient.get<LandSlide>(0, 1)
                                     val maxObjectId = landslides.maxOfOrNull { it.properties.OBJECTID } ?: 0
-                                    val exists = landslides.any { it.properties.OBJECTID == maxObjectId + 1 }
-                                    if (!exists) {
-                                        val landslide = LandSlide(
-                                            type = "Feature",
-                                            id = maxObjectId + 1,
-                                            geometry = GeoJsonPolygon(coordinates = polygon),
-                                            properties = LandSlideProperties(
-                                                OBJECTID = maxObjectId + 1,
-                                                LandSlideType = typeInt.toInt()
-                                            )
+                                    val landslide = LandSlide(
+                                        type = "Feature",
+                                        id = maxObjectId + 1,
+                                        geometry = GeoJsonPolygon(coordinates = polygon),
+                                        properties = LandSlideProperties(
+                                            OBJECTID = maxObjectId + 1,
+                                            LandSlideType = typeInt.toInt()
                                         )
-                                        val ok = ApiClient.insert(landslide)
-                                        status = if (ok) "✅ Landslide inserted!" else "❌ Insert failed"
-                                    } else {
-                                        status = "❌ Landslide insert failed (duplicate OBJECTID)"
-                                    }
+                                    )
+                                    val ok = ApiClient.insert(landslide)
+                                    status = if (ok) "✅ Landslide inserted!" else "❌ Insert failed"
                                 }
                                 "Flood" -> {
                                     val coords = polygonText.split(";").map {
@@ -282,24 +271,19 @@ fun UniversalGeneratorTab() {
                                         arrayListOf(lon, lat)
                                     }
                                     val polygon = arrayListOf(coords as ArrayList<ArrayList<Double>>)
-                                    val floods = ApiClient.get<Flood>(0, 10000)
+                                    val floods = ApiClient.get<Flood>(0, 1)
                                     val maxObjectId = floods.maxOfOrNull { it.properties.OBJECTID } ?: 0
-                                    val exists = floods.any { it.properties.OBJECTID == maxObjectId + 1 }
-                                    if (!exists) {
-                                        val flood = Flood(
-                                            type = "Feature",
-                                            id = maxObjectId + 1,
-                                            geometry = GeoJsonPolygon(coordinates = polygon),
-                                            properties = FloodProperties(
-                                                OBJECTID = maxObjectId + 1,
-                                                FloodType = typeInt.toInt()
-                                            )
+                                    val flood = Flood(
+                                        type = "Feature",
+                                        id = maxObjectId + 1,
+                                        geometry = GeoJsonPolygon(coordinates = polygon),
+                                        properties = FloodProperties(
+                                            OBJECTID = maxObjectId + 1,
+                                            FloodType = typeInt.toInt()
                                         )
-                                        val ok = ApiClient.insert(flood)
-                                        status = if (ok) "✅ Flood inserted!" else "❌ Insert failed"
-                                    } else {
-                                        status = "❌ Flood insert failed (duplicate OBJECTID)"
-                                    }
+                                    )
+                                    val ok = ApiClient.insert(flood)
+                                    status = if (ok) "✅ Flood inserted!" else "❌ Insert failed"
                                 }
                             }
                         } catch (e: Exception) {
@@ -345,7 +329,7 @@ fun ScraperTab() {
                 progressMessages = listOf("Starting scraper...")
                 scope.launch {
                     try {
-                        val scraper = models.Scraper()
+                        val scraper = Scraper()
                         progressMessages = progressMessages + "Scraping fire stations..."
                         val fireStations = scraper.scrapeFireStations()
                         progressMessages = progressMessages + "Found ${fireStations.size} fire stations."
@@ -396,41 +380,8 @@ fun DatabaseViewerTab() {
     var landslides by remember { mutableStateOf<List<LandSlide>>(emptyList()) }
     var landLots by remember { mutableStateOf<List<LandLot>>(emptyList()) }
     var landUses by remember { mutableStateOf<List<LandUse>>(emptyList()) }
-    val scope = rememberCoroutineScope()
     val pageSize = 10
-
-    LaunchedEffect(subTabIndex, page) {
-        when (subTabIndex) {
-            0 -> scope.launch {
-                totalCount = ApiClient.count<Earthquake>()
-                earthquakes = ApiClient.get<Earthquake>(page * pageSize, pageSize)
-            }
-            1 -> scope.launch {
-                totalCount = ApiClient.count<FireStation>()
-                fireStations = ApiClient.get<FireStation>(page * pageSize, pageSize)
-            }
-            2 -> scope.launch {
-                totalCount = ApiClient.count<Flood>()
-                floods = ApiClient.get<Flood>(page * pageSize, pageSize)
-            }
-            3 -> scope.launch {
-                totalCount = ApiClient.count<LandSlide>()
-                landslides = ApiClient.get<LandSlide>(page * pageSize, pageSize)
-            }
-            4 -> scope.launch {
-                totalCount = ApiClient.count<LandLot>()
-                landLots = ApiClient.get<LandLot>(page * pageSize, pageSize)
-            }
-            5 -> scope.launch {
-                totalCount = ApiClient.count<LandUse>()
-                landUses = ApiClient.get<LandUse>(page * pageSize, pageSize)
-            }
-        }
-    }
-
-    fun resetPage() {
-        page = 0
-    }
+    val scope = rememberCoroutineScope()
 
     Column(Modifier.fillMaxSize().padding(24.dp)) {
         TabRow(
@@ -438,22 +389,510 @@ fun DatabaseViewerTab() {
             backgroundColor = Color.Black,
             contentColor = Color.White
         ) {
-            Tab(selected = subTabIndex == 0, onClick = { subTabIndex = 0; resetPage() }) { Text("Earthquakes") }
-            Tab(selected = subTabIndex == 1, onClick = { subTabIndex = 1; resetPage() }) { Text("Fire Stations") }
-            Tab(selected = subTabIndex == 2, onClick = { subTabIndex = 2; resetPage() }) { Text("Floods") }
-            Tab(selected = subTabIndex == 3, onClick = { subTabIndex = 3; resetPage() }) { Text("Landslides") }
-            Tab(selected = subTabIndex == 4, onClick = { subTabIndex = 4; resetPage() }) { Text("Land Lots") }
-            Tab(selected = subTabIndex == 5, onClick = { subTabIndex = 5; resetPage() }) { Text("Land Uses") }
+            Tab(selected = subTabIndex == 0, onClick = { subTabIndex = 0; page = 0 }) { Text("Earthquakes") }
+            Tab(selected = subTabIndex == 1, onClick = { subTabIndex = 1; page = 0 }) { Text("Fire Stations") }
+            Tab(selected = subTabIndex == 2, onClick = { subTabIndex = 2; page = 0 }) { Text("Floods") }
+            Tab(selected = subTabIndex == 3, onClick = { subTabIndex = 3; page = 0 }) { Text("Landslides") }
+            Tab(selected = subTabIndex == 4, onClick = { subTabIndex = 4; page = 0 }) { Text("Land Lots") }
+            Tab(selected = subTabIndex == 5, onClick = { subTabIndex = 5; page = 0 }) { Text("Land Uses") }
         }
         Spacer(Modifier.height(16.dp))
         Box(Modifier.weight(1f)) {
             when (subTabIndex) {
-                0 -> LazyColumn { items(earthquakes) { eq -> Text("ID: ${eq.id}, Mag: ${eq.properties.magnitude}, Depth: ${eq.properties.depth}, Time: ${eq.properties.timestamp}"); Divider() } }
-                1 -> LazyColumn { items(fireStations) { fs -> Text("ID: ${fs.id}, Location: ${fs.properties.location}, Address: ${fs.properties.address}, City: ${fs.properties.city}"); Divider() } }
-                2 -> LazyColumn { items(floods) { f -> Text("ID: ${f.id}, Type: ${f.properties.FloodType}, ObjectID: ${f.properties.OBJECTID}"); Divider() } }
-                3 -> LazyColumn { items(landslides) { l -> Text("ID: ${l.id}, Type: ${l.properties.LandSlideType}, ObjectID: ${l.properties.OBJECTID}"); Divider() } }
-                4 -> LazyColumn { items(landLots) { lot -> Text("ID: ${lot.id}, ST_PARCELE: ${lot.properties.ST_PARCELE}, EID_PARCELA: ${lot.properties.EID_PARCELA}, KO_ID: ${lot.properties.KO_ID}, POVRSINA: ${lot.properties.POVRSINA}"); Divider() } }
-                5 -> LazyColumn { items(landUses) { use -> Text("ID: ${use.id}, OBJECTID: ${use.properties.OBJECTID}, RABA_ID: ${use.properties.RABA_ID}"); Divider() } }
+                0 -> {
+                    totalCount = ApiClient.count<Earthquake>()
+                    earthquakes = ApiClient.get<Earthquake>(page * pageSize, pageSize)
+                    var editingId by remember { mutableStateOf<Int?>(null) }
+                    var editedMagnitude by remember { mutableStateOf("") }
+                    var editedDepth by remember { mutableStateOf("") }
+                    var editedTimestamp by remember { mutableStateOf("") }
+                    var editedLongitude by remember { mutableStateOf("") }
+                    var editedLatitude by remember { mutableStateOf("") }
+                    LazyColumn {
+                        items(earthquakes) { eq ->
+                            if (editingId == eq.id) {
+                                OutlinedTextField(
+                                    value = editedMagnitude,
+                                    onValueChange = { editedMagnitude = it },
+                                    label = { Text("Magnitude") }
+                                )
+                                OutlinedTextField(
+                                    value = editedDepth,
+                                    onValueChange = { editedDepth = it },
+                                    label = { Text("Depth") }
+                                )
+                                OutlinedTextField(
+                                    value = editedTimestamp,
+                                    onValueChange = { editedTimestamp = it },
+                                    label = { Text("Timestamp (ISO 8601)") }
+                                )
+                                OutlinedTextField(
+                                    value = editedLongitude,
+                                    onValueChange = { editedLongitude = it },
+                                    label = { Text("Longitude") }
+                                )
+                                OutlinedTextField(
+                                    value = editedLatitude,
+                                    onValueChange = { editedLatitude = it },
+                                    label = { Text("Latitude") }
+                                )
+                                Row {
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                        scope.launch {
+                                            val updated = eq.copy(
+                                                properties = eq.properties.copy(
+                                                    magnitude = editedMagnitude.toDoubleOrNull()
+                                                        ?: eq.properties.magnitude,
+                                                    depth = editedDepth.toDoubleOrNull() ?: eq.properties.depth,
+                                                    timestamp = kotlinx.datetime.Instant.parse(editedTimestamp)
+                                                ),
+                                                geometry = eq.geometry.copy(
+                                                    coordinates = arrayListOf(
+                                                        editedLongitude.toDoubleOrNull()
+                                                            ?: eq.geometry.coordinates.getOrNull(0) ?: 0.0,
+                                                        editedLatitude.toDoubleOrNull()
+                                                            ?: eq.geometry.coordinates.getOrNull(1) ?: 0.0
+                                                    )
+                                                )
+                                            )
+                                            if (ApiClient.update(updated)) {
+                                                earthquakes = earthquakes.map { if (it.id == eq.id) updated else it }
+                                            }
+                                            editingId = null
+                                        }
+                                    }) { Text("Save") }
+                                    Spacer(Modifier.width(8.dp))
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red, contentColor = Color.White), onClick = { editingId = null }) { Text("Cancel") }
+                                }
+                            } else {
+                                Text("ID: ${eq.id}, Mag: ${eq.properties.magnitude}, Depth: ${eq.properties.depth}, Time: ${eq.properties.timestamp}")
+                                Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                    editingId = eq.id
+                                    editedMagnitude = eq.properties.magnitude.toString()
+                                    editedDepth = eq.properties.depth.toString()
+                                    editedTimestamp = eq.properties.timestamp.toString()
+                                    editedLongitude = eq.geometry.coordinates.getOrNull(0)?.toString() ?: ""
+                                    editedLatitude = eq.geometry.coordinates.getOrNull(1)?.toString() ?: ""
+                                }) { Text("Edit") }
+                            }
+                            Divider()
+                        }
+                    }
+                }
+                1 -> {
+                    totalCount = ApiClient.count<FireStation>()
+                    fireStations = ApiClient.get<FireStation>(page * pageSize, pageSize)
+                    var editingId by remember { mutableStateOf<Int?>(null) }
+                    var editedLocation by remember { mutableStateOf("") }
+                    var editedAddress by remember { mutableStateOf("") }
+                    var editedCity by remember { mutableStateOf("") }
+                    var editedDescription by remember { mutableStateOf("") }
+                    var editedTelephone by remember { mutableStateOf("") }
+                    var editedLongitude by remember { mutableStateOf("") }
+                    var editedLatitude by remember { mutableStateOf("") }
+
+                    LazyColumn {
+                        items(fireStations) { fs ->
+                            if (editingId == fs.id) {
+                                OutlinedTextField(
+                                    value = editedLocation,
+                                    onValueChange = { editedLocation = it },
+                                    label = { Text("Location") }
+                                )
+                                OutlinedTextField(
+                                    value = editedAddress,
+                                    onValueChange = { editedAddress = it },
+                                    label = { Text("Address") }
+                                )
+                                OutlinedTextField(
+                                    value = editedCity,
+                                    onValueChange = { editedCity = it },
+                                    label = { Text("City") }
+                                )
+                                OutlinedTextField(
+                                    value = editedDescription,
+                                    onValueChange = { editedDescription = it },
+                                    label = { Text("Description") }
+                                )
+                                OutlinedTextField(
+                                    value = editedTelephone,
+                                    onValueChange = { editedTelephone = it },
+                                    label = { Text("Telephone") }
+                                )
+                                OutlinedTextField(
+                                    value = editedLongitude,
+                                    onValueChange = { editedLongitude = it },
+                                    label = { Text("Longitude") }
+                                )
+                                OutlinedTextField(
+                                    value = editedLatitude,
+                                    onValueChange = { editedLatitude = it },
+                                    label = { Text("Latitude") }
+                                )
+                                Row {
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                        scope.launch {
+                                            val updated = fs.copy(
+                                                properties = fs.properties.copy(
+                                                    location = editedLocation,
+                                                    address = editedAddress,
+                                                    city = editedCity,
+                                                    description = editedDescription,
+                                                    telephoneNumber = editedTelephone
+                                                ),
+                                                geometry = fs.geometry.copy(
+                                                    coordinates = arrayListOf(
+                                                        editedLongitude.toDoubleOrNull()
+                                                            ?: fs.geometry.coordinates.getOrNull(0) ?: 0.0,
+                                                        editedLatitude.toDoubleOrNull()
+                                                            ?: fs.geometry.coordinates.getOrNull(1) ?: 0.0
+                                                    )
+                                                )
+                                            )
+                                            if (ApiClient.update(updated)) {
+                                                fireStations = fireStations.map { if (it.id == fs.id) updated else it }
+                                            }
+                                            editingId = null
+                                        }
+                                    }) { Text("Save") }
+                                    Spacer(Modifier.width(8.dp))
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red, contentColor = Color.White), onClick = { editingId = null }) { Text("Cancel") }
+                                }
+                            } else {
+                                Text("ID: ${fs.id}, Location: ${fs.properties.location}, Address: ${fs.properties.address}, City: ${fs.properties.city}, Desc: ${fs.properties.description}, Tel: ${fs.properties.telephoneNumber}")
+                                Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                    editingId = fs.id
+                                    editedLocation = fs.properties.location
+                                    editedAddress = fs.properties.address
+                                    editedCity = fs.properties.city
+                                    editedDescription = fs.properties.description
+                                    editedTelephone = fs.properties.telephoneNumber
+                                    editedLongitude = fs.geometry.coordinates.getOrNull(0)?.toString() ?: ""
+                                    editedLatitude = fs.geometry.coordinates.getOrNull(1)?.toString() ?: ""
+                                }) { Text("Edit") }
+                            }
+                            Divider()
+                        }
+                    }
+                }
+
+                2 -> {
+                    totalCount = ApiClient.count<Flood>()
+                    floods = ApiClient.get<Flood>(page * pageSize, pageSize)
+                    var editingId by remember { mutableStateOf<Int?>(null) }
+                    var editedFloodType by remember { mutableStateOf("") }
+                    var editedObjectId by remember { mutableStateOf("") }
+                    var editedPolygonText by remember { mutableStateOf("") }
+
+                    LazyColumn {
+                        items(floods) { flood ->
+                            if (editingId == flood.id) {
+                                OutlinedTextField(
+                                    value = editedObjectId,
+                                    onValueChange = { editedObjectId = it },
+                                    label = { Text("OBJECTID") }
+                                )
+                                OutlinedTextField(
+                                    value = editedFloodType,
+                                    onValueChange = { editedFloodType = it },
+                                    label = { Text("FloodType") }
+                                )
+                                OutlinedTextField(
+                                    value = editedPolygonText,
+                                    onValueChange = { editedPolygonText = it },
+                                    label = { Text("Polygon coordinates (lon,lat;lon,lat;...)") }
+                                )
+                                Row {
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                        scope.launch {
+                                            val coords = editedPolygonText.split(";").mapNotNull {
+                                                val parts = it.split(",")
+                                                if (parts.size == 2) {
+                                                    val lon = parts[0].toDoubleOrNull()
+                                                    val lat = parts[1].toDoubleOrNull()
+                                                    if (lon != null && lat != null) arrayListOf(lon, lat) else null
+                                                } else null
+                                            }
+                                            val polygon = arrayListOf(coords as ArrayList<ArrayList<Double>>)
+                                            val updated = flood.copy(
+                                                properties = flood.properties.copy(
+                                                    OBJECTID = editedObjectId.toIntOrNull()
+                                                        ?: flood.properties.OBJECTID,
+                                                    FloodType = editedFloodType.toIntOrNull()
+                                                        ?: flood.properties.FloodType
+                                                ),
+                                                geometry = flood.geometry.copy(
+                                                    coordinates = polygon
+                                                )
+                                            )
+                                            if (ApiClient.update(updated)) {
+                                                floods = floods.map { if (it.id == flood.id) updated else it }
+                                            }
+                                            editingId = null
+                                        }
+                                    }) { Text("Save") }
+                                    Spacer(Modifier.width(8.dp))
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red, contentColor = Color.White), onClick = { editingId = null }) { Text("Cancel") }
+                                }
+                            } else {
+                                Text("ID: ${flood.id}, OBJECTID: ${flood.properties.OBJECTID}, FloodType: ${flood.properties.FloodType}")
+                                Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                    editingId = flood.id
+                                    editedObjectId = flood.properties.OBJECTID.toString()
+                                    editedFloodType = flood.properties.FloodType.toString()
+                                    editedPolygonText = flood.geometry.coordinates
+                                        .flatMap { it }
+                                        .joinToString(";") { pair -> pair.joinToString(",") }
+                                }) { Text("Edit") }
+                            }
+                            Divider()
+                        }
+                    }
+                }
+
+                3 -> {
+                    totalCount = ApiClient.count<LandSlide>()
+                    landslides = ApiClient.get<LandSlide>(page * pageSize, pageSize)
+                    var editingId by remember { mutableStateOf<Int?>(null) }
+                    var editedLandSlideType by remember { mutableStateOf("") }
+                    var editedObjectId by remember { mutableStateOf("") }
+                    var editedPolygonText by remember { mutableStateOf("") }
+
+                    LazyColumn {
+                        items(landslides) { landslide ->
+                            if (editingId == landslide.id) {
+                                OutlinedTextField(
+                                    value = editedObjectId,
+                                    onValueChange = { editedObjectId = it },
+                                    label = { Text("OBJECTID") }
+                                )
+                                OutlinedTextField(
+                                    value = editedLandSlideType,
+                                    onValueChange = { editedLandSlideType = it },
+                                    label = { Text("LandSlideType") }
+                                )
+                                OutlinedTextField(
+                                    value = editedPolygonText,
+                                    onValueChange = { editedPolygonText = it },
+                                    label = { Text("Polygon coordinates (lon,lat;lon,lat;...)") }
+                                )
+                                Row {
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                        scope.launch {
+                                            val coords = editedPolygonText.split(";").mapNotNull {
+                                                val parts = it.split(",")
+                                                if (parts.size == 2) {
+                                                    val lon = parts[0].toDoubleOrNull()
+                                                    val lat = parts[1].toDoubleOrNull()
+                                                    if (lon != null && lat != null) arrayListOf(lon, lat) else null
+                                                } else null
+                                            }
+                                            val polygon = arrayListOf(coords as ArrayList<ArrayList<Double>>)
+                                            val updated = landslide.copy(
+                                                properties = landslide.properties.copy(
+                                                    OBJECTID = editedObjectId.toIntOrNull()
+                                                        ?: landslide.properties.OBJECTID,
+                                                    LandSlideType = editedLandSlideType.toIntOrNull()
+                                                        ?: landslide.properties.LandSlideType
+                                                ),
+                                                geometry = landslide.geometry.copy(
+                                                    coordinates = polygon
+                                                )
+                                            )
+                                            if (ApiClient.update(updated)) {
+                                                landslides =
+                                                    landslides.map { if (it.id == landslide.id) updated else it }
+                                            }
+                                            editingId = null
+                                        }
+                                    }) { Text("Save") }
+                                    Spacer(Modifier.width(8.dp))
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red, contentColor = Color.White), onClick = { editingId = null }) { Text("Cancel") }
+                                }
+                            } else {
+                                Text("ID: ${landslide.id}, OBJECTID: ${landslide.properties.OBJECTID}, LandSlideType: ${landslide.properties.LandSlideType}")
+                                Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                    editingId = landslide.id
+                                    editedObjectId = landslide.properties.OBJECTID.toString()
+                                    editedLandSlideType = landslide.properties.LandSlideType.toString()
+                                    editedPolygonText = landslide.geometry.coordinates
+                                        .flatMap { it }
+                                        .joinToString(";") { pair -> pair.joinToString(",") }
+                                }) { Text("Edit") }
+                            }
+                            Divider()
+                        }
+                    }
+                }
+
+                4 -> {
+                    totalCount = ApiClient.count<LandLot>()
+                    landLots = ApiClient.get<LandLot>(page * pageSize, pageSize)
+                    var editingId by remember { mutableStateOf<Int?>(null) }
+                    var editedSTParcele by remember { mutableStateOf("") }
+                    var editedEIDParcela by remember { mutableStateOf("") }
+                    var editedObjectId by remember { mutableStateOf("") }
+                    var editedKOId by remember { mutableStateOf("") }
+                    var editedPovrsina by remember { mutableStateOf("") }
+                    var editedPolygonText by remember { mutableStateOf("") }
+
+                    LazyColumn {
+                        items(landLots) { lot ->
+                            if (editingId == lot.id) {
+                                OutlinedTextField(
+                                    value = editedSTParcele,
+                                    onValueChange = { editedSTParcele = it },
+                                    label = { Text("ST_PARCELE") }
+                                )
+                                OutlinedTextField(
+                                    value = editedEIDParcela,
+                                    onValueChange = { editedEIDParcela = it },
+                                    label = { Text("EID_PARCELA") }
+                                )
+                                OutlinedTextField(
+                                    value = editedObjectId,
+                                    onValueChange = { editedObjectId = it },
+                                    label = { Text("OBJECTID") }
+                                )
+                                OutlinedTextField(
+                                    value = editedKOId,
+                                    onValueChange = { editedKOId = it },
+                                    label = { Text("KO_ID") }
+                                )
+                                OutlinedTextField(
+                                    value = editedPovrsina,
+                                    onValueChange = { editedPovrsina = it },
+                                    label = { Text("POVRSINA") }
+                                )
+                                OutlinedTextField(
+                                    value = editedPolygonText,
+                                    onValueChange = { editedPolygonText = it },
+                                    label = { Text("Polygon coordinates (lon,lat;lon,lat;...)") }
+                                )
+                                Row {
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                        scope.launch {
+                                            val coords = editedPolygonText.split(";").mapNotNull {
+                                                val parts = it.split(",")
+                                                if (parts.size == 2) {
+                                                    val lon = parts[0].toDoubleOrNull()
+                                                    val lat = parts[1].toDoubleOrNull()
+                                                    if (lon != null && lat != null) arrayListOf(lon, lat) else null
+                                                } else null
+                                            }
+                                            val polygon = arrayListOf(coords as ArrayList<ArrayList<Double>>)
+                                            val updated = lot.copy(
+                                                properties = lot.properties.copy(
+                                                    ST_PARCELE = editedSTParcele,
+                                                    EID_PARCELA = editedEIDParcela,
+                                                    OBJECTID = editedObjectId.toIntOrNull() ?: lot.properties.OBJECTID,
+                                                    KO_ID = editedKOId.toIntOrNull() ?: lot.properties.KO_ID,
+                                                    POVRSINA = editedPovrsina.toIntOrNull() ?: lot.properties.POVRSINA
+                                                ),
+                                                geometry = lot.geometry.copy(
+                                                    coordinates = polygon
+                                                )
+                                            )
+                                            if (ApiClient.update(updated)) {
+                                                landLots = landLots.map { if (it.id == lot.id) updated else it }
+                                            }
+                                            editingId = null
+                                        }
+                                    }) { Text("Save") }
+                                    Spacer(Modifier.width(8.dp))
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red, contentColor = Color.White), onClick = { editingId = null }) { Text("Cancel") }
+                                }
+                            } else {
+                                Text("ID: ${lot.id}, ST_PARCELE: ${lot.properties.ST_PARCELE}, EID_PARCELA: ${lot.properties.EID_PARCELA}, OBJECTID: ${lot.properties.OBJECTID}, KO_ID: ${lot.properties.KO_ID}, POVRSINA: ${lot.properties.POVRSINA}")
+                                Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                    editingId = lot.id
+                                    editedSTParcele = lot.properties.ST_PARCELE
+                                    editedEIDParcela = lot.properties.EID_PARCELA
+                                    editedObjectId = lot.properties.OBJECTID.toString()
+                                    editedKOId = lot.properties.KO_ID.toString()
+                                    editedPovrsina = lot.properties.POVRSINA.toString()
+                                    editedPolygonText = lot.geometry.coordinates
+                                        .flatMap { it }
+                                        .joinToString(";") { pair -> pair.joinToString(",") }
+                                }) { Text("Edit") }
+                            }
+                            Divider()
+                        }
+                    }
+                }
+
+                5 -> {
+                    totalCount = ApiClient.count<LandUse>()
+                    landUses = ApiClient.get<LandUse>(page * pageSize, pageSize)
+                    var editingId by remember { mutableStateOf<Int?>(null) }
+                    var editedObjectId by remember { mutableStateOf("") }
+                    var editedRabaId by remember { mutableStateOf("") }
+                    var editedPolygonText by remember { mutableStateOf("") }
+
+                    LazyColumn {
+                        items(landUses) { landUse ->
+                            if (editingId == landUse.id) {
+                                OutlinedTextField(
+                                    value = editedObjectId,
+                                    onValueChange = { editedObjectId = it },
+                                    label = { Text("OBJECTID") }
+                                )
+                                OutlinedTextField(
+                                    value = editedRabaId,
+                                    onValueChange = { editedRabaId = it },
+                                    label = { Text("RABA_ID") }
+                                )
+                                OutlinedTextField(
+                                    value = editedPolygonText,
+                                    onValueChange = { editedPolygonText = it },
+                                    label = { Text("Polygon coordinates (lon,lat;lon,lat;...)") }
+                                )
+                                Row {
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                        scope.launch {
+                                            val coords = editedPolygonText.split(";").mapNotNull {
+                                                val parts = it.split(",")
+                                                if (parts.size == 2) {
+                                                    val lon = parts[0].toDoubleOrNull()
+                                                    val lat = parts[1].toDoubleOrNull()
+                                                    if (lon != null && lat != null) arrayListOf(lon, lat) else null
+                                                } else null
+                                            }
+                                            val polygon = arrayListOf(coords as ArrayList<ArrayList<Double>>)
+                                            val updated = landUse.copy(
+                                                properties = landUse.properties.copy(
+                                                    OBJECTID = editedObjectId.toIntOrNull()
+                                                        ?: landUse.properties.OBJECTID,
+                                                    RABA_ID = editedRabaId.toIntOrNull() ?: landUse.properties.RABA_ID
+                                                ),
+                                                geometry = landUse.geometry.copy(
+                                                    coordinates = polygon
+                                                )
+                                            )
+                                            if (ApiClient.update(updated)) {
+                                                landUses = landUses.map { if (it.id == landUse.id) updated else it }
+                                            }
+                                            editingId = null
+                                        }
+                                    }) { Text("Save") }
+                                    Spacer(Modifier.width(8.dp))
+                                    Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red, contentColor = Color.White), onClick = { editingId = null }) { Text("Cancel") }
+                                }
+                            } else {
+                                Text("ID: ${landUse.id}, OBJECTID: ${landUse.properties.OBJECTID}, RABA_ID: ${landUse.properties.RABA_ID}")
+                                Button(colors = ButtonDefaults.buttonColors(backgroundColor = Color.Black, contentColor = Color.White), onClick = {
+                                    editingId = landUse.id
+                                    editedObjectId = landUse.properties.OBJECTID.toString()
+                                    editedRabaId = landUse.properties.RABA_ID.toString()
+                                    editedPolygonText = landUse.geometry.coordinates
+                                        .flatMap { it }
+                                        .joinToString(";") { pair -> pair.joinToString(",") }
+                                }) { Text("Edit") }
+                            }
+                            Divider()
+                        }
+                    }
+                }
             }
         }
         Spacer(Modifier.height(16.dp))
@@ -503,7 +942,7 @@ fun App() {
             }
             Box(Modifier.fillMaxSize()) {
                 when (tabIndex) {
-                    0 -> // In your App() composable, inside the DataManagerTab call:
+                    0 ->
                         DataManagerTab(
                             dbStatus = dbStatus,
                             isLoading = isLoading,
@@ -521,7 +960,7 @@ fun App() {
                                 isLoading = true
                                 scope.launch {
                                     dbStatus = updateDatabase()
-                                    // Optionally, re-check after update:
+                                    //Re-check after update:
                                     val result = checkDatabaseUpToDate()
                                     missingFireStations = result.missingFireStations
                                     missingEarthquakes = result.missingEarthquakes
@@ -545,47 +984,4 @@ fun main() = application {
     Window(onCloseRequest = ::exitApplication) {
         App()
     }
-
-
-    //Get example
-    /*
-    val eqs = ApiClient.get<Earthquake>(0, 10);
-
-    for(e in eqs){
-        println(e);
-    }
-    */
-
-
-    //Count examples
-    /*
-    println("Earthquakes: ${ApiClient.count<Earthquake>()}")
-    println("FireStations: ${ApiClient.count<FireStation>()}")
-    println("Floods: ${ApiClient.count<Flood>()}")
-    println("LandLots: ${ApiClient.count<LandLot>()}")
-    println("LandSlides: ${ApiClient.count<LandSlide>()}")
-    println("LandUse: ${ApiClient.count<LandUse>()}")
-    */
-
-
-    //Insert example
-    /*
-    val eq = models.Earthquake(
-        type = "Feature",
-        id = 999,
-        geometry = models.GeoJsonPoint(coordinates = arrayListOf(12.34, 23.45)),
-        properties = models.EarthquakeProperties(
-            timestamp = Clock.System.now(),
-            magnitude = 9.21,
-            depth = 12.34
-        )
-    )
-
-    if(ApiClient.insert<Earthquake>(eq)){
-        println("OK")
-    }
-    else {
-        println("Error")
-    }
-    */
 }
