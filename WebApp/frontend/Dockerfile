@@ -15,6 +15,11 @@ ENV NODE_ENV production
 
 
 WORKDIR /usr/src/app
+
+# Accept MapBox API token as arg and create a .env file
+ARG REACT_APP_MAPBOX_TOKEN
+RUN echo "REACT_APP_MAPBOX_TOKEN=$REACT_APP_MAPBOX_TOKEN" > .env
+
 COPY package*.json .
 RUN npm install
 RUN chmod a+rwx ./node_modules && mkdir node_modules/.cache && chmod -R 777 node_modules/.cache

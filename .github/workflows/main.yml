@@ -44,6 +44,8 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/geometrics:frontend
           file: ./WebApp/frontend/Dockerfile
           platforms: linux/arm64
+          build-args: |
+            REACT_APP_MAPBOX_TOKEN=${{ secrets.REACT_APP_MAPBOX_TOKEN }}
 
       # Detect changes in backend
       - name: Check if backend has changes
