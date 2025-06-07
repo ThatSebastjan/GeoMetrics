@@ -1,0 +1,49 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-push-docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend # Kontekst gradnje za frontend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/frontend-image:latest # Tag za frontend sliko
+          file: ./frontend/Dockerfile # Eksplicitna pot do Dockerfile
+
+      - name: Build and push Backend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend # Kontekst gradnje za backend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/backend-image:latest # Tag za backend sliko
+          file: ./backend/Dockerfile # Eksplicitna pot do Dockerfile
+
+  send-webhook-notification:
+    needs: build-and-push-docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Webhook
+        uses: joelwmale/webhook-action@master
+        with:
+          url: ${{ secrets.WEBHOOK_URL }}
+          body: '{"event": "deployment", "repository": "${{ github.repository }}"}'
+          github_event_payload: true
