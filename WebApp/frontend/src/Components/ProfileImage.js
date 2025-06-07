@@ -2,7 +2,7 @@ function ProfileImage({ user, size = 'medium', onClick = null }) {
     // Determine image URL
     const getImageUrl = () => {
         if (user && user.profileImage && user.profileImage.path) {
-            return `http://localhost:3001${user.profileImage.path}`;
+            return `http://${window.location.hostname}:3001${user.profileImage.path}`;
         }
         return '/default-avatar.png'; // Fallback image
     };

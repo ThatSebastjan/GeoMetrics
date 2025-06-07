@@ -192,7 +192,7 @@ const Map = ({ searchTerm, risk }) => {
         const bounds = get_view_bounds();
         
         try {
-            const req = await fetch(`http://localhost:3001/map/query/${[...previousBounds.current.data, ...bounds].join(",")}`);
+            const req = await fetch(`http://${window.location.hostname}:3001/map/query/${[...previousBounds.current.data, ...bounds].join(",")}`);
 
             if(req.status === 200){ //Returns 304 if there no new data
                 const resp = await req.json();
@@ -265,18 +265,18 @@ const Map = ({ searchTerm, risk }) => {
             (async () => {
 
                 //Flood data is static as there is just so much processing that needs to be done in order to generate heatmap points from it
-                const floodReq = await fetch("http://localhost:3001/flood_point_features.geojson");
+                const floodReq = await fetch(`http://${window.location.hostname}:3001/flood_point_features.geojson`);
                 floodPointsData.current = await floodReq.json();
                 map.current.getSource("flood_heatmap").setData(floodPointsData.current);
 
 
                 //Landslide data is also static. Same reason as above
-                const lsReq = await fetch("http://localhost:3001/landslide_point_features.geojson");
+                const lsReq = await fetch(`http://${window.location.hostname}:3001/landslide_point_features.geojson`);
                 landslidePointsData.current = await lsReq.json();
                 map.current.getSource("landslide_heatmap").setData(landslidePointsData.current);
 
 
-                const eqReq = await fetch("http://localhost:3001/map/earthquakes");
+                const eqReq = await fetch(`http://${window.location.hostname}:3001/map/earthquakes`);
                 earthquakePointsData.current.features = await eqReq.json();
                 map.current.getSource("earthquake_heatmap").setData(earthquakePointsData.current);
 

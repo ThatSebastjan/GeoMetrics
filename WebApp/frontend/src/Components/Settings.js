@@ -12,7 +12,7 @@ function Settings() {
     // Set profile image URL when user is available
     useEffect(() => {
         if (context.user && context.user.profileImage && context.user.profileImage.path) {
-            setProfileImageUrl(`http://localhost:3001${context.user.profileImage.path}`);
+            setProfileImageUrl(`http://${window.location.hostname}:3001${context.user.profileImage.path}`);
         }
     }, [context.user]);
 

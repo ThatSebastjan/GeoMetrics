@@ -37,7 +37,7 @@ function Edit() {
 
             try {
                 // Verify the token is still valid with the server
-                const response = await fetch("http://localhost:3001/users/check-session", {
+                const response = await fetch(`http://${window.location.hostname}:3001/users/check-session`, {
                     headers: { authorization: token }
                 });
 
@@ -60,7 +60,7 @@ function Edit() {
                 }));
 
                 if (userData.user.profileImage && userData.user.profileImage.path) {
-                    setImagePreview(`http://localhost:3001${userData.user.profileImage.path}`);
+                    setImagePreview(`http://${window.location.hostname}:3001${userData.user.profileImage.path}`);
                 }
             } catch (error) {
                 console.error("Authentication error:", error);
@@ -79,7 +79,7 @@ function Edit() {
             }));
 
             if (user.profileImage && user.profileImage.path) {
-                setImagePreview(`http://localhost:3001${user.profileImage.path}`);
+                setImagePreview(`http://${window.location.hostname}:3001${user.profileImage.path}`);
             }
         }
     }, [navigate, setUserContext, user]);
@@ -123,7 +123,7 @@ function Edit() {
             const formData = new FormData();
             formData.append('profileImage', profileImage);
 
-            const response = await fetch('http://localhost:3001/users/profile/image', {
+            const response = await fetch(`http://${window.location.hostname}:3001/users/profile/image`, {
                 method: 'POST',
                 headers: { 'Authorization': token },
                 body: formData
@@ -141,7 +141,7 @@ function Edit() {
     const handleDeleteImage = async () => {
         try {
             setLoading(true);
-            const response = await fetch('http://localhost:3001/users/profile/image', {
+            const response = await fetch(`http://${window.location.hostname}:3001/users/profile/image`, {
                 method: 'DELETE',
                 headers: { 'Authorization': token }
             });
@@ -199,7 +199,7 @@ function Edit() {
             let updatedUser = user;
 
             if (Object.keys(updateData).length > 0) {
-                const response = await fetch('http://localhost:3001/users/profile/update', {
+                const response = await fetch(`http://${window.location.hostname}:3001/users/profile/update`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',

@@ -67,7 +67,7 @@ function SearchBar({ placeholder = "Search...", onSearch }) {
     //Query land lots that match specified ids
     const landLotSearch = async (landLotId, koId = null) => {
         try {
-            const req = await fetch(`http://localhost:3001/map/find/${encodeURIComponent(landLotId)}/${koId || ""}`);
+            const req = await fetch(`http://${window.location.hostname}:3001/map/find/${encodeURIComponent(landLotId)}/${koId || ""}`);
             const resp = await req.json();
             
             return resp.map(e => {

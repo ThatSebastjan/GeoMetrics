@@ -16,7 +16,9 @@ module.exports = {
 	//CORS config
 	allowedOrigins: [
 		"http://localhost:3000",
-		"http://localhost:3001"
+		"http://localhost:3001",
+		"http://89.168.88.70:3000",
+		"http://89.168.88.70:3001",
 	],
 	
 	
