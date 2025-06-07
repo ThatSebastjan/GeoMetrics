@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'WebApp/frontend/**'
+      - 'WebApp/backend/**'
   workflow_dispatch:
 
 jobs:
@@ -26,7 +29,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Detect changes in frontend
+      - name: Check if frontend has changes
+        id: frontend-changed
+        run: |
+          echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^WebApp/frontend/' && echo true || echo false)" >> $GITHUB_OUTPUT
+
       - name: Build and push Frontend Docker image
+        if: steps.frontend-changed.outputs.changed == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./WebApp/frontend
@@ -35,7 +45,14 @@ jobs:
           file: ./WebApp/frontend/Dockerfile
           platforms: linux/arm64
 
+      # Detect changes in backend
+      - name: Check if backend has changes
+        id: backend-changed
+        run: |
+          echo "changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q '^WebApp/backend/' && echo true || echo false)" >> $GITHUB_OUTPUT
+
       - name: Build and push Backend Docker image
+        if: steps.backend-changed.outputs.changed == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ./WebApp/backend
@@ -47,6 +64,7 @@ jobs:
   send-webhook-notification:
     needs: build-and-push-docker
     runs-on: ubuntu-latest
+    if: ${{ always() }}
 
     steps:
       - name: Webhook
