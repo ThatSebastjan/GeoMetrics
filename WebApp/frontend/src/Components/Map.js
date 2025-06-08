@@ -11,7 +11,10 @@ import addEarthquakeHeatmap from "../RiskLens/earthquakes";
 
 
 //searchTerm = GeoJSON feature
-const Map = ({ searchTerm, risk }) => {
+//risk = risk lens risk type
+//onAssessment = assessment callback function
+//onAssessmentBegin = assessment start callback function (shows loading icons)
+const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
     const previousBounds = useRef({ data: [0,0,0,0] }); //Previous requested bbox for optimization
@@ -28,6 +31,9 @@ const Map = ({ searchTerm, risk }) => {
     const earthquakePointsData = useRef({ type: "FeatureCollection", features: [] });  
 
     const loadedData = useRef({ value: false }); //...
+
+    //Selected land lot
+    const selectedLot = useRef({ value: null });
 
 
 
@@ -120,7 +126,7 @@ const Map = ({ searchTerm, risk }) => {
         });
 
 
-        map.current.on("mouseleave", "state-fills", () => {
+        map.current.on("mouseleave", "land_data_fill", () => {
             if (hoveredPolygonId !== null) {
                 map.current.setFeatureState({ source: "land_data", id: hoveredPolygonId }, { hover: false });
             };
@@ -129,7 +135,11 @@ const Map = ({ searchTerm, risk }) => {
         });
 
 
-        //TODO: Add a click handler to select a land lot and display relevant information!
+
+        map.current.on("click", "land_data_fill", (e) => {
+            selectedLot.current = e.features[0];
+            assessLandLot(e.features[0]);
+        });
 
 
         
@@ -230,6 +240,34 @@ const Map = ({ searchTerm, risk }) => {
         });
 
         map.current.getSource("label_data").setData(labelData.current);
+    };
+
+
+
+    const assessLandLot = async (feature) => {
+        if(onAssessment == null){
+            return; //Don't assess on other pages with no onAssessment callback
+        };
+
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+        onAssessmentBegin();
+        await sleep(500); //Simulate some delay so the loading bar doesn't disappear instantly
+
+        const req = await fetch(`http://${window.location.hostname}:3001/map/assess`, {
+            method: "POST",
+            body: JSON.stringify({bounds: feature.geometry.coordinates}),
+            headers: { "Content-Type": "application/json" }
+        });
+
+        const result = await req.json();
+
+        if(req.status == 200){
+            onAssessment(result);
+        }
+        else {
+            alert(`Assessment error: ${result.message}`);
+        };
     };
 
 

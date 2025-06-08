@@ -7,6 +7,7 @@ const mongoose 		= require("mongoose");
 const cors 			= require("cors");
 const session 		= require("express-session");
 const MongoStore 	= require("connect-mongo");
+const isDocker      = require("is-docker"); 
 
 
 const config = require("./config.js");
@@ -17,7 +18,9 @@ const app = express();
 
 
 //DB connection
-mongoose.connect(config.dbURL);
+const DB_URL = isDocker() ? config.dockerDbURL : config.dbURL;
+
+mongoose.connect(DB_URL);
 mongoose.Promise = global.Promise;
 mongoose.connection.on("error", console.error.bind(console, "MongoDB connection error:"));
 
@@ -51,7 +54,7 @@ app.use(session({
     secret: config.sessionSecret,
     resave: true,
     saveUninitialized: false,
-    store: MongoStore.create({ mongoUrl: config.dbURL })
+    store: MongoStore.create({ mongoUrl: DB_URL })
 }));
 
 

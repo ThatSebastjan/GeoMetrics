@@ -13,27 +13,31 @@ const Gauge = ({
                    valueColor,
                    labelColor,
                    fillGradient,
-                   valueFormatter = (val) => `${Math.round(val)}%`,
+                   valueFormatter = (val) => (val != null) ? `${Math.round(val)}%` : "N/A",
                    animated = true
                }) => {
-    const [displayValue, setDisplayValue] = useState(0);
+    const [displayValue, setDisplayValue] = useState(value);
 
     // Calculate percentage of value between min and max
     const percentage = Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100));
+    const [fillPercentage, setFillPercentage] = useState(0);
 
     useEffect(() => {
+        if(value == null) return;
+        
         if (animated) {
             // Animate the value change
             let start = null;
             const startValue = displayValue;
-            const duration = 500; // Animation duration in ms
+            const duration = 1000; // Animation duration in ms
 
             const animate = (timestamp) => {
                 if (!start) start = timestamp;
                 const progress = timestamp - start;
-                const percentage = Math.min(progress / duration, 1);
+                const newPercentage = Math.pow(progress / duration, 0.3);
 
-                setDisplayValue(startValue + (value - startValue) * percentage);
+                setFillPercentage(percentage * newPercentage);
+                setDisplayValue(Math.max(startValue + (value - startValue) * newPercentage, 0));
 
                 if (progress < duration) {
                     requestAnimationFrame(animate);
@@ -44,14 +48,15 @@ const Gauge = ({
         } else {
             setDisplayValue(value);
         }
-    }, [value, animated, displayValue]);
+
+    }, [value, animated/*, displayValue*/]);
 
     return (
         <styles.gauge.GaugeContainer $size={size}>
             <styles.gauge.GaugeCircle $size={size}>
                 <styles.gauge.GaugeTrack $trackColor={trackColor} />
                 <styles.gauge.GaugeFill
-                    $percentage={percentage}
+                    $percentage={fillPercentage}
                     $fillColor={fillColor}
                     $fillGradient={fillGradient}
                 />

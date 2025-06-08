@@ -2,13 +2,18 @@ import { useState } from 'react';
 import styles from '../styles';
 import Gauge from './Gauge';
 
+import { Ring } from 'ldrs/react'
+import 'ldrs/react/Ring.css'
+
+
 
 const ResultBar = ({
                        title = "Assessment Results",
                        gauges = [],
                        isFullScreen = false,
                        onToggleFullScreen,
-                       children
+                       children,
+                       isLoading,
                    }) => {
 
 
@@ -25,7 +30,20 @@ const ResultBar = ({
             </styles.results.ExpandButtonWrapper>
 
             <styles.results.GaugeGrid $isFullScreen={isFullScreen}>
-                {gauges.map((gauge, index) => (
+                { isLoading ?  
+                
+                //Div with static height to match the height of gauges...
+                (<div style={{height: "156px", display: "flex", alignItems: "center"}}>
+                    <Ring
+                        size="50"
+                        stroke="5"
+                        bgOpacity="0"
+                        speed="2"
+                        color="black" 
+                    />
+                </div>) :
+
+                gauges.map((gauge, index) => (
                     <styles.results.GaugeItem key={index} $isFullScreen={isFullScreen}>
                         <Gauge
                             value={gauge.value}

@@ -9,5 +9,7 @@ router.get("/find/:land_lot_id/:ko_id?", mapController.mapFind);
 
 router.get("/earthquakes", mapController.queryEarthquakes);
 
+router.post("/assess", mapController.assessArea);
+
 
 module.exports = router;

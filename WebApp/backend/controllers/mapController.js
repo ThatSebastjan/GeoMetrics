@@ -4,6 +4,10 @@ const LandUseModel = require("../models/landUseModel.js");
 const WaterBodyModel = require("../models/waterBodyModel.js");
 const KoModel = require("../models/koModel.js");
 const EarthquakeModel = require("../models/earthquakeModel.js");
+const FloodModel = require("../models/floodModel.js");
+const LandSlideModel = require("../models/landSlideModel.js");
+
+const { calculateFloodRiskScore, calculateLandslideRiskScore } = require("../utils/riskAssessment.js");
 
 
 
@@ -27,15 +31,15 @@ const KO_cache = {};
     Sorted by intersection area
     Returns array of elements -> [land use type, area fraction]
 */
-const getLandTypeInfo = async (land_lot) => {
-    const landLotArea = turf.area(land_lot.geometry);
+const getLandTypeInfo = async (polygon) => {
+    const landLotArea = turf.area(polygon);
     let landUse = [];
 
     try {
         landUse = await LandUseModel.find({
             geometry: {
                 $geoIntersects: {
-                    $geometry: land_lot.geometry
+                    $geometry: polygon.geometry
                 }
             }
         });
@@ -45,11 +49,10 @@ const getLandTypeInfo = async (land_lot) => {
         return [];
     };
 
-    const landLotPolygon = turf.polygon(land_lot.geometry.coordinates);
     const typeArea = {};
 
     landUse.forEach(l => {
-        const intersection = turf.intersect(turf.featureCollection([landLotPolygon, turf.polygon(l.geometry.coordinates)]));
+        const intersection = turf.intersect(turf.featureCollection([polygon, turf.polygon(l.geometry.coordinates)]));
 
         if(intersection != null){
             const intersectionArea = turf.area(intersection.geometry);
@@ -75,8 +78,8 @@ const getLandTypeInfo = async (land_lot) => {
     Get water bodies near to a given land lot feature
     If no results are returned, the nearest water body is more than 200m away
 */
-const getNearWaterBodies = async (land_lot) => {
-    const landLotCenter = turf.centerOfMass(turf.polygon(land_lot.geometry.coordinates));
+const getNearWaterBodies = async (polygon) => {
+    const landLotCenter = turf.centerOfMass(polygon);
     let list = [];
     
     try {
@@ -130,8 +133,162 @@ const getLandLotsInArea = async (polygon) => {
 
 
 
+//Get floods in a given polygon
+const getFloodsInArea = async (polygon) => {
+
+    try {
+        const floods = await FloodModel.find({
+            geometry: {
+                $geoIntersects: {
+                    $geometry: polygon.geometry,
+                }
+            }
+        });
+
+        return floods;
+    }
+    catch(err){
+        console.log("Error in getFloodsInArea:", err);
+        return [];
+    };
+};
+
+
+
+//Get Landslides in a given polygon
+const getLandSlidesInArea = async (polygon) => {
+
+    try {
+        const landSlides = await (LandSlideModel.find({
+            geometry: {
+                $geoIntersects: {
+                    $geometry: polygon.geometry,
+                }
+            }
+        }).sort({ "properties.LandSlideType": "descending"  }).limit(20).maxTimeMS(5000));
+
+        return landSlides;
+    }
+    catch(err){
+        console.log("Error in getLandSlidesInArea:", err);
+        return [];
+    };
+};
+
+
+
 //BBOX (array: [minx, miny, maxx, maxy]) to turf.polygon
-const make_polygon = (bbox) => turf.polygon([[ [bbox[0], bbox[1]], [bbox[0], bbox[3]], [bbox[2], bbox[3]], [bbox[2], bbox[1]], [bbox[0], bbox[1]] ]]);
+const makePolygon = (bbox) => turf.polygon([[ [bbox[0], bbox[1]], [bbox[0], bbox[3]], [bbox[2], bbox[3]], [bbox[2], bbox[1]], [bbox[0], bbox[1]] ]]);
+
+
+
+//Generate an assessmenet for a particular area with given parameters
+const assessArea = async (areaPolygon, floodWeights = {}, landslideWeights = {}) => {
+
+    //Default flood weights
+    const floodDefaults = {
+        floodType: 40,
+        landUse: 30,
+        slope: 20,
+        proximity: 10,
+    };
+
+    //Default landslide weights
+    const landslideDefaults = {
+        landslideType: 40,
+        slope: 30,
+        landUse: 25,
+        proximity: 5,
+    };
+
+    //Check valid properties
+    for(const key in floodWeights){
+        if(!floodDefaults.hasOwnProperty(key)){
+            throw new Error(`Invalid flood wights property: ${key}`);
+        };
+    };
+
+    for(const key in landslideWeights){
+        if(!landslideDefaults.hasOwnProperty(key)){
+            throw new Error(`Invalid landslide wights property: ${key}`);
+        };
+    };
+
+    //Copy over defaults
+    floodWeights = Object.assign(Object.assign({}, floodDefaults), floodWeights);
+    landslideWeights = Object.assign(Object.assign({}, landslideDefaults), landslideWeights);
+
+
+    //Calculate stuff
+    let landUseCode = 3000; //Default in case of no data (should not happen)
+    let floodRisk = 0;
+    let landSlideRisk = 0;
+
+    const areaLandUse = await getLandTypeInfo(areaPolygon);
+
+    if(areaLandUse.length == 0){
+        console.log("Error, no land use information for provided polygon!");
+    }
+    else {
+        landUseCode = +areaLandUse[0][0]; //Keys are string by default
+    };
+
+
+    const nearWaterBodies = (await getNearWaterBodies(areaPolygon)).map(el => el.distance);
+
+
+    const floods = await getFloodsInArea(areaPolygon);
+    console.log("floods: ", floods);
+
+    for(let i = 0; i < floods.length; i++){
+
+        if(nearWaterBodies.length == 0){
+            //NOTE: no data for slope yet, also water proximity is a random value that is greater than 200 which is max used in calculation
+            const riskScore = calculateFloodRiskScore(floods[i].properties.FloodType, landUseCode, 0, 500);
+
+            floodRisk = Math.max(riskScore, floodRisk);
+        }
+        else {
+            let maxScore = 0;
+
+            nearWaterBodies.forEach(dst => {
+                const riskScore = calculateFloodRiskScore(floods[i].type, landUseCode, 0, dst); //NOTE: no data for slope yet
+                maxScore = Math.max(riskScore, maxScore);
+            });
+
+            floodRisk = Math.max(maxScore, floodRisk);
+        };        
+    };
+
+
+
+    const landSlides = await getLandSlidesInArea(areaPolygon);
+    console.log("landSlides: ", landSlides);
+
+    for(let i = 0; i < landSlides.length; i++){
+        if(nearWaterBodies.length == 0){
+            //NOTE: no data for slope yet, also water proximity is a random value that is greater than 200 which is max used in calculation
+            const riskScore = calculateLandslideRiskScore(landSlides[i].properties.LandSlideType, 0, landUseCode, 500);
+            landSlideRisk = Math.max(riskScore, landSlideRisk);
+        }
+        else {
+            let maxScore = 0;
+
+            nearWaterBodies.forEach(dst => {
+                const riskScore = calculateLandslideRiskScore(landSlides[i].properties.LandSlideType, 0, landUseCode, dst);
+                maxScore = Math.max(riskScore, maxScore);
+            });
+
+            landSlideRisk = Math.max(maxScore, landSlideRisk);
+        };       
+    };
+
+
+    return {
+        floodRisk,
+        landSlideRisk
+    };
+};
 
 
 
@@ -166,8 +323,8 @@ module.exports = {
 
 
         //Get land lots in newly visible area
-        const bbox_polygon = make_polygon(bbox);
-        const prev_bbox_polygon = make_polygon(prev_bbox);
+        const bbox_polygon = makePolygon(bbox);
+        const prev_bbox_polygon = makePolygon(prev_bbox);
 
         const difference = turf.difference(turf.featureCollection([bbox_polygon, prev_bbox_polygon]));
 
@@ -230,7 +387,6 @@ module.exports = {
 
     //Query earthquake points for heatmap
     queryEarthquakes: async (req, res) => {
-
         try {
             const list = await EarthquakeModel.find();
             return res.json(list);
@@ -238,7 +394,21 @@ module.exports = {
         catch(err){
             console.log("Error in queryEarthquakes:", err);
             return res.status(500).json({ message: "Query error" });
-        }
+        };
+    },
+
+
+
+    //Assess risk for a given area
+    assessArea: async (req, res) => {
+        if(!req.body.bounds){
+            return res.status(500).json({ message: "Missing required parameters!" });
+        };
+
+        const poly = turf.polygon(req.body.bounds);
+        const result = await assessArea(poly); //NOTE: no params yet!
+
+        return res.json(result);
     },
     
 };

@@ -12,6 +12,7 @@ function Assess() {
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [isAdvancedFullScreen, setIsAdvancedFullScreen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(null);
+    const [isLoadingAssessment, setIsLoadingAssessment] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
     const { param } = useParams();
@@ -56,38 +57,55 @@ function Assess() {
         }
     }, [param, navigate]);
 
-    const handleModeChange = (newMode) => {
-        navigate(`/assess/${newMode}`, { replace: true });
-    };
-
 
     // Sample data for the gauges - environmental risk indicators
-    const gauges = [
+    const [gauges, setGauges] = useState([
         {
-            value: 43,
+            value: null,
             label: "Flood Risk",
             fillGradient: "#e0f2fe 0deg, #7dd3fc 90deg, #38bdf8 180deg, #0284c7 270deg, #0c4a6e 360deg",
             innerColor: "#f8f9fa",
             valueColor: "#2d3748",
-            labelColor: "#4a5568"
+            labelColor: "#4a5568",
+            trackColor: "#cacaca",
         },
         {
-            value: 78,
+            value: null,
             label: "Landslide Risk",
             fillGradient: "#F9F5EB 0deg, #E3D5CA 90deg, #D5A021 180deg, #8B5A2B 270deg, #4A3728 360deg",
             innerColor: "#f8f9fa",
             valueColor: "#2d3748",
-            labelColor: "#4a5568"
+            labelColor: "#4a5568",
+            trackColor: "#cacaca",
         },
         {
-            value: 92,
+            value: null,
             label: "Earthquake Risk",
             fillGradient: "#2f855a 0deg, #48bb78 144deg, #f6e05e 216deg, #ed8936 270deg, #c53030 360deg",
             innerColor: "#f8f9fa",
             valueColor: "#2d3748",
-            labelColor: "#4a5568"
+            labelColor: "#4a5568",
+            trackColor: "#cacaca",
         }
-    ];
+    ]);
+
+
+    const onAssessmentBegin = () => {
+        setIsLoadingAssessment(true);
+    };
+
+
+    const onAssessmentResult = (result) => {
+        const newGauges = gauges.map(g => Object.assign({}, g));
+
+        newGauges[0].value = result.floodRisk;
+        newGauges[1].value = result.landSlideRisk;
+        newGauges[2].value = null;
+
+        setIsLoadingAssessment(false);
+        setGauges(newGauges);
+    };
+
 
     return (
         <styles.assess.Container style={{ border: "none" }}>
@@ -98,7 +116,7 @@ function Assess() {
                 />
             </styles.search.SearchBarWrapper>
             <styles.assess.MapWrapper $isFullScreen={param === "advanced" ? isAdvancedFullScreen : isFullScreen}>
-                <Map searchTerm={searchTerm}/>
+                <Map searchTerm={searchTerm} onAssessment={onAssessmentResult} onAssessmentBegin={onAssessmentBegin}/>
             </styles.assess.MapWrapper>
 
             <styles.assess.ResultBarWrapper>
@@ -108,6 +126,7 @@ function Assess() {
                             gauges={gauges}
                             isFullScreen={isFullScreen}
                             onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
+                            isLoading={isLoadingAssessment}
                         >
                             {/* Additional content for the expanded view */}
                             <div style={{ padding: '20px 0' }}>
@@ -156,6 +175,7 @@ function Assess() {
                             gauges={gauges}
                             isFullScreen={isAdvancedFullScreen}
                             onToggleFullScreen={() => setIsAdvancedFullScreen(!isAdvancedFullScreen)}
+                            isLoading={isLoadingAssessment}
                         >
                             <AdvancedBar
                                 settings={settings}
