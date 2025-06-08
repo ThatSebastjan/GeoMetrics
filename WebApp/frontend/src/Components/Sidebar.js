@@ -173,7 +173,7 @@ function Sidebar() {
               <styles.layout.StyledNavItem onClick={() => navigate('/saved-lots')}>
                 <styles.layout.NavItemContent>
                   <styles.layout.IconWrapper><icons.SaveIcon /></styles.layout.IconWrapper>
-                  Saved Lots
+                  Locations
                 </styles.layout.NavItemContent>
               </styles.layout.StyledNavItem>
               <styles.layout.StyledNavItem onClick={() => navigate('/results')}>

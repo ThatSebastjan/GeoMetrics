@@ -160,7 +160,7 @@ function Assess() {
 
                                 {user && (
                                     <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                                        <styles.common.Button>Download Full Report</styles.common.Button>
+                                        <styles.common.Button>Save Report</styles.common.Button>
                                         <styles.common.Button $secondary style={{ marginLeft: '10px' }}>
                                             Save Location
                                         </styles.common.Button>
@@ -215,7 +215,7 @@ function Assess() {
 
                                 {user && (
                                     <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                                        <styles.common.Button>Download Full Report</styles.common.Button>
+                                        <styles.common.Button>Save Report</styles.common.Button>
                                         <styles.common.Button $secondary style={{ marginLeft: '10px' }}>
                                             Save Location
                                         </styles.common.Button>

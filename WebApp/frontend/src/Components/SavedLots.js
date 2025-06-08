@@ -61,13 +61,13 @@ function SavedLots() {
     };
 
     if (isLoading) {
-        return <styles.common.Loading>Loading saved lots...</styles.common.Loading>;
+        return <styles.common.Loading>Loading saved locations...</styles.common.Loading>;
     }
 
     return (
         <>
             <styles.settings.ContainerHero>
-                <styles.common.HeroTitle>Saved Lots</styles.common.HeroTitle>
+                <styles.common.HeroTitle>Saved Locations</styles.common.HeroTitle>
                 <p>View and manage your saved property lots.</p>
             </styles.settings.ContainerHero>
 
