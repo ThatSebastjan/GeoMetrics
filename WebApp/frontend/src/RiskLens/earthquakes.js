@@ -187,6 +187,11 @@ const addEarthquakeHeatmap = (map, earthquakePointsData, mapboxgl) => {
         };
 
 
+        //Sort by date (descending)
+        nearPoints.forEach(p => p.properties.timestamp = new Date(p.properties.timestamp));
+        nearPoints.sort((a, b) => b.properties.timestamp - a.properties.timestamp);
+
+
         //Show a popup with all neaerby earthquakes at a midpoint
         let mid_lon = 0;
         let mid_lat = 0;
@@ -201,11 +206,10 @@ const addEarthquakeHeatmap = (map, earthquakePointsData, mapboxgl) => {
 
         //Yea we have to generate html here...
         const pointsHTML = nearPoints
-            .reverse()
             .map(p => 
                 `<tr>
                     <td>${p.properties.magnitude}</td>
-                    <td>${formatDate(new Date(p.properties.timestamp))}</td>
+                    <td>${formatDate(p.properties.timestamp)}</td>
                 </tr>`)
             .join("");
 
