@@ -46,8 +46,15 @@ function Login() {
         }
     };
 
+    const handleBack = () => {
+        navigate(-1); // Navigate back to the previous page
+    };
+
     return (
         <styles.login.Container>
+            <styles.login.BackButton onClick={handleBack}>
+                ← Back
+            </styles.login.BackButton>
             <styles.login.FormWrapper>
                 <styles.login.LogoSection>
                     <styles.login.LogoText>GeoMetrics</styles.login.LogoText>

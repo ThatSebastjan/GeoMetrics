@@ -184,22 +184,31 @@ const loginStyles = {
 							
         font-weight: 500;
         text-decoration: none;
-	   
-								   
-								  
-	  
-  
-
-				   
-						 
-
-
-
-
-			
-
         &:hover {
             text-decoration: underline;
+        }
+    `,
+
+    BackButton: styled.button`
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: none;
+        border: none;
+        color: ${colors.primary};
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 4px;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        transition: all 0.2s;
+
+        &:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            
         }
     `,
 };
