@@ -1,14 +1,13 @@
+const fs = require("fs");
 const turf = require("@turf/turf");
 const LandLotModel = require("../models/landLotModel.js");
 const LandUseModel = require("../models/landUseModel.js");
-const WaterBodyModel = require("../models/waterBodyModel.js");
 const KoModel = require("../models/koModel.js");
 const EarthquakeModel = require("../models/earthquakeModel.js");
-const FloodModel = require("../models/floodModel.js");
-const LandSlideModel = require("../models/landSlideModel.js");
 
-const { calculateFloodRiskScore, calculateLandslideRiskScore } = require("../utils/riskAssessment.js");
 
+//NOTE: reading from /public folder as the same data is used for heat maps
+const floodPointsData = JSON.parse(fs.readFileSync("./public/flood_point_features.geojson", "utf8"));
 
 
 //Št. katastrske občine -> name map; populated on start
@@ -74,43 +73,6 @@ const getLandTypeInfo = async (polygon) => {
 
 
 
-/*
-    Get water bodies near to a given land lot feature
-    If no results are returned, the nearest water body is more than 200m away
-*/
-const getNearWaterBodies = async (polygon) => {
-    const landLotCenter = turf.centerOfMass(polygon);
-    let list = [];
-    
-    try {
-        list = await WaterBodyModel.find({
-            geometry: {
-                $near: {
-                    $geometry: landLotCenter.geometry,
-                    $maxDistance: 200,
-                },
-            },
-        });
-
-    }
-    catch(err){
-        console.log("Error in getNearWaterBodies:", err);
-        return [];
-    };
-
-    return list.map(el => {
-        const vertices = turf.explode(turf.polygon(el.geometry.coordinates));
-        const closestVertex = turf.nearest(landLotCenter, vertices);
-
-        return {
-            feature: el,
-            distance: turf.distance(landLotCenter, closestVertex) * 1000, //km -> m 
-        };
-    });
-};
-
-
-
 //Get land lots in a given polygon
 const getLandLotsInArea = async (polygon) => {
 
@@ -133,160 +95,58 @@ const getLandLotsInArea = async (polygon) => {
 
 
 
-//Get floods in a given polygon
-const getFloodsInArea = async (polygon) => {
-
-    try {
-        const floods = await FloodModel.find({
-            geometry: {
-                $geoIntersects: {
-                    $geometry: polygon.geometry,
-                }
-            }
-        });
-
-        return floods;
-    }
-    catch(err){
-        console.log("Error in getFloodsInArea:", err);
-        return [];
-    };
-};
-
-
-
-//Get Landslides in a given polygon
-const getLandSlidesInArea = async (polygon) => {
-
-    try {
-        const landSlides = await (LandSlideModel.find({
-            geometry: {
-                $geoIntersects: {
-                    $geometry: polygon.geometry,
-                }
-            }
-        }).sort({ "properties.LandSlideType": "descending"  }).limit(20).maxTimeMS(5000));
-
-        return landSlides;
-    }
-    catch(err){
-        console.log("Error in getLandSlidesInArea:", err);
-        return [];
-    };
-};
-
-
-
 //BBOX (array: [minx, miny, maxx, maxy]) to turf.polygon
 const makePolygon = (bbox) => turf.polygon([[ [bbox[0], bbox[1]], [bbox[0], bbox[3]], [bbox[2], bbox[3]], [bbox[2], bbox[1]], [bbox[0], bbox[1]] ]]);
 
 
 
+//Get features and their distance from collection with max distance from a provided point (point = turf.point)
+const getNearFeatures = (collection, point, maxDist) => {
+    const results = [];
+    
+    collection.features.forEach(f => {
+        const dst = turf.distance(point, turf.point(f.geometry.coordinates));
+
+        if(dst < maxDist) {
+            results.push({ feature: f, distance: dst });
+        };
+    });
+
+    return results;
+};
+
+
+
+
 //Generate an assessmenet for a particular area with given parameters
-const assessArea = async (areaPolygon, floodWeights = {}, landslideWeights = {}) => {
+const assessArea = async (areaPolygon) => {
 
-    //Default flood weights
-    const floodDefaults = {
-        floodType: 40,
-        landUse: 30,
-        slope: 20,
-        proximity: 10,
+    const areaCenter = turf.centerOfMass(areaPolygon);
+
+
+    /*
+        Flood score calculation (adjusted to match the heat-map)
+    */
+    let floodScore = 0;
+    const MAX_FLOOD_DST = 0.630; //This seems to work the best (~0.62 is the distance between two data points)
+
+    const calcFloodPointScore = (feature, dst, max_dst = MAX_FLOOD_DST) => {
+        const score_map = { "0.2": 10, "0.5": 20, "0.8": 35 }; //Flood points for heatmap have score values; we have a different ranking system here
+        const factor = 1 - (dst / max_dst);
+        return score_map[feature.properties.score] * factor;
     };
 
-    //Default landslide weights
-    const landslideDefaults = {
-        landslideType: 40,
-        slope: 30,
-        landUse: 25,
-        proximity: 5,
-    };
-
-    //Check valid properties
-    for(const key in floodWeights){
-        if(!floodDefaults.hasOwnProperty(key)){
-            throw new Error(`Invalid flood wights property: ${key}`);
-        };
-    };
-
-    for(const key in landslideWeights){
-        if(!landslideDefaults.hasOwnProperty(key)){
-            throw new Error(`Invalid landslide wights property: ${key}`);
-        };
-    };
-
-    //Copy over defaults
-    floodWeights = Object.assign(Object.assign({}, floodDefaults), floodWeights);
-    landslideWeights = Object.assign(Object.assign({}, landslideDefaults), landslideWeights);
-
-
-    //Calculate stuff
-    let landUseCode = 3000; //Default in case of no data (should not happen)
-    let floodRisk = 0;
-    let landSlideRisk = 0;
-
-    const areaLandUse = await getLandTypeInfo(areaPolygon);
-
-    if(areaLandUse.length == 0){
-        console.log("Error, no land use information for provided polygon!");
-    }
-    else {
-        landUseCode = +areaLandUse[0][0]; //Keys are string by default
-    };
-
-
-    const nearWaterBodies = (await getNearWaterBodies(areaPolygon)).map(el => el.distance);
-
-
-    const floods = await getFloodsInArea(areaPolygon);
-    console.log("floods: ", floods);
-
-    for(let i = 0; i < floods.length; i++){
-
-        if(nearWaterBodies.length == 0){
-            //NOTE: no data for slope yet, also water proximity is a random value that is greater than 200 which is max used in calculation
-            const riskScore = calculateFloodRiskScore(floods[i].properties.FloodType, landUseCode, 0, 500);
-
-            floodRisk = Math.max(riskScore, floodRisk);
-        }
-        else {
-            let maxScore = 0;
-
-            nearWaterBodies.forEach(dst => {
-                const riskScore = calculateFloodRiskScore(floods[i].type, landUseCode, 0, dst); //NOTE: no data for slope yet
-                maxScore = Math.max(riskScore, maxScore);
-            });
-
-            floodRisk = Math.max(maxScore, floodRisk);
-        };        
-    };
-
-
-
-    const landSlides = await getLandSlidesInArea(areaPolygon);
-    console.log("landSlides: ", landSlides);
-
-    for(let i = 0; i < landSlides.length; i++){
-        if(nearWaterBodies.length == 0){
-            //NOTE: no data for slope yet, also water proximity is a random value that is greater than 200 which is max used in calculation
-            const riskScore = calculateLandslideRiskScore(landSlides[i].properties.LandSlideType, 0, landUseCode, 500);
-            landSlideRisk = Math.max(riskScore, landSlideRisk);
-        }
-        else {
-            let maxScore = 0;
-
-            nearWaterBodies.forEach(dst => {
-                const riskScore = calculateLandslideRiskScore(landSlides[i].properties.LandSlideType, 0, landUseCode, dst);
-                maxScore = Math.max(riskScore, maxScore);
-            });
-
-            landSlideRisk = Math.max(maxScore, landSlideRisk);
-        };       
+    const nearFloodPoints = getNearFeatures(floodPointsData, areaCenter, MAX_FLOOD_DST);
+    
+    if(nearFloodPoints.length > 0){
+        floodScore = nearFloodPoints.map(el => calcFloodPointScore(el.feature, el.distance)).reduce((acc, c) => acc + c);
+        floodScore = Math.min(floodScore, 100);
     };
 
 
     return {
-        floodRisk,
-        landSlideRisk
+        floodRisk: floodScore,
+        landSlideRisk: 0,
     };
 };
 
