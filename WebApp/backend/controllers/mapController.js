@@ -8,6 +8,7 @@ const EarthquakeModel = require("../models/earthquakeModel.js");
 
 //NOTE: reading from /public folder as the same data is used for heat maps
 const floodPointsData = JSON.parse(fs.readFileSync("./public/flood_point_features.geojson", "utf8"));
+const landslidePointData = JSON.parse(fs.readFileSync("./public/landslide_point_features.geojson", "utf8"));
 
 
 //Št. katastrske občine -> name map; populated on start
@@ -144,9 +145,30 @@ const assessArea = async (areaPolygon) => {
     };
 
 
+    /*
+        Landslide score calculation (tried to match heat-map; steep drop-off with distance to exaggerate points with high risk)
+        TODO: Data is not that dense; consider generating a more detailed set only for evaluation purposes?
+    */
+    let landslideScore = 0;
+    const MAX_LANDSLIDE_DST = 0.300;
+    const MAX_LANDSLIDE_SCORE = 143; //Maximum single point score
+
+    const calcLandslideScore = (feature, dst, max_dst = MAX_LANDSLIDE_DST) => {
+	    const factor = 1 - (dst / max_dst);
+	    return Math.pow(feature.properties.score / MAX_LANDSLIDE_SCORE, 5) * factor * 100;
+    };
+
+    const nearLandslidePoints = getNearFeatures(landslidePointData, areaCenter, MAX_LANDSLIDE_DST);
+
+    if(nearLandslidePoints.length > 0){
+        landslideScore = nearLandslidePoints.map(el => calcLandslideScore(el.feature, el.distance)).reduce((acc, c) => acc + c);
+        landslideScore = Math.min(landslideScore, 100);
+    };
+
+
     return {
         floodRisk: floodScore,
-        landSlideRisk: 0,
+        landSlideRisk: landslideScore,
     };
 };
 
