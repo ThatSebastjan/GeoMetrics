@@ -35,6 +35,11 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
     //Selected land lot
     const selectedLot = useRef({ value: null });
 
+    const overlayCanvas = useRef(null);
+    const overlayContext = useRef(null);
+    const overlayAnimFrameId = useRef(-1);
+    const overlayPoints = useRef(null);
+
 
 
     useEffect(() => {
@@ -46,6 +51,10 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
             center: [14.9955, 46.1512], // Slovenia center coordinates
             zoom: 8
         });
+
+        //DEBUG ONLY
+        window.map = map.current;
+        window.turf = turf;
 
 
         //Add events
@@ -137,9 +146,26 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
 
 
         map.current.on("click", "land_data_fill", (e) => {
+            window.selectedLot = e.features[0]; //DEBUG ONLY!
             selectedLot.current = e.features[0];
             assessLandLot(e.features[0]);
         });
+
+
+
+        //Init overlay
+        overlayContext.current = overlayCanvas.current.getContext("2d");
+
+        const resizeListener = () => {
+            overlayCanvas.current.width = map.current.getCanvas().width;
+            overlayCanvas.current.height = map.current.getCanvas().height;
+        };
+
+        resizeListener();
+        map.current.on("resize", resizeListener);
+
+        window.overlayCanvas = overlayCanvas.current; //DEBUG ONLY
+        window.ctx = overlayContext.current; //DEBUG ONLY
 
 
         
@@ -249,6 +275,8 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
             return; //Don't assess on other pages with no onAssessment callback
         };
 
+        onLandLotSelected(feature);
+
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
         onAssessmentBegin();
@@ -269,6 +297,87 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
             alert(`Assessment error: ${result.message}`);
         };
     };
+
+
+
+    const onLandLotSelected = (f) => {
+        const feature = landData.current.features.find(e => e.properties.OBJECTID == f.properties.OBJECTID);
+
+        const outerRing = turf.lineString(feature.geometry.coordinates[0]);
+        const chunk = turf.lineChunk(outerRing, 0.001); //Point every 1m
+        overlayPoints.current = chunk.features.map(f => f.geometry.coordinates[0]).reverse();
+    };
+
+
+    //Land lot animation thing
+    useEffect(() => {
+
+        if(risk != null){
+            return; //Only execute on main assess page
+        };
+
+        let startIndex = 0;
+        let prevTime = null;
+        const maxThickness = 5;
+        const lengthRatio = 0.45;
+        const loopDuration = 3000; //In ms
+        const highlightColor = "rgb(230, 115, 255)";
+
+        const renderOverlayAnimation = (timestamp) => {
+            const pList = overlayPoints.current;
+
+            if(!prevTime){
+                prevTime = timestamp;
+            };
+
+            if(!pList){
+                overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
+                return;
+            };
+
+
+            const ctx = overlayContext.current;
+            ctx.clearRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+
+            ctx.strokeStyle = highlightColor;
+
+
+            const poinst2d = pList.map(p => map.current.project(p));
+            const numThick = Math.floor(poinst2d.length * lengthRatio);
+
+            for(let i = 0; i < numThick; i++){
+                const pIdx = (startIndex + i) % poinst2d.length;
+                const thickness = Math.max((i / numThick) * maxThickness, 0.001);
+
+                const p = poinst2d[pIdx];
+                const n = poinst2d[(pIdx + 1) % poinst2d.length];
+
+                ctx.lineWidth = thickness;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(n.x, n.y);
+                ctx.stroke();
+            };
+
+
+            //Cycle with constant time
+            const tDelta = timestamp - prevTime;
+            const numChunks = Math.round(pList.length * (tDelta / loopDuration));
+
+            if(numChunks > 0){
+                startIndex = (startIndex + numChunks) % poinst2d.length;
+                prevTime = timestamp;
+            };
+
+            overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
+        };
+
+        overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
+        
+        return () => {
+            cancelAnimationFrame(overlayAnimFrameId.current);
+        }
+    }, []);
 
 
 
@@ -347,7 +456,10 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
     };
 
 
-    return <styles.map.MapContainer ref={mapContainer} />;
+    return (
+    <styles.map.MapContainer ref={mapContainer}>
+        <canvas ref={overlayCanvas} style={{zIndex: 10, position: "absolute", top: 0, left: 0, pointerEvents: "none"}}></canvas>
+    </styles.map.MapContainer>);
 };
 
 export default Map;
