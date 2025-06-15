@@ -100,7 +100,7 @@ function Assess() {
 
         newGauges[0].value = result.floodRisk;
         newGauges[1].value = result.landSlideRisk;
-        newGauges[2].value = null;
+        newGauges[2].value = result.earthQuakeRisk;
 
         setIsLoadingAssessment(false);
         setGauges(newGauges);

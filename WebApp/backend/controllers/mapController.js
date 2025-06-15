@@ -96,6 +96,28 @@ const getLandLotsInArea = async (polygon) => {
 
 
 
+//Get near earthquakes
+const getNearEarthquakes = async (point, distance) => {
+    try {
+        const list = await EarthquakeModel.find({
+            geometry: {
+                $near: {
+                    $geometry: point,
+                    $maxDistance: distance,
+                },
+            },
+        });
+
+        return list;
+    }
+    catch(err){
+        console.log("Error in getNearEarthquakes", err);
+        return [];
+    };
+};
+
+
+
 //BBOX (array: [minx, miny, maxx, maxy]) to turf.polygon
 const makePolygon = (bbox) => turf.polygon([[ [bbox[0], bbox[1]], [bbox[0], bbox[3]], [bbox[2], bbox[3]], [bbox[2], bbox[1]], [bbox[0], bbox[1]] ]]);
 
@@ -129,7 +151,7 @@ const assessArea = async (areaPolygon) => {
         Flood score calculation (adjusted to match the heat-map)
     */
     let floodScore = 0;
-    const MAX_FLOOD_DST = 0.630; //This seems to work the best (~0.62 is the distance between two data points)
+    const MAX_FLOOD_DST = 0.630; //km - This seems to work the best (~0.62 is the distance between two data points)
 
     const calcFloodPointScore = (feature, dst, max_dst = MAX_FLOOD_DST) => {
         const score_map = { "0.2": 10, "0.5": 20, "0.8": 35 }; //Flood points for heatmap have score values; we have a different ranking system here
@@ -150,7 +172,7 @@ const assessArea = async (areaPolygon) => {
         TODO: Data is not that dense; consider generating a more detailed set only for evaluation purposes?
     */
     let landslideScore = 0;
-    const MAX_LANDSLIDE_DST = 0.300;
+    const MAX_LANDSLIDE_DST = 0.300; //km
     const MAX_LANDSLIDE_SCORE = 143; //Maximum single point score
 
     const calcLandslideScore = (feature, dst, max_dst = MAX_LANDSLIDE_DST) => {
@@ -166,9 +188,37 @@ const assessArea = async (areaPolygon) => {
     };
 
 
+    /*
+        Earthquake sore calculation (based on what seems ok given displayed data and some common sense)
+        TODO: NEEDS A PROPER FORMULA! AS THIS ONE IS MADE UP AND DESIGNED IN A WAY TO SHOW WHAT LOOKS OK AND NOT WHAT IS ACTUALLY OK
+    */
+    let eqScore = 0;
+    const MAX_EARTHQUAKE_DST = 20; //km
+
+    const calcEarthquakeScore = (feature, dst, max_dst = MAX_EARTHQUAKE_DST) => {
+        const factor = 1 - (dst / max_dst);
+        return Math.pow((100 - feature.properties.depth) / 100, 2) * Math.pow(feature.properties.magnitude / 10, 2) * factor * 100;
+    };
+
+    const nearEQs = await getNearEarthquakes(areaCenter.geometry, MAX_EARTHQUAKE_DST * 1000);
+    console.log("nearEQs:", nearEQs.length);
+
+    if(nearEQs.length > 0){
+
+        eqScore = nearEQs.map(el => {
+            const distance = turf.distance(areaCenter, turf.point(el.geometry.coordinates));
+            return calcEarthquakeScore(el, distance);
+        })
+        .reduce((acc, c) => acc + c);
+
+        eqScore = Math.min(eqScore, 100);
+    };
+
+
     return {
         floodRisk: floodScore,
         landSlideRisk: landslideScore,
+        earthQuakeRisk: eqScore,
     };
 };
 

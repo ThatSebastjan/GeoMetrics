@@ -870,7 +870,6 @@ const gaugeStyles = {
                 return `conic-gradient(${props.$fillColor || '#007aff'} 0deg ${degrees}deg, transparent ${degrees}deg 360deg)`;
             }
         }};
-        transition: all 0.5s ease-in-out;
     `,
 
     GaugeInnerCircle: styled.div`

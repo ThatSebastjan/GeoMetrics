@@ -314,17 +314,20 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
 
 
 
-    const assessLandLot = async (feature) => {
+    const assessLandLot = async (f) => {
         if(onAssessment == null){
             return; //Don't assess on other pages with no onAssessment callback
         };
 
-        onLandLotSelected(feature);
+        onLandLotSelected(f);
 
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
         onAssessmentBegin();
         await sleep(500); //Simulate some delay so the loading bar doesn't disappear instantly
+
+        //Find the feature manually as one provided in event might be clipped off due to map tile boundary...
+        const feature = landData.current.features.find(e => e.properties.OBJECTID == f.properties.OBJECTID);
 
         const req = await fetch(`http://${window.location.hostname}:3001/map/assess`, {
             method: "POST",
