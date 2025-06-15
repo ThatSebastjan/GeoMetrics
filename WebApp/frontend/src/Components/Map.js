@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import * as turf from "@turf/turf";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -7,6 +7,7 @@ import styles from "../styles";
 import addFloodHeatmap from "../RiskLens/floods";
 import addLandslideHeatmap from "../RiskLens/landslides";
 import addEarthquakeHeatmap from "../RiskLens/earthquakes";
+import ContextMenu from "./ContextMenu";
 
 
 
@@ -38,7 +39,12 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
     const overlayCanvas = useRef(null);
     const overlayContext = useRef(null);
     const overlayAnimFrameId = useRef(-1);
-    const overlayPoints = useRef(null);
+    const overlayPoints = useRef({ id: null, data: null });
+
+    //Context menu
+    const [showCtxMenu, setShowCtxMenu] = useState(false);
+    const ctxMenuPos = useRef({ x: 0, y: 0 });
+    const ctxMenuFeature = useRef(null);
 
 
 
@@ -122,6 +128,7 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
 
         //Hover interactions
         let hoveredPolygonId = null;
+        let hoveredPropId = null;
 
         map.current.on("mousemove", "land_data_fill", (e) => {
             if (e.features.length > 0) {
@@ -130,6 +137,7 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
                 };
 
                 hoveredPolygonId = e.features[0].id;
+                hoveredPropId = e.features[0].properties.OBJECTID;
                 map.current.setFeatureState({ source: "land_data", id: hoveredPolygonId }, { hover: true });
             };
         });
@@ -141,6 +149,7 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
             };
 
             hoveredPolygonId = null;
+            hoveredPropId = null;
         });
 
 
@@ -153,16 +162,43 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
 
 
 
-        //Init overlay
-        overlayContext.current = overlayCanvas.current.getContext("2d");
 
-        const resizeListener = () => {
-            overlayCanvas.current.width = map.current.getCanvas().width;
-            overlayCanvas.current.height = map.current.getCanvas().height;
+        const mapCanvas = map.current.getCanvas();
+
+        const onCtxMenu = (ev) => {
+            ev.preventDefault();
+
+            if(hoveredPropId == null){
+                return;
+            };
+
+            ctxMenuFeature.current = landData.current.features.find(f => f.properties.OBJECTID == hoveredPropId);
+
+            const bounds = mapCanvas.getBoundingClientRect()
+            ctxMenuPos.current.x = ev.clientX - bounds.x;
+            ctxMenuPos.current.y = ev.clientY - bounds.y;
+            setShowCtxMenu(true);
+
+            onLandLotSelected(ctxMenuFeature.current);
         };
+        
+        
+        if(risk == null){
 
-        resizeListener();
-        map.current.on("resize", resizeListener);
+            //Context menu listeners
+            mapCanvas.addEventListener("contextmenu", onCtxMenu);
+
+            //Init overlay
+            overlayContext.current = overlayCanvas.current.getContext("2d");
+
+            const resizeListener = () => {
+                overlayCanvas.current.width = mapCanvas.width;
+                overlayCanvas.current.height = mapCanvas.height;
+            };
+
+            resizeListener();
+            map.current.on("resize", resizeListener);
+        };
 
         window.overlayCanvas = overlayCanvas.current; //DEBUG ONLY
         window.ctx = overlayContext.current; //DEBUG ONLY
@@ -171,6 +207,10 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
         
         //Clean-up handler
         return () => {
+            if(risk != null){
+                mapCanvas.removeEventListener("contextmenu", onCtxMenu);
+            };
+
             map.current.remove();
         };
     }, []);
@@ -221,6 +261,10 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
 
         //Diagonal distance max 10km
         if(distance > 10){
+            return;
+        };
+
+        if(map.current.getZoom() < 13.5){
             return;
         };
 
@@ -301,11 +345,18 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
 
 
     const onLandLotSelected = (f) => {
+
+        if(f.properties.OBJECTID == overlayPoints.current.id){
+            return; //Same, already selected feature
+        };
+
+        overlayPoints.current.id = f.properties.OBJECTID;
+
         const feature = landData.current.features.find(e => e.properties.OBJECTID == f.properties.OBJECTID);
 
         const outerRing = turf.lineString(feature.geometry.coordinates[0]);
         const chunk = turf.lineChunk(outerRing, 0.001); //Point every 1m
-        overlayPoints.current = chunk.features.map(f => f.geometry.coordinates[0]).reverse();
+        overlayPoints.current.data = chunk.features.map(f => f.geometry.coordinates[0]).reverse();
     };
 
 
@@ -323,34 +374,77 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
         const loopDuration = 3000; //In ms
         const highlightColor = "rgb(230, 115, 255)";
 
+        const clipMaskAlpha = 0.5;
+        const fadeDuration = 300; //In ms
+        let currentAlpha = 0; //Clip mask alpha for fading
+        let fadeStart = null;
+
         const renderOverlayAnimation = (timestamp) => {
-            const pList = overlayPoints.current;
+            const ctx = overlayContext.current;
+            const pList = overlayPoints.current.data;
+
+            if(overlayCanvas.current === null){
+                return;
+            };
+
+            ctx.clearRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+
 
             if(!prevTime){
                 prevTime = timestamp;
             };
 
-            if(!pList){
+            if(!pList || (map.current.getZoom() < 13.5)){
                 overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
                 return;
             };
 
+            const points2d = pList.map(p => map.current.project(p));
 
-            const ctx = overlayContext.current;
-            ctx.clearRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+
+            //Draw clipping mask if context menu land lot is selected
+            if(ctxMenuFeature.current != null){
+                ctx.save();
+
+                ctx.beginPath();
+                ctx.rect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+                
+                ctx.moveTo(points2d[0].x, points2d[0].y);
+
+                for(let i = points2d.length-1; i != 0; i--){
+                    ctx.lineTo(points2d[i].x, points2d[i].y);
+                };
+
+                ctx.lineTo(points2d[0].x, points2d[0].y);
+                ctx.clip();
+
+                ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha})`;
+                ctx.fillRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+
+                ctx.restore();
+
+                if(fadeStart === null){
+                    fadeStart = timestamp;
+                };
+
+                currentAlpha = Math.min((timestamp - fadeStart) / fadeDuration, 1) * clipMaskAlpha;
+            }
+            else if(fadeStart !== null){
+                currentAlpha = 0;
+                fadeStart = null;
+            };
+
 
             ctx.strokeStyle = highlightColor;
 
-
-            const poinst2d = pList.map(p => map.current.project(p));
-            const numThick = Math.floor(poinst2d.length * lengthRatio);
+            const numThick = Math.floor(points2d.length * lengthRatio);
 
             for(let i = 0; i < numThick; i++){
-                const pIdx = (startIndex + i) % poinst2d.length;
+                const pIdx = (startIndex + i) % points2d.length;
                 const thickness = Math.max((i / numThick) * maxThickness, 0.001);
 
-                const p = poinst2d[pIdx];
-                const n = poinst2d[(pIdx + 1) % poinst2d.length];
+                const p = points2d[pIdx];
+                const n = points2d[(pIdx + 1) % points2d.length];
 
                 ctx.lineWidth = thickness;
                 ctx.beginPath();
@@ -365,7 +459,7 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
             const numChunks = Math.round(pList.length * (tDelta / loopDuration));
 
             if(numChunks > 0){
-                startIndex = (startIndex + numChunks) % poinst2d.length;
+                startIndex = (startIndex + numChunks) % points2d.length;
                 prevTime = timestamp;
             };
 
@@ -377,7 +471,7 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
         return () => {
             cancelAnimationFrame(overlayAnimFrameId.current);
         }
-    }, []);
+    }, [risk]);
 
 
 
@@ -459,6 +553,20 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
     return (
     <styles.map.MapContainer ref={mapContainer}>
         <canvas ref={overlayCanvas} style={{zIndex: 10, position: "absolute", top: 0, left: 0, pointerEvents: "none"}}></canvas>
+        { 
+            showCtxMenu ? 
+            (<ContextMenu 
+                x={ctxMenuPos.current.x}
+                y={ctxMenuPos.current.y}
+                onClose={() => {
+                    setShowCtxMenu(false);
+                    ctxMenuFeature.current = null;
+                }}
+                onSave={() => { alert("TODO: save lot"); }}
+                onAddToComparison={() => { alert("TODO: add lot to comparison"); }}
+            ></ContextMenu>) 
+            : (<></>)
+        }
     </styles.map.MapContainer>);
 };
 

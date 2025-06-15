@@ -1914,6 +1914,86 @@ const savedStyles = {
     `
 };
 
+
+const contextMenuStyles = {
+
+    ContextMenu: styled.div`
+        position: absolute;
+        z-index: 1000000;
+        top: ${props => props.$top}px;
+        left: ${props => props.$left}px;
+        padding: 0px;
+        border: 1px solid #cacaca;
+        border-radius: ${borderRadius.medium};
+        display: flex;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        width: 220px;
+        overflow: hidden;
+        background-color: #ffffff;
+    `,
+
+    Header: styled.div`
+        width: 100%;
+        border-bottom: 1px solid #cacaca;
+        background-color: #f0f0f0;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 10px;
+        box-sizing: border-box;
+        position: relative;
+        font-weight: 700;
+    `,
+
+    Close: styled.div`
+        margin: 0px;
+        padding: 0px;
+        display: flex;
+        transition: all 0.3s;
+        border-radius: 50%;
+        padding: 3px;
+        box-sizing: border-box;
+
+        &:hover {
+            background-color: #e0e0e0;
+        }
+    `,
+
+    Item: styled.div`
+        border-bottom: 1px solid #cacaca;
+        width: 100%;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+
+        &:last-child {
+            border-bottom: none;
+        }
+    `,
+
+    ItemInline: styled.div`
+        width: 50%;
+        text-align: center;
+    `,
+
+    Button: styled.div`
+        padding: 8px 10px;
+        white-space: nowrap;
+        width: 100%;
+        transition: all 0.3s;
+        text-align: left;
+
+        &:hover {
+            background-color: #e0e0e0;
+        }
+    `,
+};
+
+
 const appStyles = {
     colors,
     spacing,
@@ -1930,6 +2010,7 @@ const appStyles = {
     search: searchBarStyles,
     advanced: advancedStyles,
     saved: savedStyles, // Add this line
+    ctxMenu: contextMenuStyles,
 };
 
 
