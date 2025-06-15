@@ -1,11 +1,14 @@
 import React, { createContext, useState, useEffect } from 'react';
 
-export const UserContext = createContext(null);
+export const UserContext = createContext({
+    user: null,
+    token: null
+});
 
 export function UserProvider({ children }) {
     const [userContext, setUserContext] = useState({
-        user: null,
-        token: null
+        user: JSON.parse(localStorage.getItem('user')),
+        token: localStorage.getItem('token')
     });
 
     useEffect(() => {

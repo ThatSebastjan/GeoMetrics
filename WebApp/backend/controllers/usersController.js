@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config.js');
 const path = require('path');
 const fs = require('fs');
+const savedLotModel = require("../models/savedLotModel.js");
 
 const DEFAULT_PROFILE_IMAGE = {
     filename: 'default-avatar.png',
@@ -316,4 +317,73 @@ exports.checkSession = async function (req, res) {
         console.error("Session check error:", error);
         return res.status(500).json({ message: "Server error" });
     }
-}
+};
+
+
+exports.saveLot = async (req, res) => {
+    const b = req.body;
+
+    if(!b.name || !b.OBJECTID || !b.address || !b.coordinates || (b.coordinates.length != 2)){
+        return res.status(500).json({ message: "Invalid data!" });
+    };
+
+    if((b.name.length > 512) || (b.address.length > 512)){
+        return res.status(500).json({ message: "Field too long!" });
+    };
+
+
+    try {
+        const existing = await savedLotModel.exists({ owner: req.userId, OBJECTID: b.OBJECTID });
+
+        if(existing != null){
+            return res.status(500).json({ message: "Save with this lot already exists!" });
+        };
+
+        const obj = new savedLotModel({
+            name: b.name,
+            address: b.address,
+            OBJECTID: b.OBJECTID,
+            coordinates: b.coordinates,
+            owner: req.userId,
+        });
+
+        await obj.save();
+
+        return res.json({ message: "ok" });
+    }
+    catch(err){
+        console.log("Error in usersController.saveLot:", err);
+        return res.status(500).json({ message: "Error saving" });
+    };
+};
+
+
+exports.getSavedLots = async (req, res) => {
+    try {
+        const savedLots = await savedLotModel.find({ owner: req.userId });
+        return res.json(savedLots);
+    }
+    catch(err){
+        console.log("Erorr in usersController.getSavedLots:", err);
+        return res.status(500).json([]);
+    };
+};
+
+
+exports.deleteSavedLot = async (req, res) => {
+
+    if(!req.body.OBJECTID){
+        return res.status(500).json({ message: "Invalid data!" });
+    };
+
+    try {
+        await savedLotModel.deleteOne({ OBJECTID: req.body.OBJECTID, owner: req.userId });
+
+        const list = await savedLotModel.find({ owner: req.userId });
+        return res.json(list);
+    }
+    catch(err){
+        console.log("Erorr in usersController.deleteSavedLot:", err);
+        return res.status(500).json([]);
+    };
+};

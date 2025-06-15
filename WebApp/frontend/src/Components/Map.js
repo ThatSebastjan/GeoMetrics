@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useContext } from "react";
 import mapboxgl from "mapbox-gl";
 import * as turf from "@turf/turf";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -9,13 +9,19 @@ import addLandslideHeatmap from "../RiskLens/landslides";
 import addEarthquakeHeatmap from "../RiskLens/earthquakes";
 import ContextMenu from "./ContextMenu";
 
+import { UserContext } from "../Contexts/UserContext";
+
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
 
 
 //searchTerm = GeoJSON feature
 //risk = risk lens risk type
 //onAssessment = assessment callback function
 //onAssessmentBegin = assessment start callback function (shows loading icons)
-const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
+//initInfo -> {lng, lat, zoom}
+const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
     const previousBounds = useRef({ data: [0,0,0,0] }); //Previous requested bbox for optimization
@@ -45,6 +51,12 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
     const [showCtxMenu, setShowCtxMenu] = useState(false);
     const ctxMenuPos = useRef({ x: 0, y: 0 });
     const ctxMenuFeature = useRef(null);
+
+    //User info
+    const context = useContext(UserContext);
+
+    //Penging init info
+    const pendingInitId = useRef(initInfo?.id);
 
 
 
@@ -236,6 +248,24 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
     }, [searchTerm]);
 
 
+    //Set initial state from params if provided
+    useEffect(() => {
+        let timeoutId = -1;
+
+        if(initInfo != null){
+            timeoutId = setTimeout(async () => {
+                map.current.panTo([initInfo.lng, initInfo.lat], { duration: 800 });
+                await sleep(1000);
+                map.current.zoomTo(initInfo.zoom);
+            }, 2000);
+        };
+
+        return () => {
+            clearTimeout(timeoutId);
+        };
+    }, [initInfo]);
+
+
 
     //Get map view bounds
     const get_view_bounds = () => {
@@ -310,6 +340,17 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
         });
 
         map.current.getSource("label_data").setData(labelData.current);
+
+
+        //Set initial highlighted land lot if initInfo is specified
+        if(pendingInitId.current != null){
+            const initFeature = landData.current.features.find(f => f.properties.OBJECTID == pendingInitId.current);
+
+            if(initFeature != null){
+                pendingInitId.current = null;
+                onLandLotSelected(initFeature);
+            };
+        };
     };
 
 
@@ -320,8 +361,6 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
         };
 
         onLandLotSelected(f);
-
-        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
         onAssessmentBegin();
         await sleep(500); //Simulate some delay so the loading bar doesn't disappear instantly
@@ -478,6 +517,78 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
 
 
 
+    //On context menu land lot save
+    const onSaveLot = async () => {
+        if(context.user == null){
+            return alert("Must be logged in!");
+        };
+
+        if(ctxMenuFeature.current == null){
+            return alert("ERROR - NO FEATURE?!"); //Should not happen
+        };
+
+
+        //Get feature address
+        const midPoint = turf.centerOfMass(turf.polygon(ctxMenuFeature.current.geometry.coordinates));
+        const addrResults = await coordsToAddress(...midPoint.geometry.coordinates);
+        let address = addrResults.find(f => f.properties.feature_type == "address")?.properties.full_address;
+
+        //TODO: Nicer prompt
+        const name = prompt("<TEMPORARY PROMPT>\nEnter save name:");
+
+        if(name == null || name.length == 0){
+            return alert("Invalid name!"); //TODO: add placeholder name
+        };
+
+        address = prompt("Enter / edit the address:", address);
+
+        const req = await fetch(`http://${window.location.hostname}:3001/users/saveLot`, {
+            method: "POST",
+            headers: { 
+                "Authorization": context.token,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                name: name,
+                OBJECTID: ctxMenuFeature.current.properties.OBJECTID,
+                address: address,
+                coordinates: midPoint.geometry.coordinates,
+            }),
+        });
+
+        const resp = await req.json();
+
+        if(req.status != 200){
+            alert(`Error saving: ${resp.message}`);
+        }
+        else {
+            alert("SAVED - <TODO: SHOW SUCCESS ALERT>");
+        };
+    };
+
+
+    //On context menu add lot to compare
+    const onAddToComparison = () => {
+        alert("TODO: onAddToComparison");
+    };
+
+
+    //Backwards geocoding search
+    const coordsToAddress = async (lon, lat) => {
+        try {
+            const req = await fetch(`https://api.mapbox.com/search/geocode/v6/reverse?longitude=${lon}&latitude=${lat}&country=si&access_token=${process.env.REACT_APP_MAPBOX_TOKEN}`);
+            const resp = await req.json();
+            return resp.features;
+        }
+        catch(err){
+            console.log(`Error in coordsToAddress:`, err);
+        };
+    
+        return [];
+    };
+
+
+
 
 
     //This code only gets executed on risk lens sub-page
@@ -565,8 +676,8 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
                     setShowCtxMenu(false);
                     ctxMenuFeature.current = null;
                 }}
-                onSave={() => { alert("TODO: save lot"); }}
-                onAddToComparison={() => { alert("TODO: add lot to comparison"); }}
+                onSave={onSaveLot}
+                onAddToComparison={onAddToComparison}
             ></ContextMenu>) 
             : (<></>)
         }

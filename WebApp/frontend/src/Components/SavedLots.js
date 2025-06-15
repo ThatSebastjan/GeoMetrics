@@ -1,52 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../styles';
 import Minimap from './Minimap';
-import * as turf from "@turf/turf";
+import { UserContext } from "../Contexts/UserContext";
 
 function SavedLots() {
     const [savedLots, setSavedLots] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const navigate = useNavigate();
+    const context = useContext(UserContext);
 
     // Mock data for saved lots
     useEffect(() => {
-        const mockSavedLots = [
-            {
-                id: 1,
-                title: "Riverside Property",
-                address: "123 River Road, Ljubljana",
-                coordinates: { lat: 46.0569, lng: 14.5058 },
-            },
-            {
-                id: 2,
-                title: "Hillside Vineyard",
-                address: "456 Vine Hill, Maribor",
-                coordinates: { lat: 46.5547, lng: 15.6467 },
-            },
-            {
-                id: 3,
-                title: "Mountain Cabin",
-                address: "789 Alpine Way, Bled",
-                coordinates: { lat: 46.3688, lng: 14.1144 },
-            },
-            {
-                id: 4,
-                title: "Coastal Plot",
-                address: "101 Sea View, Piran",
-                coordinates: { lat: 45.5289, lng: 13.5682 },
-            }
-        ];
 
+        const fetchSavedData = async () => {
 
-            setSavedLots(mockSavedLots);
+            const req = await fetch(`http://${window.location.hostname}:3001/users/getSavedLots`, {
+                headers: { "Authorization": context.token },
+            });
+
+            const resp = await req.json();
+
+            const data = resp.map((r, i) => {
+                return {
+                    id: r.OBJECTID,
+                    title: r.name,
+                    address: r.address,
+                    coordinates: { lng: r.coordinates[0], lat: r.coordinates[1] },
+                };
+            });
+
+            setSavedLots(data);
             setIsLoading(false);
+        };
 
+        fetchSavedData();
     }, []);
 
     const handleViewOnMap = (lot) => {
         // Navigate to assess page with the lot coordinates
-        navigate(`/assess?lat=${lot.coordinates.lat}&lng=${lot.coordinates.lng}&id=${lot.id}`);
+        navigate(`/assess/basic?lat=${lot.coordinates.lat}&lng=${lot.coordinates.lng}&id=${lot.id}`);
     };
 
     const handleCompare = (lot) => {
@@ -54,10 +47,31 @@ function SavedLots() {
         navigate(`/side-by-side?lot=${lot.id}`);
     };
 
-    const handleUnsave = (lotId) => {
-        // Remove lot from saved lots
-        setSavedLots(savedLots.filter(lot => lot.id !== lotId));
-        // In a real app, you would also make an API call to remove from the server
+    const handleUnsave = async (lotId) => {
+        
+        const req = await fetch(`http://${window.location.hostname}:3001/users/savedLots`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": context.token,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                OBJECTID: lotId
+            }),
+        });
+
+        const resp = await req.json();
+
+        const data = resp.map((r, i) => {
+            return {
+                id: r.OBJECTID,
+                title: r.name,
+                address: r.address,
+                coordinates: { lng: r.coordinates[0], lat: r.coordinates[1] },
+            };
+        });
+
+        setSavedLots(data);
     };
 
     if (isLoading) {

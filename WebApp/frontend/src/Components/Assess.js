@@ -17,6 +17,18 @@ function Assess() {
     const navigate = useNavigate();
     const { param } = useParams();
 
+    const searchParams = new URLSearchParams(location.search);
+
+    let initInfo = null;
+
+    if(searchParams.has("lng") && searchParams.has("lat") && searchParams.has("id")){
+        initInfo = {
+            lng: parseFloat(searchParams.get("lng")),
+            lat: parseFloat(searchParams.get("lat")),
+            zoom: 17,
+            id: parseInt(searchParams.get("id")),
+        };
+    };
 
 
     const handleSearch = (query) => {
@@ -116,7 +128,7 @@ function Assess() {
                 />
             </styles.search.SearchBarWrapper>
             <styles.assess.MapWrapper $isFullScreen={param === "advanced" ? isAdvancedFullScreen : isFullScreen}>
-                <Map searchTerm={searchTerm} onAssessment={onAssessmentResult} onAssessmentBegin={onAssessmentBegin}/>
+                <Map searchTerm={searchTerm} onAssessment={onAssessmentResult} onAssessmentBegin={onAssessmentBegin} initInfo={initInfo}/>
             </styles.assess.MapWrapper>
 
             <styles.assess.ResultBarWrapper>

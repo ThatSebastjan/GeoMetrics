@@ -18,6 +18,7 @@ const authenticate = (req, res, next) => {
     req.userId = decoded.userId;
     next();
   } catch (error) {
+    console.log("Auth error:", error);
     return res.status(401).json({ message: 'Authentication failed' });
   }
 };
@@ -36,5 +37,11 @@ router.get("/check-session", authenticate, userController.checkSession);
 // Profile picture routes
 router.post("/profile/image", authenticate, upload.single('profileImage'), userController.uploadProfileImage);
 router.delete("/profile/image", authenticate, userController.deleteProfileImage);
+
+
+router.get("/getSavedLots", authenticate, userController.getSavedLots);
+router.post("/saveLot", authenticate, userController.saveLot);
+
+router.delete("/savedLots", authenticate, userController.deleteSavedLot);
 
 module.exports = router;
