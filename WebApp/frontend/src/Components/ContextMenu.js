@@ -2,7 +2,7 @@ import styles from "../styles";
 import Icons from "./Icons";
 
 
-const ContextMenu = ({ x, y, onClose, onSave, onAddToComparison }) => {
+const ContextMenu = ({ x, y, onClose, items, featureRef }) => {
 
     const c = styles.ctxMenu;
 
@@ -27,13 +27,16 @@ const ContextMenu = ({ x, y, onClose, onSave, onAddToComparison }) => {
                 </c.Close>
             </c.Header>
 
-            <c.Item>
-                <c.Button onClick={() => onSave()}>Save Lot</c.Button>
-            </c.Item>
-
-            <c.Item>
-                <c.Button onClick={() => onAddToComparison()}>Add to comparison</c.Button>
-            </c.Item>
+            {
+                items.map((itm, idx) => (
+                    <c.Item key={idx}>
+                        <c.Button onClick={() => {
+                            itm.onClick(featureRef.current);
+                            onClose();
+                        }}>{itm.text}</c.Button>
+                    </c.Item>)
+                )
+            }
         </c.ContextMenu>
     </>);
 

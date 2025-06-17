@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import styles from '../styles';
 import Map from '../Components/Map.js';
@@ -6,6 +6,10 @@ import ResultBar from '../Components/ResultBar';
 import AdvancedBar from '../Components/AdvancedBar';
 import SearchBar from "./SearchBar";
 import { UserContext } from '../Contexts/UserContext.js';
+
+import { getHighlightPoints, sleep } from '../utility.js';
+
+
 
 function Assess() {
     const { user } = useContext(UserContext);
@@ -16,6 +20,7 @@ function Assess() {
     const location = useLocation();
     const navigate = useNavigate();
     const { param } = useParams();
+    const highlightData = useRef({ id: null, data: null, startIndex: 0 });
 
     const searchParams = new URLSearchParams(location.search);
 
@@ -102,11 +107,6 @@ function Assess() {
     ]);
 
 
-    const onAssessmentBegin = () => {
-        setIsLoadingAssessment(true);
-    };
-
-
     const onAssessmentResult = (result) => {
         const newGauges = gauges.map(g => Object.assign({}, g));
 
@@ -119,6 +119,50 @@ function Assess() {
     };
 
 
+    const assessLandLot = async (feature) => {
+        setIsLoadingAssessment(true);
+        await sleep(500); //Simulate some delay so the loading bar doesn't disappear instantly
+
+        const req = await fetch(`http://${window.location.hostname}:3001/map/assess`, {
+            method: "POST",
+            body: JSON.stringify({bounds: feature.geometry.coordinates}),
+            headers: { "Content-Type": "application/json" }
+        });
+
+        const result = await req.json();
+
+        if(req.status == 200){
+            onAssessmentResult(result);
+        }
+        else {
+            alert(`Assessment error: ${result.message}`);
+        };
+    };
+
+
+    const onLandLotSelected = (feature) => {
+    
+        if(feature.properties.OBJECTID == highlightData.current.id){
+            return; //Same, already selected feature
+        };
+
+        const data = getHighlightPoints(feature);
+        highlightData.current.data = data.features.map(f => f.geometry.coordinates[0]).reverse();
+
+        highlightData.current.startIndex = 0;
+        highlightData.current.id = feature.properties.OBJECTID;
+    };
+
+
+    const getHighlightData = () => {
+        if(highlightData.current.id == null){
+            return [];
+        };
+
+        return [highlightData.current];
+    };
+
+
     return (
         <styles.assess.Container style={{ border: "none" }}>
             <styles.search.SearchBarWrapper>
@@ -128,7 +172,13 @@ function Assess() {
                 />
             </styles.search.SearchBarWrapper>
             <styles.assess.MapWrapper $isFullScreen={param === "advanced" ? isAdvancedFullScreen : isFullScreen}>
-                <Map searchTerm={searchTerm} onAssessment={onAssessmentResult} onAssessmentBegin={onAssessmentBegin} initInfo={initInfo}/>
+                <Map
+                    searchTerm={searchTerm}
+                    assessLandLot={assessLandLot}
+                    initInfo={initInfo}
+                    onLandLotSelected={onLandLotSelected}
+                    getHighlightData={getHighlightData}
+                />
             </styles.assess.MapWrapper>
 
             <styles.assess.ResultBarWrapper>

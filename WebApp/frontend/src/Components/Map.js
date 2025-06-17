@@ -10,18 +10,17 @@ import addEarthquakeHeatmap from "../RiskLens/earthquakes";
 import ContextMenu from "./ContextMenu";
 
 import { UserContext } from "../Contexts/UserContext";
-
-
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+import { sleep } from "../utility";
 
 
 
 //searchTerm = GeoJSON feature
 //risk = risk lens risk type
-//onAssessment = assessment callback function
-//onAssessmentBegin = assessment start callback function (shows loading icons)
+//assessLandLot -> assessment callback
+//getCtxMenuItems -> callback that returns the list of items to display when a context menu is opened (gets the selected feature as parameter)
 //initInfo -> {lng, lat, zoom}
-const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) => {
+//outMapRef -> optional ref; if specified, assigned to map object for external acccess
+const Map = ({ searchTerm, risk, assessLandLot, getCtxMenuItems, onLandLotSelected, getHighlightData, initInfo, outMapRef }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
     const previousBounds = useRef({ data: [0,0,0,0] }); //Previous requested bbox for optimization
@@ -45,18 +44,34 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
     const overlayCanvas = useRef(null);
     const overlayContext = useRef(null);
     const overlayAnimFrameId = useRef(-1);
-    const overlayPoints = useRef({ id: null, data: null });
 
     //Context menu
     const [showCtxMenu, setShowCtxMenu] = useState(false);
     const ctxMenuPos = useRef({ x: 0, y: 0 });
     const ctxMenuFeature = useRef(null);
+    const [ctxMenuItems, setCtxMenuItems] = useState([]);
 
     //User info
     const context = useContext(UserContext);
 
     //Penging init info
     const pendingInitId = useRef(initInfo?.id);
+
+
+
+    //Called before the context menu is opened; preprends the default save lot option
+    const __getCtxMenuItemsInternal = () => {
+        let itms = [{
+            text: "Save Lot", //Default option
+            onClick: onSaveLot
+        }];
+
+        if(getCtxMenuItems != null){
+            itms = itms.concat(getCtxMenuItems(ctxMenuFeature.current));
+        };
+
+        return itms;
+    };
 
 
 
@@ -73,6 +88,11 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
         //DEBUG ONLY
         window.map = map.current;
         window.turf = turf;
+
+
+        if(outMapRef != null){
+            outMapRef.current = map.current;
+        };
 
 
         //Add events
@@ -167,9 +187,19 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
 
 
         map.current.on("click", "land_data_fill", (e) => {
-            window.selectedLot = e.features[0]; //DEBUG ONLY!
-            selectedLot.current = e.features[0];
-            assessLandLot(e.features[0]);
+            const f = e.features[0];
+            const feature = landData.current.features.find(e => e.properties.OBJECTID == f.properties.OBJECTID);
+
+            window.selectedLot = feature; //DEBUG ONLY!
+            selectedLot.current = feature;
+
+            if(onLandLotSelected != null){
+                onLandLotSelected(feature);
+            };
+
+            if(assessLandLot != null){
+                assessLandLot(feature);
+            };
         });
 
 
@@ -189,9 +219,13 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
             const bounds = mapCanvas.getBoundingClientRect()
             ctxMenuPos.current.x = ev.clientX - bounds.x;
             ctxMenuPos.current.y = ev.clientY - bounds.y;
+
+            setCtxMenuItems(__getCtxMenuItemsInternal());
             setShowCtxMenu(true);
 
-            onLandLotSelected(ctxMenuFeature.current);
+            if(onLandLotSelected != null){
+                onLandLotSelected(ctxMenuFeature.current);
+            };
         };
         
         
@@ -354,54 +388,6 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
     };
 
 
-
-    const assessLandLot = async (f) => {
-        if(onAssessment == null){
-            return; //Don't assess on other pages with no onAssessment callback
-        };
-
-        onLandLotSelected(f);
-
-        onAssessmentBegin();
-        await sleep(500); //Simulate some delay so the loading bar doesn't disappear instantly
-
-        //Find the feature manually as one provided in event might be clipped off due to map tile boundary...
-        const feature = landData.current.features.find(e => e.properties.OBJECTID == f.properties.OBJECTID);
-
-        const req = await fetch(`http://${window.location.hostname}:3001/map/assess`, {
-            method: "POST",
-            body: JSON.stringify({bounds: feature.geometry.coordinates}),
-            headers: { "Content-Type": "application/json" }
-        });
-
-        const result = await req.json();
-
-        if(req.status == 200){
-            onAssessment(result);
-        }
-        else {
-            alert(`Assessment error: ${result.message}`);
-        };
-    };
-
-
-
-    const onLandLotSelected = (f) => {
-
-        if(f.properties.OBJECTID == overlayPoints.current.id){
-            return; //Same, already selected feature
-        };
-
-        overlayPoints.current.id = f.properties.OBJECTID;
-
-        const feature = landData.current.features.find(e => e.properties.OBJECTID == f.properties.OBJECTID);
-
-        const outerRing = turf.lineString(feature.geometry.coordinates[0]);
-        const chunk = turf.lineChunk(outerRing, 0.001); //Point every 1m
-        overlayPoints.current.data = chunk.features.map(f => f.geometry.coordinates[0]).reverse();
-    };
-
-
     //Land lot animation thing
     useEffect(() => {
 
@@ -409,12 +395,10 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
             return; //Only execute on main assess page
         };
 
-        let startIndex = 0;
-        let prevTime = null;
         const maxThickness = 5;
         const lengthRatio = 0.45;
         const loopDuration = 3000; //In ms
-        const highlightColor = "rgb(230, 115, 255)";
+        const highlightColors = ["rgb(230, 115, 255)", "rgb(123, 234, 211)"];
 
         const clipMaskAlpha = 0.5;
         const fadeDuration = 300; //In ms
@@ -423,7 +407,6 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
 
         const renderOverlayAnimation = (timestamp) => {
             const ctx = overlayContext.current;
-            const pList = overlayPoints.current.data;
 
             if(overlayCanvas.current === null){
                 return;
@@ -432,77 +415,93 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
             ctx.clearRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
 
 
-            if(!prevTime){
-                prevTime = timestamp;
-            };
-
-            if(!pList || (map.current.getZoom() < 13.5)){
+            if((map.current.getZoom() < 13.5)){
                 overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
                 return;
             };
 
-            const points2d = pList.map(p => map.current.project(p));
+
+            const highlightData = (getHighlightData != null) ? getHighlightData() : [];
+
+            let renderedClippingMask = false;
+
+            highlightData.forEach((h, hIdx) => {
+                const pList = h.data;
+                const points2d = pList.map(p => map.current.project(p));
 
 
-            //Draw clipping mask if context menu land lot is selected
-            if(ctxMenuFeature.current != null){
-                ctx.save();
+                //Draw clipping mask if context menu land lot is selected
+                if(ctxMenuFeature.current?.properties.OBJECTID == h.id){
 
-                ctx.beginPath();
-                ctx.rect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
-                
-                ctx.moveTo(points2d[0].x, points2d[0].y);
+                    console.log("clip mask")
+                    
 
-                for(let i = points2d.length-1; i != 0; i--){
-                    ctx.lineTo(points2d[i].x, points2d[i].y);
+                    ctx.save();
+
+                    ctx.beginPath();
+                    ctx.rect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+                    
+                    ctx.moveTo(points2d[0].x, points2d[0].y);
+
+                    for(let i = points2d.length-1; i != 0; i--){
+                        ctx.lineTo(points2d[i].x, points2d[i].y);
+                    };
+
+                    ctx.lineTo(points2d[0].x, points2d[0].y);
+                    ctx.clip();
+
+                    ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha})`;
+                    ctx.fillRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+
+                    ctx.restore();
+
+                    if(fadeStart === null){
+                        fadeStart = timestamp;
+                    };
+
+                    currentAlpha = Math.min((timestamp - fadeStart) / fadeDuration, 1) * clipMaskAlpha;
+                    renderedClippingMask = true; //Don't decrease alpha
                 };
 
-                ctx.lineTo(points2d[0].x, points2d[0].y);
-                ctx.clip();
 
-                ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha})`;
-                ctx.fillRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+                ctx.strokeStyle = highlightColors[hIdx];
 
-                ctx.restore();
+                const numThick = Math.floor(points2d.length * lengthRatio);
 
-                if(fadeStart === null){
-                    fadeStart = timestamp;
+                for(let i = 0; i < numThick; i++){
+                    const pIdx = (h.startIndex + i) % points2d.length;
+                    const thickness = Math.max((i / numThick) * maxThickness, 0.001);
+
+                    const p = points2d[pIdx];
+                    const n = points2d[(pIdx + 1) % points2d.length];
+
+                    ctx.lineWidth = thickness;
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(n.x, n.y);
+                    ctx.stroke();
                 };
 
-                currentAlpha = Math.min((timestamp - fadeStart) / fadeDuration, 1) * clipMaskAlpha;
-            }
-            else if(fadeStart !== null){
+
+                //Cycle with constant time
+                if(!h.prevTime){
+                    h.prevTime = timestamp;
+                }
+
+                const tDelta = timestamp - h.prevTime;
+                const numChunks = Math.round(pList.length * (tDelta / loopDuration));
+
+                if(numChunks > 0){
+                    h.startIndex = (h.startIndex + numChunks) % points2d.length;
+                    h.prevTime = timestamp;
+                };
+
+            });
+
+
+            if(renderedClippingMask == false){
                 currentAlpha = 0;
                 fadeStart = null;
-            };
-
-
-            ctx.strokeStyle = highlightColor;
-
-            const numThick = Math.floor(points2d.length * lengthRatio);
-
-            for(let i = 0; i < numThick; i++){
-                const pIdx = (startIndex + i) % points2d.length;
-                const thickness = Math.max((i / numThick) * maxThickness, 0.001);
-
-                const p = points2d[pIdx];
-                const n = points2d[(pIdx + 1) % points2d.length];
-
-                ctx.lineWidth = thickness;
-                ctx.beginPath();
-                ctx.moveTo(p.x, p.y);
-                ctx.lineTo(n.x, n.y);
-                ctx.stroke();
-            };
-
-
-            //Cycle with constant time
-            const tDelta = timestamp - prevTime;
-            const numChunks = Math.round(pList.length * (tDelta / loopDuration));
-
-            if(numChunks > 0){
-                startIndex = (startIndex + numChunks) % points2d.length;
-                prevTime = timestamp;
             };
 
             overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
@@ -518,18 +517,14 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
 
 
     //On context menu land lot save
-    const onSaveLot = async () => {
+    const onSaveLot = async (feature) => {
         if(context.user == null){
             return alert("Must be logged in!");
         };
 
-        if(ctxMenuFeature.current == null){
-            return alert("ERROR - NO FEATURE?!"); //Should not happen
-        };
-
-
+        
         //Get feature address
-        const midPoint = turf.centerOfMass(turf.polygon(ctxMenuFeature.current.geometry.coordinates));
+        const midPoint = turf.centerOfMass(turf.polygon(feature.geometry.coordinates));
         const addrResults = await coordsToAddress(...midPoint.geometry.coordinates);
         let address = addrResults.find(f => f.properties.feature_type == "address")?.properties.full_address;
 
@@ -550,7 +545,7 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
             },
             body: JSON.stringify({
                 name: name,
-                OBJECTID: ctxMenuFeature.current.properties.OBJECTID,
+                OBJECTID: feature.properties.OBJECTID,
                 address: address,
                 coordinates: midPoint.geometry.coordinates,
             }),
@@ -566,11 +561,6 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
         };
     };
 
-
-    //On context menu add lot to compare
-    const onAddToComparison = () => {
-        alert("TODO: onAddToComparison");
-    };
 
 
     //Backwards geocoding search
@@ -672,12 +662,14 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin, initInfo }) =>
             (<ContextMenu 
                 x={ctxMenuPos.current.x}
                 y={ctxMenuPos.current.y}
+
                 onClose={() => {
                     setShowCtxMenu(false);
                     ctxMenuFeature.current = null;
                 }}
-                onSave={onSaveLot}
-                onAddToComparison={onAddToComparison}
+
+                items={ctxMenuItems}
+                featureRef={ctxMenuFeature} //Note passed by ref
             ></ContextMenu>) 
             : (<></>)
         }

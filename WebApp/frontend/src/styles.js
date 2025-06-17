@@ -1955,6 +1955,7 @@ const contextMenuStyles = {
         border-radius: 50%;
         padding: 3px;
         box-sizing: border-box;
+        cursor: pointer;
 
         &:hover {
             background-color: #e0e0e0;
@@ -1968,6 +1969,7 @@ const contextMenuStyles = {
         display: flex;
         flex-direction: row;
         justify-content: space-between;
+        cursor: pointer;
 
         &:last-child {
             border-bottom: none;
