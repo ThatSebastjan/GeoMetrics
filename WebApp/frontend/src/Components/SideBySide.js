@@ -3,39 +3,10 @@ import styles from '../styles';
 import Map from '../Components/Map.js';
 import ResultBar from '../Components/ResultBar';
 import { UserContext } from "../Contexts/UserContext";
-import { getHighlightPoints } from '../utility.js';
+import { getHighlightPoints, defaultGauges } from '../utility.js';
 
 import * as turf from "@turf/turf";
 
-
-
-//A copy of this is made for left and right gauge to eliminiate code duplication
-const defaultGauges = [
-    {
-        value: null,
-        label: "Flood Risk",
-        fillGradient: "#e0f2fe 0deg, #7dd3fc 90deg, #38bdf8 180deg, #0284c7 270deg, #0c4a6e 360deg",
-        innerColor: "#f8f9fa",
-        valueColor: "#2d3748",
-        labelColor: "#4a5568"
-    },
-    {
-        value: null,
-        label: "Landslide Risk",
-        fillGradient: "#F9F5EB 0deg, #E3D5CA 90deg, #D5A021 180deg, #8B5A2B 270deg, #4A3728 360deg",
-        innerColor: "#f8fafc",
-        valueColor: "#2d3748",
-        labelColor: "#4a5568"
-    },
-    {
-        value: null,
-        label: "Earthquake Risk",
-        fillGradient: "#2f855a 0deg, #48bb78 144deg, #f6e05e 216deg, #ed8936 270deg, #c53030 360deg",
-        innerColor: "#f8f9fa",
-        valueColor: "#2d3748",
-        labelColor: "#4a5568"
-    }
-];
 
 
 

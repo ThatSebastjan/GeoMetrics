@@ -201,7 +201,6 @@ const assessArea = async (areaPolygon) => {
     };
 
     const nearEQs = await getNearEarthquakes(areaCenter.geometry, MAX_EARTHQUAKE_DST * 1000);
-    console.log("nearEQs:", nearEQs.length);
 
     if(nearEQs.length > 0){
 
@@ -330,7 +329,6 @@ module.exports = {
     },
 
 
-
     //Assess risk for a given area
     assessArea: async (req, res) => {
         if(!req.body.bounds){
@@ -342,5 +340,46 @@ module.exports = {
 
         return res.json(result);
     },
+
+
+    //Smart select - return results in area based on filter
+    smartSelect: async (req, res) => {
+        if(!Array.isArray(req.body.bounds) || !req.body.filter){
+            return res.status(500).json({ message: "Missing required parameters!" });
+        };
+
+
+        const bounds = req.body.bounds;
+
+        if(bounds.length < 4){
+            return res.status(500).json({ message: "Invalid bounds" });
+        };
+
+        //TODO: maybe check and limit area... to prevent users from selecting too many land lots at once
+
+        const poly = turf.polygon([ bounds ]);
+        const lots = await getLandLotsInArea(poly);
+
+        console.log(`Smart select - num lots in area: ${lots.length}`);
+
+        //Assess all land lots in area (in batches to speed things up but also prevent exceeding memory limit)
+        const results = [];
+        const chunkSize = 100;
+
+        for(let i = 0; i < lots.length; i += chunkSize){
+            const chunk = lots.slice(i, i + chunkSize);
+            const promises = chunk.map((c, idx) => assessArea(turf.polygon(chunk[idx].geometry.coordinates)));
+            const r = await Promise.all(promises);
+            results.push(...r);
+
+            console.log(`Processed ${((i+1) / lots.length * 100).toFixed(2)}%`);
+        };
+
+
+        //TODO: filter based on selected condition
+
+        res.status(500).json({ message: "TODO: Not implemented yet!" });
+    },
+
     
 };

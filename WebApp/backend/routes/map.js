@@ -11,5 +11,7 @@ router.get("/earthquakes", mapController.queryEarthquakes);
 
 router.post("/assess", mapController.assessArea);
 
+router.post("/smartSelect", mapController.smartSelect);
+
 
 module.exports = router;

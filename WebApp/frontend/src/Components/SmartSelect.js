@@ -1,52 +1,246 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import styles from '../styles';
 import Map from '../Components/Map.js';
 import ResultBar from '../Components/ResultBar';
+import { UserContext } from "../Contexts/UserContext";
+import { defaultGauges, dist2D, getHighlightPoints } from '../utility.js';
+
+
 
 function SmartSelect() {
-    const [user, setUser] = useState(null);
+    const user = useContext(UserContext).user;
+
     const [isFullScreen, setIsFullScreen] = useState(false);
+    const [gauges, setGauges] = useState(defaultGauges.map(obj => Object.assign({}, obj)));
 
-    // Sample data for the gauges - environmental risk indicators
-    const gauges = [
-        {
-            value: 55,
-            label: "Flood Risk",
-            fillGradient: "#e0f2fe 0deg, #7dd3fc 90deg, #38bdf8 180deg, #0284c7 270deg, #0c4a6e 360deg",
-            innerColor: "#f8f9fa",
-            valueColor: "#2d3748",
-            labelColor: "#4a5568"
-        },
-        {
-            value: 78,
-            label: "Landslide Risk",
-            fillGradient: "#F9F5EB 0deg, #E3D5CA 90deg, #D5A021 180deg, #8B5A2B 270deg, #4A3728 360deg",
-            innerColor: "#f8fafc",
-            valueColor: "#2d3748",
-            labelColor: "#4a5568"
-        },
-        {
-            value: 92,
-            label: "Earthquake Risk",
-            fillGradient: "#2f855a 0deg, #48bb78 144deg, #f6e05e 216deg, #ed8936 270deg, #c53030 360deg",
-            innerColor: "#f8f9fa",
-            valueColor: "#2d3748",
-            labelColor: "#4a5568"
+    const highlightData = useRef({ id: null, data: null, startIndex: 0 });
+
+    const initStatus = useRef(false);
+    const mapObj = useRef(null);
+
+    const pointList = useRef([]); //A list of polygon points for area selection (pairs [lng, lat] - in world space)
+    const nearPointIdx = useRef(null); //Nearest point (index) for rendering purposes
+    const allowNewPoints = useRef(true);
+
+
+
+    const onLandLotSelected = (feature, isCtxMenuSelect) => {
+
+        if(isCtxMenuSelect != true){
+            return; //Only select land lots on context menu open
+        };
+        
+        if(feature.properties.OBJECTID == highlightData.current.id){
+            return; //Same, already selected feature
+        };
+
+        const data = getHighlightPoints(feature);
+        highlightData.current.data = data.features.map(f => f.geometry.coordinates[0]).reverse();
+
+        highlightData.current.startIndex = 0;
+        highlightData.current.id = feature.properties.OBJECTID;
+    };
+
+
+    const getHighlightData = () => {
+        if(highlightData.current.id == null){
+            return [];
+        };
+
+        return [highlightData.current];
+    };
+
+
+    let ldo = 0; //current line dash offset
+
+    const postRender = (map, ctx) => {
+
+        //Add listeners - only once
+        if(initStatus.current == false){
+            initStatus.current = true;
+            mapObj.current = map;
+
+            map.on("mousedown", handleMapMousedown);
+            map.on("mousemove", handleMapMousemove);
+        };
+
+
+        if(pointList.current.length == 0){
+            return;
+        };
+
+
+        const points = pointList.current.map(p => map.project(p));;
+
+        //Draw polygon
+        if(points.length > 1){
+
+            ctx.beginPath()
+            ctx.setLineDash([5, 10]);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "rgb(60, 140, 70)";
+            ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+
+            for(let i = 0; i < points.length; i++){
+                const p = points[i];
+
+                if(i == 0){
+                    ctx.moveTo(p.x, p.y);
+                }
+                else { 
+                    ctx.lineTo(p.x, p.y);
+                };
+            };
+
+            ctx.fill();
+            ctx.stroke();
+            ctx.lineWidth = 1;
+            ctx.setLineDash([]);
+        };
+
+
+        //Draw points if placing / removing is allowed
+        if(allowNewPoints.current){
+            ctx.strokeStyle = "rgb(20, 59, 4)";
+
+            console.log(nearPointIdx.current);
+
+            points.forEach((p2d, i) => {
+
+                if((i == 0) && (nearPointIdx.current == 0) && (pointList.current.length >= 3)){
+                    ctx.fillStyle = "rgb(90, 190, 100)";
+                }
+                else {
+                    ctx.fillStyle = (i == nearPointIdx.current) ? "rgb(237, 84, 112)" : "rgb(60, 140, 70)";
+                };
+
+                ctx.beginPath();
+                ctx.arc(p2d.x, p2d.y, 2, 0, 2*Math.PI);
+                ctx.stroke();
+                ctx.fill();
+            });
+        };
+
+
+        ldo = (ldo + 0.1) % 15;
+        ctx.lineDashOffset = ldo;
+    };
+
+
+    const handleMapMousedown = (ev) => {
+
+        if(allowNewPoints.current == false){
+            return;
+        };
+
+        const map = ev.target;
+        const points = pointList.current.map(p => map.project(p));
+
+        const pDist = points.map((p, i) => { return { p, i, dist: dist2D(ev.point.x, ev.point.y, p.x, p.y) } }).sort((a, b) => a.dist - b.dist)[0];
+        
+        //Left click - add new point
+        if(ev.originalEvent.which == 1){
+
+            //Close area polygon loop
+            if((pDist != null) && (pDist.i == 0) && (pDist.dist < 10) && (pointList.current.length >= 3)){
+                pointList.current.push(pointList.current[0]);
+                onAreaSelected();
+            }
+            else {
+                pointList.current.push(ev.lngLat.toArray());
+            };
         }
-    ];
 
+        //Right click - remove point / cancel selection
+        else if(ev.originalEvent.which == 3){
+            
+            //Remove one near point
+            if((pDist != null) && (pDist.dist < 10)){
+                pointList.current.splice(pDist.i, 1);
+            }
+
+            //Cancel selection
+            else {
+
+                //TODO: when nicer dialogs are implemented, swith this one out
+                if(window.confirm("Are you sure you want to reset area selection?")){
+                    pointList.current = [];
+                };
+            };
+
+            nearPointIdx.current = null;
+        };
+
+    };
+
+
+    const handleMapMousemove = (ev) => {
+        const map = ev.target;
+
+        if(allowNewPoints.current == false){
+            map.getCanvas().style.cursor = "default";
+            return;
+        };
+
+        const points = pointList.current.map(p => map.project(p));
+        const pDist = points.map((p, i) => { return { p, i, dist: dist2D(ev.point.x, ev.point.y, p.x, p.y) } }).sort((a, b) => a.dist - b.dist)[0];
+
+        //Is within 10px radius
+        if((pDist != null) && (pDist.dist < 10)){
+            map.getCanvas().style.cursor = "pointer";
+            nearPointIdx.current = pDist.i;
+            return;
+        };
+        
+        map.getCanvas().style.cursor = "crosshair";
+        nearPointIdx.current = null;
+    };
+
+
+    //This only serves the purpose of removing the added event listneres
     useEffect(() => {
-        // Get user data from localStorage
-        const userData = localStorage.getItem('user');
-        if (userData) {
-            setUser(JSON.parse(userData));
-        }
+
+        return () => {
+            if(mapObj.current != null){
+                mapObj.current.off("mousedown", handleMapMousedown);
+                mapObj.current.off("mousemove", handleMapMousemove);
+            }; 
+        };
     }, []);
 
+
+    //Called when user completes the area selection
+    const onAreaSelected = async () => {
+        allowNewPoints.current = false;
+
+        const req = await fetch(`http://${window.location.hostname}:3001/map/smartSelect`, {
+            method: "POST",
+            body: JSON.stringify({
+                bounds: pointList.current,
+                filter: "best",
+            }),
+            headers: { "Content-Type": "application/json" }
+        });
+
+        const result = await req.json();
+
+        if(req.status == 200){
+            console.log("Result:", result);
+        }
+        else {
+            return alert(`An error occurred: ${result.message}`);
+        };
+    };
+
+
     return (
-        <styles.assess.Container>
+        <styles.assess.Container style={{ border: "none" }}>
             <styles.assess.MapWrapper $isFullScreen={isFullScreen}>
-                <Map />
+                <Map 
+                    onLandLotSelected={onLandLotSelected}
+                    getHighlightData={getHighlightData}
+                    overlayPostRender={postRender}
+                />
             </styles.assess.MapWrapper>
 
             <styles.assess.ResultBarWrapper>

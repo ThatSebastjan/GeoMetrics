@@ -10,17 +10,29 @@ import addEarthquakeHeatmap from "../RiskLens/earthquakes";
 import ContextMenu from "./ContextMenu";
 
 import { UserContext } from "../Contexts/UserContext";
-import { sleep } from "../utility";
+import { setDPI, sleep } from "../utility";
 
 
 
 //searchTerm = GeoJSON feature
-//risk = risk lens risk type
-//assessLandLot -> assessment callback
+//risk = optional; risk lens risk type
+//assessLandLot -> optional; assessment callback
 //getCtxMenuItems -> callback that returns the list of items to display when a context menu is opened (gets the selected feature as parameter)
-//initInfo -> {lng, lat, zoom}
+//initInfo -> optional; {lng, lat, zoom}
 //outMapRef -> optional ref; if specified, assigned to map object for external acccess
-const Map = ({ searchTerm, risk, assessLandLot, getCtxMenuItems, onLandLotSelected, getHighlightData, initInfo, outMapRef }) => {
+//overlayPostRender -> optional; callback that gets called after overlay items are rendered
+const Map = ({
+        searchTerm,
+        risk,
+        assessLandLot,
+        getCtxMenuItems,
+        onLandLotSelected,
+        getHighlightData,
+        initInfo,
+        outMapRef,
+        overlayPostRender,
+    }) =>
+    {
     const mapContainer = useRef(null);
     const map = useRef(null);
     const previousBounds = useRef({ data: [0,0,0,0] }); //Previous requested bbox for optimization
@@ -224,7 +236,7 @@ const Map = ({ searchTerm, risk, assessLandLot, getCtxMenuItems, onLandLotSelect
             setShowCtxMenu(true);
 
             if(onLandLotSelected != null){
-                onLandLotSelected(ctxMenuFeature.current);
+                onLandLotSelected(ctxMenuFeature.current, true);
             };
         };
         
@@ -240,6 +252,7 @@ const Map = ({ searchTerm, risk, assessLandLot, getCtxMenuItems, onLandLotSelect
             const resizeListener = () => {
                 overlayCanvas.current.width = mapCanvas.width;
                 overlayCanvas.current.height = mapCanvas.height;
+                setDPI(overlayCanvas.current, window.devicePixelRatio * 96);
             };
 
             resizeListener();
@@ -412,100 +425,104 @@ const Map = ({ searchTerm, risk, assessLandLot, getCtxMenuItems, onLandLotSelect
                 return;
             };
 
-            ctx.clearRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+
+            do {
+                ctx.clearRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+
+                if((map.current.getZoom() < 13.5)){
+                    break;
+                };
 
 
-            if((map.current.getZoom() < 13.5)){
-                overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
-                return;
-            };
+                let renderedClippingMask = false;
+                const highlightData = (getHighlightData != null) ? getHighlightData() : [];
+
+                highlightData.forEach((h, hIdx) => {
+                    const pList = h.data;
+                    const points2d = pList.map(p => map.current.project(p));
 
 
-            const highlightData = (getHighlightData != null) ? getHighlightData() : [];
+                    //Draw clipping mask if context menu land lot is selected
+                    if(ctxMenuFeature.current?.properties.OBJECTID == h.id){
+                        ctx.save();
 
-            let renderedClippingMask = false;
+                        ctx.beginPath();
+                        ctx.rect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+                        
+                        ctx.moveTo(points2d[0].x, points2d[0].y);
 
-            highlightData.forEach((h, hIdx) => {
-                const pList = h.data;
-                const points2d = pList.map(p => map.current.project(p));
+                        for(let i = points2d.length-1; i != 0; i--){
+                            ctx.lineTo(points2d[i].x, points2d[i].y);
+                        };
 
+                        ctx.lineTo(points2d[0].x, points2d[0].y);
+                        ctx.clip();
 
-                //Draw clipping mask if context menu land lot is selected
-                if(ctxMenuFeature.current?.properties.OBJECTID == h.id){
+                        ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha})`;
+                        ctx.fillRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
 
-                    console.log("clip mask")
-                    
+                        ctx.restore();
 
-                    ctx.save();
+                        if(fadeStart === null){
+                            fadeStart = timestamp;
+                        };
 
-                    ctx.beginPath();
-                    ctx.rect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
-                    
-                    ctx.moveTo(points2d[0].x, points2d[0].y);
-
-                    for(let i = points2d.length-1; i != 0; i--){
-                        ctx.lineTo(points2d[i].x, points2d[i].y);
+                        currentAlpha = Math.min((timestamp - fadeStart) / fadeDuration, 1) * clipMaskAlpha;
+                        renderedClippingMask = true; //Don't decrease alpha
                     };
 
-                    ctx.lineTo(points2d[0].x, points2d[0].y);
-                    ctx.clip();
 
-                    ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha})`;
-                    ctx.fillRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+                    ctx.strokeStyle = highlightColors[hIdx];
 
-                    ctx.restore();
+                    const numThick = Math.floor(points2d.length * lengthRatio);
 
-                    if(fadeStart === null){
-                        fadeStart = timestamp;
+                    for(let i = 0; i < numThick; i++){
+                        const pIdx = (h.startIndex + i) % points2d.length;
+                        const thickness = Math.max((i / numThick) * maxThickness, 0.001);
+
+                        const p = points2d[pIdx];
+                        const n = points2d[(pIdx + 1) % points2d.length];
+
+                        ctx.lineWidth = thickness;
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(n.x, n.y);
+                        ctx.stroke();
                     };
 
-                    currentAlpha = Math.min((timestamp - fadeStart) / fadeDuration, 1) * clipMaskAlpha;
-                    renderedClippingMask = true; //Don't decrease alpha
+
+                    //Cycle with constant time
+                    if(!h.prevTime){
+                        h.prevTime = timestamp;
+                    }
+
+                    const tDelta = timestamp - h.prevTime;
+                    const numChunks = Math.round(pList.length * (tDelta / loopDuration));
+
+                    if(numChunks > 0){
+                        h.startIndex = (h.startIndex + numChunks) % points2d.length;
+                        h.prevTime = timestamp;
+                    };
+
+                });
+
+
+                if(renderedClippingMask == false){
+                    currentAlpha = 0;
+                    fadeStart = null;
                 };
 
-
-                ctx.strokeStyle = highlightColors[hIdx];
-
-                const numThick = Math.floor(points2d.length * lengthRatio);
-
-                for(let i = 0; i < numThick; i++){
-                    const pIdx = (h.startIndex + i) % points2d.length;
-                    const thickness = Math.max((i / numThick) * maxThickness, 0.001);
-
-                    const p = points2d[pIdx];
-                    const n = points2d[(pIdx + 1) % points2d.length];
-
-                    ctx.lineWidth = thickness;
-                    ctx.beginPath();
-                    ctx.moveTo(p.x, p.y);
-                    ctx.lineTo(n.x, n.y);
-                    ctx.stroke();
-                };
+            } while(false);
 
 
-                //Cycle with constant time
-                if(!h.prevTime){
-                    h.prevTime = timestamp;
-                }
-
-                const tDelta = timestamp - h.prevTime;
-                const numChunks = Math.round(pList.length * (tDelta / loopDuration));
-
-                if(numChunks > 0){
-                    h.startIndex = (h.startIndex + numChunks) % points2d.length;
-                    h.prevTime = timestamp;
-                };
-
-            });
-
-
-            if(renderedClippingMask == false){
-                currentAlpha = 0;
-                fadeStart = null;
+            //Optional post-render callback
+            if(overlayPostRender != null){
+                overlayPostRender(map.current, ctx);
             };
 
             overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
         };
+
 
         overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
         
