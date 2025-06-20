@@ -368,7 +368,7 @@ module.exports = {
 
         for(let i = 0; i < lots.length; i += chunkSize){
             const chunk = lots.slice(i, i + chunkSize);
-            const promises = chunk.map((c, idx) => assessArea(turf.polygon(chunk[idx].geometry.coordinates)));
+            const promises = chunk.map(c => assessArea(turf.polygon(c.geometry.coordinates)));
             const r = await Promise.all(promises);
             results.push(...r);
 

@@ -10,6 +10,7 @@ import addEarthquakeHeatmap from "../RiskLens/earthquakes";
 import ContextMenu from "./ContextMenu";
 
 import { UserContext } from "../Contexts/UserContext";
+import { PopupContext } from "../Contexts/CustomPopups";
 import { setDPI, sleep } from "../utility";
 
 
@@ -69,6 +70,9 @@ const Map = ({
     //Penging init info
     const pendingInitId = useRef(initInfo?.id);
 
+    const { alert, prompt } = useContext(PopupContext);
+
+    window.pctx = useContext(PopupContext);
 
 
     //Called before the context menu is opened; preprends the default save lot option

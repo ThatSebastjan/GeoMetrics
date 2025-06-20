@@ -103,8 +103,6 @@ function SmartSelect() {
         if(allowNewPoints.current){
             ctx.strokeStyle = "rgb(20, 59, 4)";
 
-            console.log(nearPointIdx.current);
-
             points.forEach((p2d, i) => {
 
                 if((i == 0) && (nearPointIdx.current == 0) && (pointList.current.length >= 3)){

@@ -14,6 +14,7 @@ import Results from "./Components/Results";
 import SavedLots from "./Components/SavedLots";
 import ResultDetails from "./Components/ResultDetails";
 import RiskLens from "./Components/RiskLens";
+import CustomPopups from './Contexts/CustomPopups';
 
 
 // Create a separate component for routes that uses the context
@@ -87,7 +88,9 @@ function AppRoutes() {
 function App() {
     return (
         <UserProvider>
-            <AppRoutes />
+            <CustomPopups>
+                <AppRoutes />
+            </CustomPopups>
         </UserProvider>
     );
 }
