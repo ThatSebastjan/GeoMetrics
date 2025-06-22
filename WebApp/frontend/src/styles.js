@@ -2058,6 +2058,22 @@ const popupStyles = {
             box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
         }
     `,
+
+    FormGroup: styled.div`
+        margin-bottom: ${spacing.md};
+        text-align: left;
+        width: 100%;
+        padding: 0px ${spacing.md};
+        box-sizing: border-box;
+    `,
+
+    Label: styled.label`
+        display: block;
+        margin-bottom: ${spacing.xs};
+        font-weight: 500;
+        color: ${colors.textDark};
+        font-size: 0.95rem;
+    `,
 };
 
 

@@ -4,6 +4,33 @@ import Map from '../Components/Map.js';
 import ResultBar from '../Components/ResultBar';
 import { UserContext } from "../Contexts/UserContext";
 import { defaultGauges, dist2D, getHighlightPoints } from '../utility.js';
+import { PopupContext } from "../Contexts/CustomPopups";
+
+import * as turf from "@turf/turf";
+
+
+const colorData = [
+    "rgb(255, 218, 185)",
+    "rgb(173, 216, 230)",
+    "rgb(32, 178, 170)",
+    "rgb(230, 190, 255)",
+    "rgb(255, 215, 0)",
+    "rgb(255, 192, 203)",
+    "rgb(142, 188, 211)",
+    "rgb(255, 127, 80)",
+    "rgb(112, 150, 158)",
+    "rgb(224, 255, 255)",
+    "rgb(255, 192, 203)",
+    "rgb(135, 206, 235)",
+    "rgb(165, 42, 42)",
+    "rgb(173, 216, 230)",
+    "rgb(240, 128, 128)",
+    "rgb(204, 153, 255)",
+    "rgb(46, 139, 87)",
+    "rgb(192, 192, 192)",
+    "rgb(220, 20, 60)",
+    "rgb(153, 102, 255)"
+];
 
 
 
@@ -12,8 +39,10 @@ function SmartSelect() {
 
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [gauges, setGauges] = useState(defaultGauges.map(obj => Object.assign({}, obj)));
+    const [isLoading, setIsLoading] = useState(false);
 
     const highlightData = useRef({ id: null, data: null, startIndex: 0 });
+
 
     const initStatus = useRef(false);
     const mapObj = useRef(null);
@@ -21,15 +50,51 @@ function SmartSelect() {
     const pointList = useRef([]); //A list of polygon points for area selection (pairs [lng, lat] - in world space)
     const nearPointIdx = useRef(null); //Nearest point (index) for rendering purposes
     const allowNewPoints = useRef(true);
+    const dragState = useRef(false);
+
+    const results = useRef(null);
+    const resultsHighlight = useRef([]);
+
+    const { alert, confirm, SSF } = useContext(PopupContext);
 
 
 
     const onLandLotSelected = (feature, isCtxMenuSelect) => {
 
-        if(isCtxMenuSelect != true){
-            return; //Only select land lots on context menu open
+        //Clicked on a land lot, check if it is one of highlighted results and show assessment results for it + clipping mask
+        resultsHighlight.current.forEach(el => { el.clip = false; });
+
+        if(isCtxMenuSelect != true){ //This should be a `!= true` check as isCtxMenuSelect can be null
+
+            if(results.current != null){
+
+                const rIdx = results.current.findIndex(r => r.lot.properties.OBJECTID == feature.properties.OBJECTID);
+
+                if(rIdx != -1){
+                    resultsHighlight.current[rIdx].clip = true;
+
+                    const resEl = results.current[rIdx].result;
+                    const newGauges = gauges.map(g => Object.assign({}, g));
+
+                    newGauges[0].value = resEl.floodRisk;
+                    newGauges[1].value = resEl.landSlideRisk;
+                    newGauges[2].value = resEl.earthQuakeRisk;
+
+                    setGauges(newGauges);
+                };
+            };
+            return;
+        }
+        else {
+            const newGauges = gauges.map(g => Object.assign({}, g));
+            newGauges[0].value = null;
+            newGauges[1].value = null;
+            newGauges[2].value = null;
+            setGauges(newGauges);
         };
-        
+
+
+        //Context menu feature select
         if(feature.properties.OBJECTID == highlightData.current.id){
             return; //Same, already selected feature
         };
@@ -44,10 +109,10 @@ function SmartSelect() {
 
     const getHighlightData = () => {
         if(highlightData.current.id == null){
-            return [];
+            return resultsHighlight.current;
         };
 
-        return [highlightData.current];
+        return [highlightData.current, ...resultsHighlight.current];
     };
 
 
@@ -60,7 +125,8 @@ function SmartSelect() {
             initStatus.current = true;
             mapObj.current = map;
 
-            map.on("mousedown", handleMapMousedown);
+            map.on("dragstart", handleMapDragStart);
+            map.on("mouseup", handleMapMouseup);
             map.on("mousemove", handleMapMousemove);
         };
 
@@ -125,7 +191,18 @@ function SmartSelect() {
     };
 
 
-    const handleMapMousedown = (ev) => {
+    const handleMapDragStart = (ev) => {
+        dragState.current = true;
+    };
+
+
+    const handleMapMouseup = async (ev) => {
+        const wasDrag = dragState.current;
+        dragState.current = false;
+
+        if(wasDrag){
+            return; //Skip map panning actions
+        };
 
         if(allowNewPoints.current == false){
             return;
@@ -160,8 +237,7 @@ function SmartSelect() {
             //Cancel selection
             else {
 
-                //TODO: when nicer dialogs are implemented, swith this one out
-                if(window.confirm("Are you sure you want to reset area selection?")){
+                if((pointList.current.length > 0) && (await confirm("Are you sure you want to reset area selection?"))){
                     pointList.current = [];
                 };
             };
@@ -200,7 +276,8 @@ function SmartSelect() {
 
         return () => {
             if(mapObj.current != null){
-                mapObj.current.off("mousedown", handleMapMousedown);
+                mapObj.current.off("dragstart", handleMapDragStart);
+                mapObj.current.off("mouseup", handleMapMouseup);
                 mapObj.current.off("mousemove", handleMapMousemove);
             }; 
         };
@@ -211,23 +288,115 @@ function SmartSelect() {
     const onAreaSelected = async () => {
         allowNewPoints.current = false;
 
+        const filters = await SSF();
+
+        //Cancel clicked
+        if(filters == null){
+            pointList.current = [];
+            allowNewPoints.current = true;
+            return;
+        };
+
+        setIsLoading(true);
+
         const req = await fetch(`http://${window.location.hostname}:3001/map/smartSelect`, {
             method: "POST",
             body: JSON.stringify({
                 bounds: pointList.current,
-                filter: "best",
+                filter: filters,
             }),
             headers: { "Content-Type": "application/json" }
         });
 
         const result = await req.json();
+        setIsLoading(false);
 
         if(req.status == 200){
-            console.log("Result:", result);
+            handleResults(result);
         }
         else {
             return alert(`An error occurred: ${result.message}`);
         };
+    };
+
+
+    const handleResults = (list) => {
+        results.current = list;
+
+        if(list.length == 0){
+            return alert("No land lot in area matches the provided filter values!");
+        };
+
+        //Generate highlight data for all
+        resultsHighlight.current = list.map((el, idx) => {
+            const data = getHighlightPoints(el.lot).features.map(f => f.geometry.coordinates[0]).reverse();
+
+            return {
+                data,
+                startIndex: 0,
+                id: el.lot.properties.OBJECTID,
+                color: colorData[idx % colorData.length],
+            };
+        });
+
+
+        //Zoom to results
+        const featureCollection = turf.featureCollection(list.map(el => turf.polygon(el.lot.geometry.coordinates)));
+        const resBBOX = turf.bbox(featureCollection);
+
+        const bboxWidth = Math.abs(resBBOX[0] - resBBOX[2]);
+        const bboxHeight = Math.abs(resBBOX[1] - resBBOX[3]);
+
+        //Add 10% bounds padding
+        resBBOX[0] -= bboxWidth * 0.1;
+        resBBOX[2] += bboxWidth * 0.1;
+
+        resBBOX[1] -= bboxHeight * 0.1;
+        resBBOX[3] += bboxHeight * 0.1;
+
+        mapObj.current.fitBounds(resBBOX, {
+            easing: (t) => Math.pow(t, 1/3),
+            duration: 1000,
+        });
+    };
+
+
+    //Reset state
+    const resetState = (clearPoints = true) => {
+
+        if(clearPoints == true){
+            allowNewPoints.current = true;
+            pointList.current = [];
+        };
+
+        results.current = null;
+        resultsHighlight.current = [];
+
+        highlightData.current = { id: null, data: null, startIndex: 0 };
+    };
+
+
+    const getCtxMenuItems = (ctxFeature) => {
+
+        if(results.current != null){
+            return [
+                {
+                    text: "Reset selection",
+                    onClick: () => {
+                        resetState();
+                    },
+                },
+                {
+                    text: "Change filters",
+                    onClick: () => {
+                        resetState(false);
+                        onAreaSelected();
+                    },
+                }
+            ];
+        };
+
+        return [];
     };
 
 
@@ -238,6 +407,7 @@ function SmartSelect() {
                     onLandLotSelected={onLandLotSelected}
                     getHighlightData={getHighlightData}
                     overlayPostRender={postRender}
+                    getCtxMenuItems={getCtxMenuItems}
                 />
             </styles.assess.MapWrapper>
 
@@ -247,6 +417,7 @@ function SmartSelect() {
                         gauges={gauges}
                         isFullScreen={isFullScreen}
                         onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
+                        isLoading={isLoading}
                     >
                         {/* Additional content for the expanded view */}
                         <div style={{ padding: '20px 0' }}>

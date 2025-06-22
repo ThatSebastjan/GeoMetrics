@@ -75,18 +75,29 @@ const getLandTypeInfo = async (polygon) => {
 
 
 //Get land lots in a given polygon
-const getLandLotsInArea = async (polygon) => {
+const getLandLotsInArea = async (polygon, strictInclude = false) => {
 
     try {
-        const lots = await LandLotModel.find({
+
+        if(strictInclude == true){
+
+            return await LandLotModel.find({
+                geometry: {
+                    $geoWithin: { //Only select lots with bounds entirely in provided polygon
+                        $geometry: polygon.geometry,
+                    }
+                }
+            });
+        };
+
+
+        return await LandLotModel.find({
             geometry: {
                 $geoIntersects: {
                     $geometry: polygon.geometry,
                 }
             }
         });
-
-        return lots;
     }
     catch(err){
         console.log("Error in getLandLotsInArea:", err);
@@ -349,16 +360,21 @@ module.exports = {
         };
 
 
+        const filter = req.body.filter;
         const bounds = req.body.bounds;
 
         if(bounds.length < 4){
             return res.status(500).json({ message: "Invalid bounds" });
         };
 
-        //TODO: maybe check and limit area... to prevent users from selecting too many land lots at once
-
         const poly = turf.polygon([ bounds ]);
-        const lots = await getLandLotsInArea(poly);
+        const lots = await getLandLotsInArea(poly, true);
+
+        //Arbitrary land lot limit as assessment is kinda slow...
+        //TODO: once assessment is optimized, re-think this limit
+        if(lots.length > 5000){
+            return res.status(500).json({ message: "Area exceeds lot count limit (max. 5000 lots)" });
+        };
 
         console.log(`Smart select - num lots in area: ${lots.length}`);
 
@@ -369,16 +385,45 @@ module.exports = {
         for(let i = 0; i < lots.length; i += chunkSize){
             const chunk = lots.slice(i, i + chunkSize);
             const promises = chunk.map(c => assessArea(turf.polygon(c.geometry.coordinates)));
-            const r = await Promise.all(promises);
+
+            const r = (await Promise.all(promises)).map((el, i) => {
+                return {
+                    result: el,
+                    lot: chunk[i],
+                };
+            });
+
             results.push(...r);
 
             console.log(`Processed ${((i+1) / lots.length * 100).toFixed(2)}%`);
         };
 
 
-        //TODO: filter based on selected condition
+        //Filter based on selected condition
 
-        res.status(500).json({ message: "TODO: Not implemented yet!" });
+        //Top % filter
+        if(filter.mode == 0){
+            const computeScore = (r) => 300 - (r.floodRisk + r.landSlideRisk + r.earthQuakeRisk);
+
+            results.forEach(el => {
+                el.score = computeScore(el.result);
+            });
+
+            results.sort((a, b) => b.score - a.score); //Sort descending
+
+            const numTop = Math.round(Math.max(results.length * (filter.top / 100), 1));
+            return res.json(results.slice(0, numTop));
+        }
+
+        //Custom filter
+        else if(filter.mode == 1){
+            const matchesFilter = (r) => (r.floodRisk < filter.flood) && (r.landSlideRisk < filter.landslide) && (r.earthQuakeRisk < filter.earthquake);
+
+            const filtered = results.filter(r => matchesFilter(r.result));
+            return res.json(filtered);
+        };
+
+        return res.status(500).json({ message: "Invalid filter!" });
     },
 
     

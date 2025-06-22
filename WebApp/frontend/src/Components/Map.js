@@ -70,7 +70,7 @@ const Map = ({
     //Penging init info
     const pendingInitId = useRef(initInfo?.id);
 
-    const { alert, prompt } = useContext(PopupContext);
+    const { alert, saveLot } = useContext(PopupContext);
 
     window.pctx = useContext(PopupContext);
 
@@ -447,7 +447,7 @@ const Map = ({
 
 
                     //Draw clipping mask if context menu land lot is selected
-                    if(ctxMenuFeature.current?.properties.OBJECTID == h.id){
+                    if((ctxMenuFeature.current?.properties.OBJECTID == h.id) || (h.clip == true)){
                         ctx.save();
 
                         ctx.beginPath();
@@ -476,7 +476,8 @@ const Map = ({
                     };
 
 
-                    ctx.strokeStyle = highlightColors[hIdx];
+                    //If a color is provided use it, otherwsie use fallback
+                    ctx.strokeStyle = h.color || highlightColors[hIdx % highlightColors.length];
 
                     const numThick = Math.floor(points2d.length * lengthRatio);
 
@@ -540,24 +541,26 @@ const Map = ({
     //On context menu land lot save
     const onSaveLot = async (feature) => {
         if(context.user == null){
-            return alert("Must be logged in!");
+            return alert("Must be logged in to perform this action!");
         };
 
         
         //Get feature address
         const midPoint = turf.centerOfMass(turf.polygon(feature.geometry.coordinates));
         const addrResults = await coordsToAddress(...midPoint.geometry.coordinates);
-        let address = addrResults.find(f => f.properties.feature_type == "address")?.properties.full_address;
+        const approxAddress = addrResults.find(f => f.properties.feature_type == "address")?.properties.full_address;
 
-        //TODO: Nicer prompt
-        const name = prompt("<TEMPORARY PROMPT>\nEnter save name:");
+        const saveData = await saveLot(approxAddress);
 
-        if(name == null || name.length == 0){
-            return alert("Invalid name!"); //TODO: add placeholder name
+        if(saveData == null){
+            return;
         };
 
-        address = prompt("Enter / edit the address:", address);
+        if((saveData.name.length == 0) || (saveData.address.length == 0)){
+            return alert("Invalid input");
+        };
 
+        
         const req = await fetch(`http://${window.location.hostname}:3001/users/saveLot`, {
             method: "POST",
             headers: { 
@@ -565,9 +568,9 @@ const Map = ({
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                name: name,
+                name: saveData.name,
                 OBJECTID: feature.properties.OBJECTID,
-                address: address,
+                address: saveData.address,
                 coordinates: midPoint.geometry.coordinates,
             }),
         });
@@ -575,10 +578,10 @@ const Map = ({
         const resp = await req.json();
 
         if(req.status != 200){
-            alert(`Error saving: ${resp.message}`);
+            await alert(`Error saving: ${resp.message}`);
         }
         else {
-            alert("SAVED - <TODO: SHOW SUCCESS ALERT>");
+            await alert(`Lot saved with name "${saveData.name}"`);
         };
     };
 

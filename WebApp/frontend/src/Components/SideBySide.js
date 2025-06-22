@@ -4,6 +4,7 @@ import Map from '../Components/Map.js';
 import ResultBar from '../Components/ResultBar';
 import { UserContext } from "../Contexts/UserContext";
 import { getHighlightPoints, defaultGauges } from '../utility.js';
+import { PopupContext } from "../Contexts/CustomPopups";
 
 import * as turf from "@turf/turf";
 
@@ -26,6 +27,8 @@ function SideBySide() {
     const lastComparedFeatures = useRef([]);
 
     const mapRef = useRef(null); //Ref passed into map and assigned there
+
+    const { alert } = useContext(PopupContext);
 
 
     const onAddToComparison = (feature) => {
