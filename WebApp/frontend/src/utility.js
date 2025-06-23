@@ -76,3 +76,29 @@ export const setDPI = (canvas, dpi) => {
     ctx.drawImage(backup, 0, 0);
     ctx.setTransform(scaleFactor, 0, 0, scaleFactor, 0, 0);
 };
+
+
+//Backwards geocoding search
+export const coordsToAddress = async (lon, lat) => {
+    try {
+        const req = await fetch(`https://api.mapbox.com/search/geocode/v6/reverse?longitude=${lon}&latitude=${lat}&country=si&access_token=${process.env.REACT_APP_MAPBOX_TOKEN}`);
+        const resp = await req.json();
+        return resp.features;
+    }
+    catch(err){
+        console.log(`Error in coordsToAddress:`, err);
+    };
+
+    return [];
+};
+
+
+
+//Get approximate address; might return null
+export const getFeatureAddress = async (feature) => {
+    const midPoint = turf.centerOfMass(turf.polygon(feature.geometry.coordinates));
+    const addrResults = await coordsToAddress(...midPoint.geometry.coordinates);
+    const approxAddress = addrResults.find(f => f.properties.feature_type == "address")?.properties.full_address;
+
+    return approxAddress;
+};

@@ -23,7 +23,7 @@ const CustomPopups = ({ children }) => {
 
     const [showSaveLot, setShowSaveLot] = useState(false);
     const saveLotCallback = useRef(null);
-    const [saveLotValues, setSaveLotValues] = useState({ name: null, address: null })
+    const [saveLotValues, setSaveLotValues] = useState({ name: null, address: null, title: null })
 
     const [showSSF, setShowSSF] = useState(false); //SSF = SmartSelect Filter
     const [SSFData, setSSFData] = useState({ 
@@ -95,10 +95,10 @@ const CustomPopups = ({ children }) => {
     };
 
 
-    const saveLotPrompt = (defaultAddress) => {
+    const saveLotPrompt = (defaultAddress, title = "Save Lot") => {
 
         return new Promise(resolve => {
-            setSaveLotValues({ name: "", address: defaultAddress }); //Set default (clear previous)
+            setSaveLotValues({ name: "", address: defaultAddress, title: title }); //Set default (clear previous)
 
             saveLotCallback.current = (result) => {
                 setShowSaveLot(false);
@@ -145,8 +145,10 @@ const CustomPopups = ({ children }) => {
             (showAlert || showPrompt || showConfirm || showSaveLot || showSSF) && 
             <div 
                 onContextMenu={(e) => e.preventDefault()}
+                onWheel={(e) => e.preventDefault()}
+                onScroll={(e) => e.preventDefault()}
                 style={{
-                    position: "absolute",
+                    position: "fixed",
                     zIndex: 100000,
                     width: "100%",
                     height: "100%",
@@ -166,7 +168,7 @@ const CustomPopups = ({ children }) => {
             </ps.PopupHeader>
 
             <ps.PopupContent>
-                <p style={{ marginTop: '12px' }}>{ alertData.current.message }</p>
+                { alertData.current.message.split("\n").map(txt => <p style={{ marginTop: "4px", marginBottom: '4px' }}>{ txt }</p>) }
             </ps.PopupContent>
 
             <ps.PopupActions>
@@ -226,7 +228,7 @@ const CustomPopups = ({ children }) => {
         { showSaveLot &&
         (<ps.PopupElement onContextMenu={(e) => e.preventDefault()}>
             <ps.PopupHeader>
-                <ps.PopupTitle>Save Lot</ps.PopupTitle>
+                <ps.PopupTitle>{saveLotValues.title}</ps.PopupTitle>
             </ps.PopupHeader>
 
             <ps.PopupContent>

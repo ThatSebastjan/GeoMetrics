@@ -1997,7 +1997,7 @@ const contextMenuStyles = {
 
 const popupStyles = {
     PopupElement: styled.div`
-        position: absolute;
+        position: fixed;
         z-index: 1000000;
         left: 50%;
         top: 50%;

@@ -3,7 +3,16 @@ const jwt = require('jsonwebtoken');
 const config = require('../config.js');
 const path = require('path');
 const fs = require('fs');
-const savedLotModel = require("../models/savedLotModel.js");
+const SavedLotModel = require("../models/savedLotModel.js");
+const LandLotModel = require("../models/landLotModel.js");
+const ReportModel = require("../models/reportModel.js");
+const WaterBodyModel = require("../models/waterBodyModel.js");
+const FireStationModel = require("../models/fireStationModel.js");
+const turf = require("@turf/turf");
+
+const { getElevation } = require("../utils/elevation.js");
+const { getFloodDetails, getLandSlideDetails, getEarthQuakeDetails } = require("../utils/riskDescriptions.js");
+
 
 const DEFAULT_PROFILE_IMAGE = {
     filename: 'default-avatar.png',
@@ -333,13 +342,13 @@ exports.saveLot = async (req, res) => {
 
 
     try {
-        const existing = await savedLotModel.exists({ owner: req.userId, OBJECTID: b.OBJECTID });
+        const existing = await SavedLotModel.exists({ owner: req.userId, OBJECTID: b.OBJECTID });
 
         if(existing != null){
             return res.status(500).json({ message: "Save with this lot already exists!" });
         };
 
-        const obj = new savedLotModel({
+        const obj = new SavedLotModel({
             name: b.name,
             address: b.address,
             OBJECTID: b.OBJECTID,
@@ -360,7 +369,7 @@ exports.saveLot = async (req, res) => {
 
 exports.getSavedLots = async (req, res) => {
     try {
-        const savedLots = await savedLotModel.find({ owner: req.userId });
+        const savedLots = await SavedLotModel.find({ owner: req.userId });
         return res.json(savedLots);
     }
     catch(err){
@@ -377,13 +386,197 @@ exports.deleteSavedLot = async (req, res) => {
     };
 
     try {
-        await savedLotModel.deleteOne({ OBJECTID: req.body.OBJECTID, owner: req.userId });
+        await SavedLotModel.deleteOne({ OBJECTID: req.body.OBJECTID, owner: req.userId });
 
-        const list = await savedLotModel.find({ owner: req.userId });
+        const list = await SavedLotModel.find({ owner: req.userId });
         return res.json(list);
     }
     catch(err){
         console.log("Erorr in usersController.deleteSavedLot:", err);
         return res.status(500).json([]);
+    };
+};
+
+
+
+//Save assessment report
+exports.saveReport = async (req, res) => {
+    if(!req.body.name || !req.body.address || !Number.isInteger(req.body.lotId) || !req.body.results){
+        return res.status(500).json({ message: "Missing / invalid parameters!" });
+    };
+
+    const { lotId, results } = req.body;
+
+    if(!results.hasOwnProperty("floodRisk") || !results.hasOwnProperty("landSlideRisk") || !results.hasOwnProperty("earthQuakeRisk")){
+        return res.status(500).json({ message: "Invalid parameters!" });
+    };
+
+
+    try {
+
+        //Does the user already have a saved report for this land lot?
+        const existing = await ReportModel.findOne({ owner: req.userId, lotId: lotId });
+
+        if(existing != null){
+            return res.status(500).json({ message: `Saved report for this land lot already exists under the name "${existing.title}"` });
+        };
+
+
+        const landLot = await LandLotModel.findOne({ id: lotId });
+
+        if(landLot == null){
+            return res.status(500).json({ message: "Invalid lotId!" });
+        };
+
+        const lotCenter = turf.centerOfMass(turf.polygon(landLot.geometry.coordinates));
+
+
+        const reportObj = new ReportModel({
+            lotId: lotId,
+            title: req.body.name,
+            address: req.body.address,
+            coordinates: lotCenter.geometry.coordinates,
+            summary: "TODO: AI generate summary based on assessment results!",
+            results: results,
+            owner: req.userId,
+        });
+
+        await reportObj.save();
+        return res.json({ id: reportObj._id });
+    }
+    catch(err){
+        console.log("Error in saveReport:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    };
+};
+
+
+
+exports.getReports = async (req, res) => {
+    try {
+        const reports = await ReportModel.find({ owner: req.userId });
+        return res.json(reports);
+    }
+    catch(err){
+        console.log("Erorr in usersController.getReports:", err);
+        return res.status(500).json([]);
+    };
+};
+
+
+
+exports.getReportDetails = async (req, res) => {
+
+    if(!req.params.id){
+        return res.status(500).json({ message: "Invalid params" });
+    };
+
+
+    const getNearestFeature = async (point, model, maxDst) => {
+        try {
+            const nearObjs = await model.find({
+                geometry: {
+                    $near: {
+                        $geometry: point.geometry,
+                        $maxDistance: maxDst,
+                        $minDistance: 0,
+                    }
+                }
+            });
+            
+            const objDsts = nearObjs.map(e => {
+                const objCenter = (e.geometry.type == "Point") ? turf.point(e.geometry.coordinates) : turf.centerOfMass(turf.polygon(e.geometry.coordinates));
+                return { distance: turf.distance(point, objCenter), obj: e };
+            }).sort((a, b) => a.distance - b.distance);
+
+            return objDsts[0]; //Nearest object or null
+        }
+        catch(err){
+            console.log("Error in getNearestFeature:", err);
+            return null;
+        };
+    };
+
+
+    try {
+
+        //NOTE: ownership is not checked here as we allow users to share report URLs 
+        const report = await ReportModel.findOne({ _id: req.params.id });
+
+        if(report == null){
+            return res.status(500).json({ message: "Invalid report ID" });
+        };
+
+        const landLot = await LandLotModel.findOne({ id: report.lotId });
+
+        if(landLot == null){
+            return res.status(500).json({ message: "Invalid lotId!" });
+        };
+
+        const lotPoly = turf.polygon(landLot.geometry.coordinates);
+        const lotArea = turf.area(lotPoly); //In square meters
+        const lotCenter = turf.centerOfMass(lotPoly);
+
+        const nearestWB = await getNearestFeature(lotCenter, WaterBodyModel, 5000);
+        const nearestFS = await getNearestFeature(lotCenter, FireStationModel, 100000);
+
+        const lotElevation = getElevation(lotCenter.geometry.coordinates[0], lotCenter.geometry.coordinates[1]);
+
+        return res.json({
+            id: report._id,
+            lotId: landLot.id,
+            title: report.title,
+            address: report.address,
+            date: report.date,
+            scores: {
+                floodRisk: +report.results.floodRisk.toFixed(2),
+                landslideRisk: +report.results.landSlideRisk.toFixed(2),
+                earthquakeRisk: +report.results.earthQuakeRisk.toFixed(2)
+            },
+            coordinates: { lng: report.coordinates[0], lat: report.coordinates[1] },
+            summary: report.summary,
+            
+            details: {
+                flood: getFloodDetails(report.results.floodRisk),
+                landslide: getLandSlideDetails(report.results.landSlideRisk),
+                earthquake: getEarthQuakeDetails(report.results.earthQuakeRisk),
+            },
+            
+            propertyDetails: {
+                size: `${Math.round(lotArea)} m²`,
+                elevation: `${Math.round(lotElevation)}m above sea level`,
+                proximityToWater: (nearestWB != null) ? `${Math.round(nearestWB.distance * 1000)}m to nearest body of water` : "More than 5km to nearest body of water",
+                proximityToFirstResponders: (nearestFS != null) ? `${nearestFS.distance.toFixed(2)}km from nearest Fire station` : "More than 100km away from nearest Fire station"
+            }
+        });
+    }
+    catch(err){
+        console.log("Erorr in usersController.getReportDetails:", err);
+        return res.status(500).json({ message: "Internal server error" });
+    };
+};
+
+
+
+exports.deleteReport = async (req, res) => {
+
+    if(!req.params.id){
+        return res.status(500).json({ message: "Invalid parameters!" });
+    };
+
+    try {
+        const report = await ReportModel.findOne({ _id: req.params.id, owner: req.userId });
+
+        if(report == null){
+            return res.status(500).json({ message: "Invalid report id!" });
+        };
+
+        await ReportModel.deleteOne({ _id: report._id, owner: report.owner });
+
+        return res.json({ message: "OK" });
+    }
+    catch(err){
+        console.log("Erorr in usersController.deleteReport:", err);
+        return res.status(500).json({ message: "Internal server error!" });
     };
 };

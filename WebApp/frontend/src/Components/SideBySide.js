@@ -10,6 +10,10 @@ import * as turf from "@turf/turf";
 
 
 
+/*
+    TODO: move result bar and its contents into a seperate components to remove duplicated code!
+*/
+
 
 function SideBySide() {
     const [leftFullScreen, setLeftFullScreen] = useState(false);
@@ -18,8 +22,18 @@ function SideBySide() {
     const context = useContext(UserContext);
     const user = context.user;
 
+
     const [gaugesLeft, setGaugesLeft] = useState(defaultGauges.map(obj => Object.assign({}, obj)));
     const [gaugesRight, setGaugesRight] = useState(defaultGauges.map(obj => Object.assign({}, obj)));
+
+    const [floodDetailsLeft, setFloodDetailsLeft] = useState(null);
+    const [landSlideDetailsLeft, setLandSlideDetailsLeft] = useState(null);
+    const [earthQuakeDetailsLeft, setEarthQuakeDetailsLeft] = useState(null);
+    
+    const [floodDetailsRight, setFloodDetailsRight] = useState(null);
+    const [landSlideDetailsRight, setLandSlideDetailsRight] = useState(null);
+    const [earthQuakeDetailsRight, setEarthQuakeDetailsRight] = useState(null);
+
     const [isLoading, setIsLoading] = useState(false);
 
     const selectedFeatures = useRef([]);
@@ -102,13 +116,21 @@ function SideBySide() {
 
         gaugeSetters.forEach((setter, idx) => {
             const newGauges = defaultGauges.map(g => Object.assign({}, g));
-            const result = results[idx];
+            const result = results[idx].results;
 
             newGauges[0].value = result.floodRisk;
             newGauges[1].value = result.landSlideRisk;
             newGauges[2].value = result.earthQuakeRisk;
             setter(newGauges);
         });
+
+        setFloodDetailsLeft(results[0].details.flood);
+        setLandSlideDetailsLeft(results[0].details.landSlide);
+        setEarthQuakeDetailsLeft(results[0].details.earthQuake);
+
+        setFloodDetailsRight(results[1].details.flood);
+        setLandSlideDetailsRight(results[1].details.landSlide);
+        setEarthQuakeDetailsRight(results[1].details.earthQuake);
 
         setIsLoading(false);
     };
@@ -260,31 +282,27 @@ function SideBySide() {
                                     <div style={{ flex: '1', minWidth: '250px' }}>
                                         <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Flood Risk Assessment</h4>
                                         <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            High risk area with a 79% probability of flooding in the next 30 years. The property is located
-                                            only 5m above the nearest flood plain with limited drainage infrastructure.
+                                            { floodDetailsLeft || "N/A" }
                                         </p>
                                     </div>
 
                                     <div style={{ flex: '1', minWidth: '250px' }}>
                                         <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Mudslide Risk Assessment</h4>
                                         <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            Low risk with only a 36% probability of soil instability issues. The property is on a 5° slope
-                                            with no historical instances of land movement within 1km of the location.
+                                            { landSlideDetailsLeft || "N/A" }
                                         </p>
                                     </div>
 
                                     <div style={{ flex: '1', minWidth: '250px' }}>
                                         <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Earthquake Risk Assessment</h4>
                                         <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            Moderate risk area with 62% probability of significant seismic activity in the next 50 years.
-                                            Location is within 8km of a fault line with historical 5.0+ magnitude events.
+                                            { earthQuakeDetailsLeft || "N/A" }
                                         </p>
                                     </div>
                                 </div>
 
                                 {user && (
                                     <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                                        <styles.common.Button>Download Full Report</styles.common.Button>
                                         <styles.common.Button $secondary style={{ marginLeft: '10px' }}>
                                             Save Location A
                                         </styles.common.Button>
@@ -312,31 +330,27 @@ function SideBySide() {
                                     <div style={{ flex: '1', minWidth: '250px' }}>
                                         <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Flood Risk Assessment</h4>
                                         <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            Moderate risk area with a 55% probability of flooding in the next 30 years. The property sits
-                                            10m above the nearest flood plain and has sufficient drainage infrastructure.
+                                            { floodDetailsRight || "N/A" }
                                         </p>
                                     </div>
 
                                     <div style={{ flex: '1', minWidth: '250px' }}>
                                         <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Mudslide Risk Assessment</h4>
                                         <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            High risk with a 78% probability of soil instability issues. The property is on a 15° slope
-                                            with multiple historical instances of land movement within 300m of the location.
+                                            { landSlideDetailsRight || "N/A" }
                                         </p>
                                     </div>
 
                                     <div style={{ flex: '1', minWidth: '250px' }}>
                                         <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Earthquake Risk Assessment</h4>
                                         <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            Very high risk area with 92% probability of significant seismic activity in the next 50 years.
-                                            Location is within 3km of a major fault line with historical 7.0+ magnitude events.
+                                            { earthQuakeDetailsRight || "N/A" }
                                         </p>
                                     </div>
                                 </div>
 
                                 {user && (
                                     <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                                        <styles.common.Button>Download Full Report</styles.common.Button>
                                         <styles.common.Button $secondary style={{ marginLeft: '10px' }}>
                                             Save Location B
                                         </styles.common.Button>

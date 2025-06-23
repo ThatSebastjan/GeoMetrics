@@ -5,6 +5,8 @@ const LandUseModel = require("../models/landUseModel.js");
 const KoModel = require("../models/koModel.js");
 const EarthquakeModel = require("../models/earthquakeModel.js");
 
+const { getFloodDetails, getLandSlideDetails, getEarthQuakeDetails } = require("../utils/riskDescriptions.js");
+
 
 //NOTE: reading from /public folder as the same data is used for heat maps
 const floodPointsData = JSON.parse(fs.readFileSync("./public/flood_point_features.geojson", "utf8"));
@@ -349,7 +351,14 @@ module.exports = {
         const poly = turf.polygon(req.body.bounds);
         const result = await assessArea(poly); //NOTE: no params yet!
 
-        return res.json(result);
+        return res.json({
+            results: result,
+            details: {
+                flood: getFloodDetails(result.floodRisk),
+                landSlide: getFloodDetails(result.landSlideRisk),
+                earthQuake: getFloodDetails(result.earthQuakeRisk),
+            }
+        });
     },
 
 
@@ -390,6 +399,11 @@ module.exports = {
                 return {
                     result: el,
                     lot: chunk[i],
+                    details: {
+                        flood: getFloodDetails(el.floodRisk),
+                        landSlide: getFloodDetails(el.landSlideRisk),
+                        earthQuake: getFloodDetails(el.earthQuakeRisk),
+                    }
                 };
             });
 

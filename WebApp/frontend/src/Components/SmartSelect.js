@@ -39,6 +39,11 @@ function SmartSelect() {
 
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [gauges, setGauges] = useState(defaultGauges.map(obj => Object.assign({}, obj)));
+
+    const [floodDetails, setFloodDetails] = useState(null);
+    const [landSlideDetails, setLandSlideDetails] = useState(null);
+    const [earthQuakeDetails, setEarthQuakeDetails] = useState(null);
+
     const [isLoading, setIsLoading] = useState(false);
 
     const highlightData = useRef({ id: null, data: null, startIndex: 0 });
@@ -76,11 +81,16 @@ function SmartSelect() {
                     const resEl = results.current[rIdx].result;
                     const newGauges = gauges.map(g => Object.assign({}, g));
 
+
                     newGauges[0].value = resEl.floodRisk;
                     newGauges[1].value = resEl.landSlideRisk;
                     newGauges[2].value = resEl.earthQuakeRisk;
-
                     setGauges(newGauges);
+
+                    const details = results.current[rIdx].details;
+                    setFloodDetails(details.flood);
+                    setLandSlideDetails(details.landSlide);
+                    setEarthQuakeDetails(details.earthQuake);
                 };
             };
             return;
@@ -91,6 +101,10 @@ function SmartSelect() {
             newGauges[1].value = null;
             newGauges[2].value = null;
             setGauges(newGauges);
+
+            setFloodDetails(null);
+            setLandSlideDetails(null);
+            setEarthQuakeDetails(null);
         };
 
 
@@ -427,31 +441,27 @@ function SmartSelect() {
                                 <div style={{ flex: '1', minWidth: '250px' }}>
                                     <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Flood Risk Assessment</h4>
                                     <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                        Low risk area with a 10% probability of flooding in the next 30 years. The property sits
-                                        15m above the nearest flood plain and has adequate drainage infrastructure.
+                                        { floodDetails || "N/A" }
                                     </p>
                                 </div>
 
                                 <div style={{ flex: '1', minWidth: '250px' }}>
                                     <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Mudslide Risk Assessment</h4>
                                     <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                        Moderate risk with a 65% probability of soil instability issues. The property is on a 12° slope
-                                        with historical instances of land movement within 500m of the location.
+                                        { landSlideDetails || "N/A" }
                                     </p>
                                 </div>
 
                                 <div style={{ flex: '1', minWidth: '250px' }}>
                                     <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Earthquake Risk Assessment</h4>
                                     <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                        High risk area with 92% probability of significant seismic activity in the next 50 years.
-                                        Location is within 5km of a major fault line with historical 6.5+ magnitude events.
+                                        { earthQuakeDetails || "N/A" }
                                     </p>
                                 </div>
                             </div>
 
                             {user && (
                                 <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                                    <styles.common.Button>Download Full Report</styles.common.Button>
                                     <styles.common.Button $secondary style={{ marginLeft: '10px' }}>
                                         Save Location
                                     </styles.common.Button>

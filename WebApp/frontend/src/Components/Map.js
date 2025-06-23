@@ -11,7 +11,7 @@ import ContextMenu from "./ContextMenu";
 
 import { UserContext } from "../Contexts/UserContext";
 import { PopupContext } from "../Contexts/CustomPopups";
-import { setDPI, sleep } from "../utility";
+import { setDPI, sleep, getFeatureAddress } from "../utility";
 
 
 
@@ -71,8 +71,6 @@ const Map = ({
     const pendingInitId = useRef(initInfo?.id);
 
     const { alert, saveLot } = useContext(PopupContext);
-
-    window.pctx = useContext(PopupContext);
 
 
     //Called before the context menu is opened; preprends the default save lot option
@@ -544,11 +542,11 @@ const Map = ({
             return alert("Must be logged in to perform this action!");
         };
 
+
+        const midPoint = turf.centerOfMass(turf.polygon(feature.geometry.coordinates));
         
         //Get feature address
-        const midPoint = turf.centerOfMass(turf.polygon(feature.geometry.coordinates));
-        const addrResults = await coordsToAddress(...midPoint.geometry.coordinates);
-        const approxAddress = addrResults.find(f => f.properties.feature_type == "address")?.properties.full_address;
+        const approxAddress = await getFeatureAddress(feature);
 
         const saveData = await saveLot(approxAddress);
 
@@ -584,23 +582,6 @@ const Map = ({
             await alert(`Lot saved with name "${saveData.name}"`);
         };
     };
-
-
-
-    //Backwards geocoding search
-    const coordsToAddress = async (lon, lat) => {
-        try {
-            const req = await fetch(`https://api.mapbox.com/search/geocode/v6/reverse?longitude=${lon}&latitude=${lat}&country=si&access_token=${process.env.REACT_APP_MAPBOX_TOKEN}`);
-            const resp = await req.json();
-            return resp.features;
-        }
-        catch(err){
-            console.log(`Error in coordsToAddress:`, err);
-        };
-    
-        return [];
-    };
-
 
 
 
