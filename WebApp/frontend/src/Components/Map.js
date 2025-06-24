@@ -397,7 +397,7 @@ const Map = ({
 
             if(initFeature != null){
                 pendingInitId.current = null;
-                onLandLotSelected(initFeature);
+                onLandLotSelected(initFeature, false, true);
             };
         };
     };
@@ -420,7 +420,8 @@ const Map = ({
         let currentAlpha = 0; //Clip mask alpha for fading
         let fadeStart = null;
 
-        const renderOverlayAnimation = (timestamp) => {
+        const renderOverlayAnimation = () => {
+            const timestamp = performance.now(); //Don't rely on timestamp argument from requestAnimationFrame as this also gets called from map render hook without it
             const ctx = overlayContext.current;
 
             if(overlayCanvas.current === null){
@@ -528,6 +529,26 @@ const Map = ({
 
 
         overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
+
+
+        //Hook map render method to stay in sync on map movement
+        const oldRender = map.current._render;
+
+        const renderHook = function(){ //This is declared as a "legacy" js function as we need "arguments" object
+
+            //Cancel any pending frames
+            cancelAnimationFrame(overlayAnimFrameId.current);
+
+            const result = oldRender.apply(this, arguments);
+            renderOverlayAnimation();
+
+            return result;
+        };
+
+        if(map.current._render != renderHook){
+            map.current._render = renderHook;
+        };
+
         
         return () => {
             cancelAnimationFrame(overlayAnimFrameId.current);

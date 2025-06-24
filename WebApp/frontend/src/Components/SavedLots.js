@@ -39,12 +39,12 @@ function SavedLots() {
 
     const handleViewOnMap = (lot) => {
         // Navigate to assess page with the lot coordinates
-        navigate(`/assess/basic?lat=${lot.coordinates.lat}&lng=${lot.coordinates.lng}&id=${lot.id}`);
+        navigate(`/assess/basic?lng=${lot.coordinates.lng}&lat=${lot.coordinates.lat}&id=${lot.id}`);
     };
 
     const handleCompare = (lot) => {
         // Add to compare queue
-        navigate(`/side-by-side?lot=${lot.id}`);
+        navigate(`/side-by-side?lng=${lot.coordinates.lng}&lat=${lot.coordinates.lat}&id=${lot.id}`);
     };
 
     const handleUnsave = async (lotId) => {

@@ -355,8 +355,8 @@ module.exports = {
             results: result,
             details: {
                 flood: getFloodDetails(result.floodRisk),
-                landSlide: getFloodDetails(result.landSlideRisk),
-                earthQuake: getFloodDetails(result.earthQuakeRisk),
+                landSlide: getLandSlideDetails(result.landSlideRisk),
+                earthQuake: getEarthQuakeDetails(result.earthQuakeRisk),
             }
         });
     },
@@ -401,8 +401,8 @@ module.exports = {
                     lot: chunk[i],
                     details: {
                         flood: getFloodDetails(el.floodRisk),
-                        landSlide: getFloodDetails(el.landSlideRisk),
-                        earthQuake: getFloodDetails(el.earthQuakeRisk),
+                        landSlide: getLandSlideDetails(el.landSlideRisk),
+                        earthQuake: getEarthQuakeDetails(el.earthQuakeRisk),
                     }
                 };
             });

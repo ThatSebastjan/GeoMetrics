@@ -168,7 +168,7 @@ const CustomPopups = ({ children }) => {
             </ps.PopupHeader>
 
             <ps.PopupContent>
-                { alertData.current.message.split("\n").map(txt => <p style={{ marginTop: "4px", marginBottom: '4px' }}>{ txt }</p>) }
+                { alertData.current.message.split("\n").map((txt, idx) => <p key={idx} style={{ marginTop: "4px", marginBottom: '4px' }}>{ txt }</p>) }
             </ps.PopupContent>
 
             <ps.PopupActions>

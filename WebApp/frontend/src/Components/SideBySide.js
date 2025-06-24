@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useRef } from 'react';
+import { useParam } from 'react-router-dom';
 import styles from '../styles';
 import Map from '../Components/Map.js';
 import ResultBar from '../Components/ResultBar';
@@ -45,10 +46,29 @@ function SideBySide() {
     const { alert } = useContext(PopupContext);
 
 
+    //Init info is used for adding a lot to comparison from url info
+    const searchParams = new URLSearchParams(window.location.search);
+    let initInfo = null; //Declared this way to reset on state changes
+    const initDone = useRef(false);
+
+    if(searchParams.has("lng") && searchParams.has("lat") && searchParams.has("id") && (initDone.current == false)){
+        initInfo = {
+            lng: parseFloat(searchParams.get("lng")),
+            lat: parseFloat(searchParams.get("lat")),
+            zoom: 17,
+            id: parseInt(searchParams.get("id")),
+        };
+    };
+
+
+
+
     const onAddToComparison = (feature) => {
         if(selectedFeatures.current.find(f => f.properties.OBJECTID == feature.properties.OBJECTID) != null){
             return alert("Error, already added!");
         };
+
+        console.log("Add to comp:", feature, selectedFeatures.current);
 
         selectedFeatures.current.push(feature);
         
@@ -136,13 +156,34 @@ function SideBySide() {
     };
 
 
-    const onLandLotSelected = (feature) => {
+    const onLandLotSelected = (feature, isCtxMenuSelect = false, isInitFeature = false) => {
 
-        //Highlight a single feature as there is none selected for comparison yet
-        if(selectedFeatures.current.length == 0){
+        //onAddToComparison needs to be executed after highlight select so it is wrapped into an anonymous function to prevent returning from parent
+        (() => {
 
-            if((highlightData.length == 1) && (highlightData.current[0].id == feature.properties.OBJECTID)){
-                return; //Already selected feature
+            //Highlight a single feature as there is none selected for comparison yet
+            if(selectedFeatures.current.length == 0){
+
+                if((highlightData.length == 1) && (highlightData.current[0].id == feature.properties.OBJECTID)){
+                    return; //Already selected feature
+                };
+
+                const data = getHighlightPoints(feature);
+
+                const obj = {
+                    id: feature.properties.OBJECTID,
+                    data: data.features.map(f => f.geometry.coordinates[0]).reverse(),
+                    startIndex: 0,
+                };
+
+                highlightData.current = [obj];
+                return;
+            };
+
+
+            //There is already a single selected feature present
+            if(highlightData.current.findIndex(d => d.id == feature.properties.OBJECTID) != -1){
+                return; //Already selected
             };
 
             const data = getHighlightPoints(feature);
@@ -153,25 +194,16 @@ function SideBySide() {
                 startIndex: 0,
             };
 
-            highlightData.current = [obj];
-            return;
+            highlightData.current[1] = obj;
+
+        })();
+
+
+        //Feature selected form init params
+        if(isInitFeature == true){
+            initDone.current = true; //To prevent initInfo from messing things up on state changes afterwards
+            onAddToComparison(feature);
         };
-
-
-        //There is already a single selected feature present
-        if(highlightData.current.findIndex(d => d.id == feature.properties.OBJECTID) != -1){
-            return; //Already selected
-        };
-
-        const data = getHighlightPoints(feature);
-
-        const obj = {
-            id: feature.properties.OBJECTID,
-            data: data.features.map(f => f.geometry.coordinates[0]).reverse(),
-            startIndex: 0,
-        };
-
-        highlightData.current[1] = obj;
     };
 
 
@@ -261,6 +293,7 @@ function SideBySide() {
                     onLandLotSelected={onLandLotSelected}
                     getHighlightData={getHighlightData}
                     outMapRef={mapRef}
+                    initInfo={initInfo}
                 />
             </styles.assess.MapWrapper>
 

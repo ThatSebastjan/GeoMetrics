@@ -329,7 +329,8 @@ function SmartSelect() {
             handleResults(result);
         }
         else {
-            return alert(`An error occurred: ${result.message}`);
+            alert(`An error occurred: ${result.message}`);
+            resetState(true);
         };
     };
 
