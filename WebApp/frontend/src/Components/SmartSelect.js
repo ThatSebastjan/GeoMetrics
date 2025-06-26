@@ -1,9 +1,10 @@
 import { useState, useEffect, useContext, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from '../styles';
 import Map from '../Components/Map.js';
 import ResultBar from '../Components/ResultBar';
 import { UserContext } from "../Contexts/UserContext";
-import { defaultGauges, dist2D, getHighlightPoints } from '../utility.js';
+import { defaultGauges, dist2D, getHighlightPoints, getFeatureAddress } from '../utility.js';
 import { PopupContext } from "../Contexts/CustomPopups";
 
 import * as turf from "@turf/turf";
@@ -35,7 +36,8 @@ const colorData = [
 
 
 function SmartSelect() {
-    const user = useContext(UserContext).user;
+    const context = useContext(UserContext);
+    const navigate = useNavigate();
 
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [gauges, setGauges] = useState(defaultGauges.map(obj => Object.assign({}, obj)));
@@ -59,8 +61,9 @@ function SmartSelect() {
 
     const results = useRef(null);
     const resultsHighlight = useRef([]);
+    const activeLotData = useRef({ feature: null, results: null }); //Used for saving report
 
-    const { alert, confirm, SSF } = useContext(PopupContext);
+    const { alert, confirm, SSF, saveLot } = useContext(PopupContext);
 
 
 
@@ -81,6 +84,8 @@ function SmartSelect() {
                     const resEl = results.current[rIdx].result;
                     const newGauges = gauges.map(g => Object.assign({}, g));
 
+                    activeLotData.current.feature = feature;
+                    activeLotData.current.results = resEl;
 
                     newGauges[0].value = resEl.floodRisk;
                     newGauges[1].value = resEl.landSlideRisk;
@@ -96,6 +101,9 @@ function SmartSelect() {
             return;
         }
         else {
+            activeLotData.current.feature = null;
+            activeLotData.current.results = null;
+
             const newGauges = gauges.map(g => Object.assign({}, g));
             newGauges[0].value = null;
             newGauges[1].value = null;
@@ -415,6 +423,56 @@ function SmartSelect() {
     };
 
 
+
+    //Save current assessment report
+    const saveReport = async () => {
+
+        if(activeLotData.current.feature == null){
+            throw new Error("activeLotData null!");
+        };
+
+        const feature = activeLotData.current.feature;
+
+        const approxAddress = await getFeatureAddress(feature);
+        const info = await saveLot(approxAddress, "Save Report"); //Re-purpose save lot dialog as same info is needed (address, save name)
+
+        if(info == null){
+            return; //Canceled
+        };
+
+        if((info.address.length == 0) || (info.name.length == 0)){
+            return alert("Invalid input!");
+        };
+
+
+        const req = await fetch(`http://${window.location.hostname}:3001/users/saveReport`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": context.token,
+            },
+            body: JSON.stringify({
+                name: info.name,
+                address: info.address,
+                lotId: feature.properties.OBJECTID,
+                results: activeLotData.current.results,
+            }),
+        });
+
+        const res = await req.json();
+
+        if(req.status == 200){
+            if(await confirm(`Report "${info.name}" saved successfully\n Do you want to view it?`)){
+                navigate(`/result-details/${res.id}`);
+            };
+        }
+        else {
+            alert(`Error saving report: ${res.message}`);
+        };
+    };
+
+
+
     return (
         <styles.assess.Container style={{ border: "none" }}>
             <styles.assess.MapWrapper $isFullScreen={isFullScreen}>
@@ -461,11 +519,9 @@ function SmartSelect() {
                                 </div>
                             </div>
 
-                            {user && (
+                            {context.user && (
                                 <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                                    <styles.common.Button $secondary style={{ marginLeft: '10px' }}>
-                                        Save Location
-                                    </styles.common.Button>
+                                    { floodDetails && <styles.common.Button onClick={saveReport}>Save Report</styles.common.Button> }
                                 </div>
                             )}
                         </div>

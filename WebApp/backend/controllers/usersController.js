@@ -399,6 +399,12 @@ exports.deleteSavedLot = async (req, res) => {
 
 
 
+//TODO: implement this!
+const generateSummary = async (results, lotCenter) => {
+    return "TODO: AI generate summary based on assessment results!";
+};
+
+
 //Save assessment report
 exports.saveReport = async (req, res) => {
     if(!req.body.name || !req.body.address || !Number.isInteger(req.body.lotId) || !req.body.results){
@@ -436,7 +442,7 @@ exports.saveReport = async (req, res) => {
             title: req.body.name,
             address: req.body.address,
             coordinates: lotCenter.geometry.coordinates,
-            summary: "TODO: AI generate summary based on assessment results!",
+            summary: await generateSummary(results, lotCenter),
             results: results,
             owner: req.userId,
         });

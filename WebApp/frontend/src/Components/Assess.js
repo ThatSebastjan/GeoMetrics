@@ -15,7 +15,6 @@ import { getHighlightPoints, sleep, defaultGauges, getFeatureAddress } from '../
 function Assess() {
     const context = useContext(UserContext);
     const [isFullScreen, setIsFullScreen] = useState(false);
-    const [isAdvancedFullScreen, setIsAdvancedFullScreen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(null);
     const [isLoadingAssessment, setIsLoadingAssessment] = useState(false);
     const location = useLocation();
@@ -201,7 +200,7 @@ function Assess() {
                     onSearch={handleSearch}
                 />
             </styles.search.SearchBarWrapper>
-            <styles.assess.MapWrapper $isFullScreen={param === "advanced" ? isAdvancedFullScreen : isFullScreen}>
+            <styles.assess.MapWrapper $isFullScreen={isFullScreen}>
                 <Map
                     searchTerm={searchTerm}
                     assessLandLot={assessLandLot}

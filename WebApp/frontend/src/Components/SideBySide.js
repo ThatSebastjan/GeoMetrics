@@ -1,10 +1,10 @@
-import { useState, useEffect, useContext, useRef } from 'react';
-import { useParam } from 'react-router-dom';
+import { useState, useContext, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from '../styles';
 import Map from '../Components/Map.js';
 import ResultBar from '../Components/ResultBar';
 import { UserContext } from "../Contexts/UserContext";
-import { getHighlightPoints, defaultGauges } from '../utility.js';
+import { getHighlightPoints, defaultGauges, getFeatureAddress } from '../utility.js';
 import { PopupContext } from "../Contexts/CustomPopups";
 
 import * as turf from "@turf/turf";
@@ -22,7 +22,7 @@ function SideBySide() {
 
     const context = useContext(UserContext);
     const user = context.user;
-
+    const navigate = useNavigate();
 
     const [gaugesLeft, setGaugesLeft] = useState(defaultGauges.map(obj => Object.assign({}, obj)));
     const [gaugesRight, setGaugesRight] = useState(defaultGauges.map(obj => Object.assign({}, obj)));
@@ -40,10 +40,11 @@ function SideBySide() {
     const selectedFeatures = useRef([]);
     const highlightData = useRef([]);
     const lastComparedFeatures = useRef([]);
+    const lastAssessmentResults = useRef(null);
 
     const mapRef = useRef(null); //Ref passed into map and assigned there
 
-    const { alert } = useContext(PopupContext);
+    const { alert, confirm, saveLot } = useContext(PopupContext);
 
 
     //Init info is used for adding a lot to comparison from url info
@@ -131,6 +132,7 @@ function SideBySide() {
             };
         };
 
+        lastAssessmentResults.current = results;
 
         const gaugeSetters = [setGaugesLeft, setGaugesRight];
 
@@ -285,6 +287,62 @@ function SideBySide() {
 
 
 
+    //Save selected assessment report
+    const saveReport = async (side) => {
+        
+        if(lastAssessmentResults.current == null){
+            throw new Error("lastAssessmentResults null!");
+        };
+
+        if(side != "left" && side != "right"){
+            throw new Error(`Invalid side parameter for SideBySide.saveReport(...): "${side}"`);
+        };
+
+        const sideIdx = (side == "left") ? 0 : 1;
+        const assessmentData = lastAssessmentResults.current[sideIdx];
+        const feature = lastComparedFeatures.current[sideIdx];
+
+
+        const approxAddress = await getFeatureAddress(feature);
+        const info = await saveLot(approxAddress, "Save Report"); //Re-purpose save lot dialog as same info is needed (address, save name)
+
+        if(info == null){
+            return; //Canceled
+        };
+
+        if((info.address.length == 0) || (info.name.length == 0)){
+            return alert("Invalid input!");
+        };
+
+
+        const req = await fetch(`http://${window.location.hostname}:3001/users/saveReport`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": context.token,
+            },
+            body: JSON.stringify({
+                name: info.name,
+                address: info.address,
+                lotId: feature.properties.OBJECTID,
+                results: assessmentData.results,
+            }),
+        });
+
+        const res = await req.json();
+
+        if(req.status == 200){
+            if(await confirm(`Report "${info.name}" saved successfully\n Do you want to view it?`)){
+                navigate(`/result-details/${res.id}`);
+            };
+        }
+        else {
+            alert(`Error saving report: ${res.message}`);
+        };
+    };
+
+
+
     return (
         <styles.assess.Container style={{ border: "none" }}>
             <styles.assess.MapWrapper $isFullScreen={leftFullScreen && rightFullScreen}>
@@ -336,9 +394,7 @@ function SideBySide() {
 
                                 {user && (
                                     <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                                        <styles.common.Button $secondary style={{ marginLeft: '10px' }}>
-                                            Save Location A
-                                        </styles.common.Button>
+                                        <styles.common.Button onClick={() => saveReport("left")}>Save Report</styles.common.Button>
                                     </div>
                                 )}
                             </div>
@@ -384,9 +440,7 @@ function SideBySide() {
 
                                 {user && (
                                     <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                                        <styles.common.Button $secondary style={{ marginLeft: '10px' }}>
-                                            Save Location B
-                                        </styles.common.Button>
+                                        <styles.common.Button onClick={() => saveReport("right")}>Save Report</styles.common.Button>
                                     </div>
                                 )}
                             </div>
