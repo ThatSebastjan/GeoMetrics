@@ -475,8 +475,29 @@ const Map = ({
                     };
 
 
+
                     //If a color is provided use it, otherwsie use fallback
                     ctx.strokeStyle = h.color || highlightColors[hIdx % highlightColors.length];
+
+                    //Draw outline
+                    ctx.beginPath();
+                    ctx.lineWidth = 2;
+
+                    for(let i = 0; i < points2d.length; i++){
+                        const point = points2d[i];
+
+                        if(i == 0){
+                            ctx.moveTo(point.x, point.y);
+                        }
+                        else {
+                            ctx.lineTo(point.x, point.y);
+                        };
+                    };
+
+                    ctx.lineTo(points2d[0].x, points2d[0].y);
+                    ctx.stroke();
+
+                    
 
                     const numThick = Math.floor(points2d.length * lengthRatio);
 
