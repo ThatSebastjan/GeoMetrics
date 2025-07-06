@@ -13,11 +13,42 @@ const turf = require("@turf/turf");
 const { getElevation } = require("../utils/elevation.js");
 const { getFloodDetails, getLandSlideDetails, getEarthQuakeDetails } = require("../utils/riskDescriptions.js");
 
+const { generateSummary } = require("../utils/llmApi.js");
+
 
 const DEFAULT_PROFILE_IMAGE = {
     filename: 'default-avatar.png',
     path: '/default-avatar.png',
 };
+
+
+
+const getNearestFeature = async (point, model, maxDst) => {
+    try {
+        const nearObjs = await model.find({
+            geometry: {
+                $near: {
+                    $geometry: point.geometry,
+                    $maxDistance: maxDst,
+                    $minDistance: 0,
+                }
+            }
+        });
+        
+        const objDsts = nearObjs.map(e => {
+            const objCenter = (e.geometry.type == "Point") ? turf.point(e.geometry.coordinates) : turf.centerOfMass(turf.polygon(e.geometry.coordinates));
+            return { distance: turf.distance(point, objCenter), obj: e };
+        }).sort((a, b) => a.distance - b.distance);
+
+        return objDsts[0]; //Nearest object or null
+    }
+    catch(err){
+        console.log("Error in getNearestFeature:", err);
+        return null;
+    };
+};
+
+
 
 /**
  * User login function
@@ -399,12 +430,6 @@ exports.deleteSavedLot = async (req, res) => {
 
 
 
-//TODO: implement this!
-const generateSummary = async (results, lotCenter) => {
-    return "TODO: AI generate summary based on assessment results!";
-};
-
-
 //Save assessment report
 exports.saveReport = async (req, res) => {
     if(!req.body.name || !req.body.address || !Number.isInteger(req.body.lotId) || !req.body.results){
@@ -436,13 +461,17 @@ exports.saveReport = async (req, res) => {
 
         const lotCenter = turf.centerOfMass(turf.polygon(landLot.geometry.coordinates));
 
+        const nearestWB = await getNearestFeature(lotCenter, WaterBodyModel, 5000);
+        const nearestFS = await getNearestFeature(lotCenter, FireStationModel, 100000);
+        const lotElevation = getElevation(lotCenter.geometry.coordinates[0], lotCenter.geometry.coordinates[1]);
+
 
         const reportObj = new ReportModel({
             lotId: lotId,
             title: req.body.name,
             address: req.body.address,
             coordinates: lotCenter.geometry.coordinates,
-            summary: await generateSummary(results, lotCenter),
+            summary: await generateSummary(results, lotCenter, nearestWB, nearestFS, Math.round(lotElevation)),
             results: results,
             owner: req.userId,
         });
@@ -476,33 +505,6 @@ exports.getReportDetails = async (req, res) => {
     if(!req.params.id){
         return res.status(500).json({ message: "Invalid params" });
     };
-
-
-    const getNearestFeature = async (point, model, maxDst) => {
-        try {
-            const nearObjs = await model.find({
-                geometry: {
-                    $near: {
-                        $geometry: point.geometry,
-                        $maxDistance: maxDst,
-                        $minDistance: 0,
-                    }
-                }
-            });
-            
-            const objDsts = nearObjs.map(e => {
-                const objCenter = (e.geometry.type == "Point") ? turf.point(e.geometry.coordinates) : turf.centerOfMass(turf.polygon(e.geometry.coordinates));
-                return { distance: turf.distance(point, objCenter), obj: e };
-            }).sort((a, b) => a.distance - b.distance);
-
-            return objDsts[0]; //Nearest object or null
-        }
-        catch(err){
-            console.log("Error in getNearestFeature:", err);
-            return null;
-        };
-    };
-
 
     try {
 
