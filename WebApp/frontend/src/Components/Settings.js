@@ -115,7 +115,7 @@ function Settings() {
                                         onClick={() => handleLogout()}
                                         style={{ width: '100%' }}
                                     >
-                                        Sign Out
+                                        Log Out
                                     </styles.settings.LogoutButton>
                                 </div>
                             </>
