@@ -28,3 +28,5 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: cd ./WebApp/backend/ && npm i && npm test
+      env:
+        ACCESS_TOKEN: PlaceholderValue #Placeholder value to prevent error on startup
