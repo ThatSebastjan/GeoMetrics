@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState, useContext } from "react";
 import mapboxgl from "mapbox-gl";
 import * as turf from "@turf/turf";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -7,14 +7,33 @@ import styles from "../styles";
 import addFloodHeatmap from "../RiskLens/floods";
 import addLandslideHeatmap from "../RiskLens/landslides";
 import addEarthquakeHeatmap from "../RiskLens/earthquakes";
+import ContextMenu from "./ContextMenu";
+
+import { UserContext } from "../Contexts/UserContext";
+import { PopupContext } from "../Contexts/CustomPopups";
+import { setDPI, sleep, getFeatureAddress } from "../utility";
 
 
 
 //searchTerm = GeoJSON feature
-//risk = risk lens risk type
-//onAssessment = assessment callback function
-//onAssessmentBegin = assessment start callback function (shows loading icons)
-const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
+//risk = optional; risk lens risk type
+//assessLandLot -> optional; assessment callback
+//getCtxMenuItems -> callback that returns the list of items to display when a context menu is opened (gets the selected feature as parameter)
+//initInfo -> optional; {lng, lat, zoom}
+//outMapRef -> optional ref; if specified, assigned to map object for external acccess
+//overlayPostRender -> optional; callback that gets called after overlay items are rendered
+const Map = ({
+        searchTerm,
+        risk,
+        assessLandLot,
+        getCtxMenuItems,
+        onLandLotSelected,
+        getHighlightData,
+        initInfo,
+        outMapRef,
+        overlayPostRender,
+    }) =>
+    {
     const mapContainer = useRef(null);
     const map = useRef(null);
     const previousBounds = useRef({ data: [0,0,0,0] }); //Previous requested bbox for optimization
@@ -35,6 +54,39 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
     //Selected land lot
     const selectedLot = useRef({ value: null });
 
+    const overlayCanvas = useRef(null);
+    const overlayContext = useRef(null);
+    const overlayAnimFrameId = useRef(-1);
+
+    //Context menu
+    const [showCtxMenu, setShowCtxMenu] = useState(false);
+    const ctxMenuPos = useRef({ x: 0, y: 0 });
+    const ctxMenuFeature = useRef(null);
+    const [ctxMenuItems, setCtxMenuItems] = useState([]);
+
+    //User info
+    const context = useContext(UserContext);
+
+    //Penging init info
+    const pendingInitId = useRef(initInfo?.id);
+
+    const { alert, saveLot } = useContext(PopupContext);
+
+
+    //Called before the context menu is opened; preprends the default save lot option
+    const __getCtxMenuItemsInternal = () => {
+        let itms = [{
+            text: "Save Lot", //Default option
+            onClick: onSaveLot
+        }];
+
+        if(getCtxMenuItems != null){
+            itms = itms.concat(getCtxMenuItems(ctxMenuFeature.current));
+        };
+
+        return itms;
+    };
+
 
 
     useEffect(() => {
@@ -46,6 +98,15 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
             center: [14.9955, 46.1512], // Slovenia center coordinates
             zoom: 8
         });
+
+        //DEBUG ONLY
+        window.map = map.current;
+        window.turf = turf;
+
+
+        if(outMapRef != null){
+            outMapRef.current = map.current;
+        };
 
 
         //Add events
@@ -113,6 +174,7 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
 
         //Hover interactions
         let hoveredPolygonId = null;
+        let hoveredPropId = null;
 
         map.current.on("mousemove", "land_data_fill", (e) => {
             if (e.features.length > 0) {
@@ -121,6 +183,7 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
                 };
 
                 hoveredPolygonId = e.features[0].id;
+                hoveredPropId = e.features[0].properties.OBJECTID;
                 map.current.setFeatureState({ source: "land_data", id: hoveredPolygonId }, { hover: true });
             };
         });
@@ -132,19 +195,83 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
             };
 
             hoveredPolygonId = null;
+            hoveredPropId = null;
         });
 
 
 
         map.current.on("click", "land_data_fill", (e) => {
-            selectedLot.current = e.features[0];
-            assessLandLot(e.features[0]);
+            const f = e.features[0];
+            const feature = landData.current.features.find(e => e.properties.OBJECTID == f.properties.OBJECTID);
+
+            window.selectedLot = feature; //DEBUG ONLY!
+            selectedLot.current = feature;
+
+            if(onLandLotSelected != null){
+                onLandLotSelected(feature);
+            };
+
+            if(assessLandLot != null){
+                assessLandLot(feature);
+            };
         });
+
+
+
+
+        const mapCanvas = map.current.getCanvas();
+
+        const onCtxMenu = (ev) => {
+            ev.preventDefault();
+
+            if(hoveredPropId == null){
+                return;
+            };
+
+            ctxMenuFeature.current = landData.current.features.find(f => f.properties.OBJECTID == hoveredPropId);
+
+            const bounds = mapCanvas.getBoundingClientRect()
+            ctxMenuPos.current.x = ev.clientX - bounds.x;
+            ctxMenuPos.current.y = ev.clientY - bounds.y;
+
+            setCtxMenuItems(__getCtxMenuItemsInternal());
+            setShowCtxMenu(true);
+
+            if(onLandLotSelected != null){
+                onLandLotSelected(ctxMenuFeature.current, true);
+            };
+        };
+        
+        
+        if(risk == null){
+
+            //Context menu listeners
+            mapCanvas.addEventListener("contextmenu", onCtxMenu);
+
+            //Init overlay
+            overlayContext.current = overlayCanvas.current.getContext("2d");
+
+            const resizeListener = () => {
+                overlayCanvas.current.width = mapCanvas.width;
+                overlayCanvas.current.height = mapCanvas.height;
+                setDPI(overlayCanvas.current, window.devicePixelRatio * 96);
+            };
+
+            resizeListener();
+            map.current.on("resize", resizeListener);
+        };
+
+        window.overlayCanvas = overlayCanvas.current; //DEBUG ONLY
+        window.ctx = overlayContext.current; //DEBUG ONLY
 
 
         
         //Clean-up handler
         return () => {
+            if(risk != null){
+                mapCanvas.removeEventListener("contextmenu", onCtxMenu);
+            };
+
             map.current.remove();
         };
     }, []);
@@ -168,6 +295,24 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
         };
         
     }, [searchTerm]);
+
+
+    //Set initial state from params if provided
+    useEffect(() => {
+        let timeoutId = -1;
+
+        if(initInfo != null){
+            timeoutId = setTimeout(async () => {
+                map.current.panTo([initInfo.lng, initInfo.lat], { duration: 800 });
+                await sleep(1000);
+                map.current.zoomTo(initInfo.zoom);
+            }, 2000);
+        };
+
+        return () => {
+            clearTimeout(timeoutId);
+        };
+    }, [initInfo]);
 
 
 
@@ -195,6 +340,10 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
 
         //Diagonal distance max 10km
         if(distance > 10){
+            return;
+        };
+
+        if(map.current.getZoom() < 13.5){
             return;
         };
 
@@ -240,36 +389,241 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
         });
 
         map.current.getSource("label_data").setData(labelData.current);
+
+
+        //Set initial highlighted land lot if initInfo is specified
+        if(pendingInitId.current != null){
+            const initFeature = landData.current.features.find(f => f.properties.OBJECTID == pendingInitId.current);
+
+            if(initFeature != null){
+                pendingInitId.current = null;
+                onLandLotSelected(initFeature, false, true);
+            };
+        };
     };
 
 
+    //Land lot animation thing
+    useEffect(() => {
 
-    const assessLandLot = async (feature) => {
-        if(onAssessment == null){
-            return; //Don't assess on other pages with no onAssessment callback
+        if(risk != null){
+            return; //Only execute on main assess page
         };
 
-        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        const maxThickness = 5;
+        const lengthRatio = 0.45;
+        const loopDuration = 3000; //In ms
+        const highlightColors = ["rgb(230, 115, 255)", "rgb(123, 234, 211)"];
 
-        onAssessmentBegin();
-        await sleep(500); //Simulate some delay so the loading bar doesn't disappear instantly
+        const clipMaskAlpha = 0.5;
+        const fadeDuration = 300; //In ms
+        let currentAlpha = 0; //Clip mask alpha for fading
+        let fadeStart = null;
 
-        const req = await fetch(`http://${window.location.hostname}:3001/map/assess`, {
+        const renderOverlayAnimation = () => {
+            const timestamp = performance.now(); //Don't rely on timestamp argument from requestAnimationFrame as this also gets called from map render hook without it
+            const ctx = overlayContext.current;
+
+            if(overlayCanvas.current === null){
+                return;
+            };
+
+
+            do {
+                ctx.clearRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+
+                if((map.current.getZoom() < 13.5)){
+                    break;
+                };
+
+
+                let renderedClippingMask = false;
+                const highlightData = (getHighlightData != null) ? getHighlightData() : [];
+
+                highlightData.forEach((h, hIdx) => {
+                    const pList = h.data;
+                    const points2d = pList.map(p => map.current.project(p));
+
+
+                    //Draw clipping mask if context menu land lot is selected
+                    if((ctxMenuFeature.current?.properties.OBJECTID == h.id) || (h.clip == true)){
+                        ctx.save();
+
+                        ctx.beginPath();
+                        ctx.rect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+                        
+                        ctx.moveTo(points2d[0].x, points2d[0].y);
+
+                        for(let i = points2d.length-1; i != 0; i--){
+                            ctx.lineTo(points2d[i].x, points2d[i].y);
+                        };
+
+                        ctx.lineTo(points2d[0].x, points2d[0].y);
+                        ctx.clip();
+
+                        ctx.fillStyle = `rgba(0, 0, 0, ${currentAlpha})`;
+                        ctx.fillRect(0, 0, overlayCanvas.current.width, overlayCanvas.current.height);
+
+                        ctx.restore();
+
+                        if(fadeStart === null){
+                            fadeStart = timestamp;
+                        };
+
+                        currentAlpha = Math.min((timestamp - fadeStart) / fadeDuration, 1) * clipMaskAlpha;
+                        renderedClippingMask = true; //Don't decrease alpha
+                    };
+
+
+
+                    //If a color is provided use it, otherwsie use fallback
+                    ctx.strokeStyle = h.color || highlightColors[hIdx % highlightColors.length];
+
+                    //Draw outline
+                    ctx.beginPath();
+                    ctx.lineWidth = 2;
+
+                    for(let i = 0; i < points2d.length; i++){
+                        const point = points2d[i];
+
+                        if(i == 0){
+                            ctx.moveTo(point.x, point.y);
+                        }
+                        else {
+                            ctx.lineTo(point.x, point.y);
+                        };
+                    };
+
+                    ctx.lineTo(points2d[0].x, points2d[0].y);
+                    ctx.stroke();
+
+                    
+
+                    const numThick = Math.floor(points2d.length * lengthRatio);
+
+                    for(let i = 0; i < numThick; i++){
+                        const pIdx = (h.startIndex + i) % points2d.length;
+                        const thickness = Math.max((i / numThick) * maxThickness, 0.001);
+
+                        const p = points2d[pIdx];
+                        const n = points2d[(pIdx + 1) % points2d.length];
+
+                        ctx.lineWidth = thickness;
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(n.x, n.y);
+                        ctx.stroke();
+                    };
+
+
+                    //Cycle with constant time
+                    if(!h.prevTime){
+                        h.prevTime = timestamp;
+                    }
+
+                    const tDelta = timestamp - h.prevTime;
+                    const numChunks = Math.round(pList.length * (tDelta / loopDuration));
+
+                    if(numChunks > 0){
+                        h.startIndex = (h.startIndex + numChunks) % points2d.length;
+                        h.prevTime = timestamp;
+                    };
+
+                });
+
+
+                if(renderedClippingMask == false){
+                    currentAlpha = 0;
+                    fadeStart = null;
+                };
+
+            } while(false);
+
+
+            //Optional post-render callback
+            if(overlayPostRender != null){
+                overlayPostRender(map.current, ctx);
+            };
+
+            overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
+        };
+
+
+        overlayAnimFrameId.current = requestAnimationFrame(renderOverlayAnimation);
+
+
+        //Hook map render method to stay in sync on map movement
+        const oldRender = map.current._render;
+
+        const renderHook = function(){ //This is declared as a "legacy" js function as we need "arguments" object
+
+            //Cancel any pending frames
+            cancelAnimationFrame(overlayAnimFrameId.current);
+
+            const result = oldRender.apply(this, arguments);
+            renderOverlayAnimation();
+
+            return result;
+        };
+
+        if(map.current._render != renderHook){
+            map.current._render = renderHook;
+        };
+
+        
+        return () => {
+            cancelAnimationFrame(overlayAnimFrameId.current);
+        }
+    }, [risk]);
+
+
+
+    //On context menu land lot save
+    const onSaveLot = async (feature) => {
+        if(context.user == null){
+            return alert("Must be logged in to perform this action!");
+        };
+
+
+        const midPoint = turf.centerOfMass(turf.polygon(feature.geometry.coordinates));
+        
+        //Get feature address
+        const approxAddress = await getFeatureAddress(feature);
+
+        const saveData = await saveLot(approxAddress);
+
+        if(saveData == null){
+            return;
+        };
+
+        if((saveData.name.length == 0) || (saveData.address.length == 0)){
+            return alert("Invalid input");
+        };
+
+        
+        const req = await fetch(`http://${window.location.hostname}:3001/users/saveLot`, {
             method: "POST",
-            body: JSON.stringify({bounds: feature.geometry.coordinates}),
-            headers: { "Content-Type": "application/json" }
+            headers: { 
+                "Authorization": context.token,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                name: saveData.name,
+                OBJECTID: feature.properties.OBJECTID,
+                address: saveData.address,
+                coordinates: midPoint.geometry.coordinates,
+            }),
         });
 
-        const result = await req.json();
+        const resp = await req.json();
 
-        if(req.status == 200){
-            onAssessment(result);
+        if(req.status != 200){
+            await alert(`Error saving: ${resp.message}`);
         }
         else {
-            alert(`Assessment error: ${result.message}`);
+            await alert(`Lot saved with name "${saveData.name}"`);
         };
     };
-
 
 
 
@@ -347,7 +701,26 @@ const Map = ({ searchTerm, risk, onAssessment, onAssessmentBegin }) => {
     };
 
 
-    return <styles.map.MapContainer ref={mapContainer} />;
+    return (
+    <styles.map.MapContainer ref={mapContainer}>
+        <canvas ref={overlayCanvas} style={{zIndex: 10, position: "absolute", top: 0, left: 0, pointerEvents: "none"}}></canvas>
+        { 
+            showCtxMenu ? 
+            (<ContextMenu 
+                x={ctxMenuPos.current.x}
+                y={ctxMenuPos.current.y}
+
+                onClose={() => {
+                    setShowCtxMenu(false);
+                    ctxMenuFeature.current = null;
+                }}
+
+                items={ctxMenuItems}
+                featureRef={ctxMenuFeature} //Note passed by ref
+            ></ContextMenu>) 
+            : (<></>)
+        }
+    </styles.map.MapContainer>);
 };
 
 export default Map;

@@ -14,6 +14,8 @@ import Results from "./Components/Results";
 import SavedLots from "./Components/SavedLots";
 import ResultDetails from "./Components/ResultDetails";
 import RiskLens from "./Components/RiskLens";
+import CustomPopups from "./Contexts/CustomPopups";
+import WorkInProgress from "./Components/WorkInProgress";
 
 
 // Create a separate component for routes that uses the context
@@ -76,6 +78,7 @@ function AppRoutes() {
                         <Route path="result-details/:id?" element={<ResultDetails/>}/>
                         <Route path="risk-lens/:risk?" element={<RiskLens/>}/>
                         <Route path="saved-lots" element={<SavedLots />} />
+                        <Route path="work-in-progress" element={<WorkInProgress />} />
                     </Route>
                 </Routes>
             </div>
@@ -87,7 +90,9 @@ function AppRoutes() {
 function App() {
     return (
         <UserProvider>
-            <AppRoutes />
+            <CustomPopups>
+                <AppRoutes />
+            </CustomPopups>
         </UserProvider>
     );
 }
