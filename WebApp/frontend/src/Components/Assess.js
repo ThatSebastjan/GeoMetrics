@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import styles from '../styles';
 import Map from '../Components/Map.js';
@@ -6,17 +6,44 @@ import ResultBar from '../Components/ResultBar';
 import AdvancedBar from '../Components/AdvancedBar';
 import SearchBar from "./SearchBar";
 import { UserContext } from '../Contexts/UserContext.js';
+import { PopupContext } from "../Contexts/CustomPopups";
+
+import { getHighlightPoints, sleep, defaultGauges, getFeatureAddress } from '../utility.js';
+
+
 
 function Assess() {
-    const { user } = useContext(UserContext);
+    const context = useContext(UserContext);
     const [isFullScreen, setIsFullScreen] = useState(false);
-    const [isAdvancedFullScreen, setIsAdvancedFullScreen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(null);
     const [isLoadingAssessment, setIsLoadingAssessment] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
     const { param } = useParams();
 
+    const highlightData = useRef({ id: null, data: null, startIndex: 0 });
+    const assessedFeature = useRef(null);
+    const assessementResults = useRef(null);
+
+    const [floodDetails, setFloodDetails] = useState(null);
+    const [landSlideDetails, setLandSlideDetails] = useState(null);
+    const [earthQuakeDetails, setEarthQuakeDetails] = useState(null);
+
+    const { alert, confirm, saveLot } = useContext(PopupContext);
+
+
+
+    const searchParams = new URLSearchParams(location.search);
+    let initInfo = null;
+
+    if(searchParams.has("lng") && searchParams.has("lat") && searchParams.has("id") && (searchTerm == null)){
+        initInfo = {
+            lng: parseFloat(searchParams.get("lng")),
+            lat: parseFloat(searchParams.get("lat")),
+            zoom: 17,
+            id: parseInt(searchParams.get("id")),
+        };
+    };
 
 
     const handleSearch = (query) => {
@@ -58,52 +85,110 @@ function Assess() {
     }, [param, navigate]);
 
 
-    // Sample data for the gauges - environmental risk indicators
-    const [gauges, setGauges] = useState([
-        {
-            value: null,
-            label: "Flood Risk",
-            fillGradient: "#e0f2fe 0deg, #7dd3fc 90deg, #38bdf8 180deg, #0284c7 270deg, #0c4a6e 360deg",
-            innerColor: "#f8f9fa",
-            valueColor: "#2d3748",
-            labelColor: "#4a5568",
-            trackColor: "#cacaca",
-        },
-        {
-            value: null,
-            label: "Landslide Risk",
-            fillGradient: "#F9F5EB 0deg, #E3D5CA 90deg, #D5A021 180deg, #8B5A2B 270deg, #4A3728 360deg",
-            innerColor: "#f8f9fa",
-            valueColor: "#2d3748",
-            labelColor: "#4a5568",
-            trackColor: "#cacaca",
-        },
-        {
-            value: null,
-            label: "Earthquake Risk",
-            fillGradient: "#2f855a 0deg, #48bb78 144deg, #f6e05e 216deg, #ed8936 270deg, #c53030 360deg",
-            innerColor: "#f8f9fa",
-            valueColor: "#2d3748",
-            labelColor: "#4a5568",
-            trackColor: "#cacaca",
-        }
-    ]);
+    //Create a copy of gauge data for local use
+    const [gauges, setGauges] = useState(defaultGauges.map(obj => Object.assign({}, obj)));
 
 
-    const onAssessmentBegin = () => {
-        setIsLoadingAssessment(true);
-    };
-
-
-    const onAssessmentResult = (result) => {
+    const onAssessmentResult = (res) => {
         const newGauges = gauges.map(g => Object.assign({}, g));
 
-        newGauges[0].value = result.floodRisk;
-        newGauges[1].value = result.landSlideRisk;
-        newGauges[2].value = null;
+        newGauges[0].value = res.results.floodRisk;
+        newGauges[1].value = res.results.landSlideRisk;
+        newGauges[2].value = res.results.earthQuakeRisk;
 
         setIsLoadingAssessment(false);
         setGauges(newGauges);
+
+        setFloodDetails(res.details.flood);
+        setLandSlideDetails(res.details.landSlide);
+        setEarthQuakeDetails(res.details.earthQuake);
+    };
+
+
+    const assessLandLot = async (feature) => {
+        setIsLoadingAssessment(true);
+        await sleep(500); //Simulate some delay so the loading bar doesn't disappear instantly
+
+        const req = await fetch(`http://${window.location.hostname}:3001/map/assess`, {
+            method: "POST",
+            body: JSON.stringify({bounds: feature.geometry.coordinates}),
+            headers: { "Content-Type": "application/json" }
+        });
+
+        const result = await req.json();
+
+        if(req.status == 200){
+            assessedFeature.current = feature;
+            assessementResults.current = result;
+            onAssessmentResult(result);
+        }
+        else {
+            alert(`Assessment error: ${result.message}`);
+        };
+    };
+
+
+    const onLandLotSelected = (feature) => {
+    
+        if(feature.properties.OBJECTID == highlightData.current.id){
+            return; //Same, already selected feature
+        };
+
+        const data = getHighlightPoints(feature);
+        highlightData.current.data = data.features.map(f => f.geometry.coordinates[0]).reverse();
+
+        highlightData.current.startIndex = 0;
+        highlightData.current.id = feature.properties.OBJECTID;
+    };
+
+
+    const getHighlightData = () => {
+        if(highlightData.current.id == null){
+            return [];
+        };
+
+        return [highlightData.current];
+    };
+
+
+    //Save current assessment report
+    const saveReport = async () => {
+        const approxAddress = await getFeatureAddress(assessedFeature.current);
+        const info = await saveLot(approxAddress, "Save Report"); //Re-purpose save lot dialog as same info is needed (address, save name)
+
+        if(info == null){
+            return; //Canceled
+        };
+
+        if((info.address.length == 0) || (info.name.length == 0)){
+            return alert("Invalid input!");
+        };
+
+
+        const req = await fetch(`http://${window.location.hostname}:3001/users/saveReport`, {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": context.token,
+            },
+            body: JSON.stringify({
+                name: info.name,
+                address: info.address,
+                lotId: assessedFeature.current.properties.OBJECTID,
+                results: assessementResults.current.results,
+            }),
+        });
+
+        const res = await req.json();
+
+        if(req.status == 200){
+            if(await confirm(`Report "${info.name}" saved successfully\n Do you want to view it?`)){
+                navigate(`/result-details/${res.id}`);
+            };
+        }
+        else {
+            alert(`Error saving report: ${res.message}`);
+        };
     };
 
 
@@ -115,12 +200,18 @@ function Assess() {
                     onSearch={handleSearch}
                 />
             </styles.search.SearchBarWrapper>
-            <styles.assess.MapWrapper $isFullScreen={param === "advanced" ? isAdvancedFullScreen : isFullScreen}>
-                <Map searchTerm={searchTerm} onAssessment={onAssessmentResult} onAssessmentBegin={onAssessmentBegin}/>
+            <styles.assess.MapWrapper $isFullScreen={isFullScreen}>
+                <Map
+                    searchTerm={searchTerm}
+                    assessLandLot={assessLandLot}
+                    initInfo={initInfo}
+                    onLandLotSelected={onLandLotSelected}
+                    getHighlightData={getHighlightData}
+                />
             </styles.assess.MapWrapper>
 
             <styles.assess.ResultBarWrapper>
-                {param === 'basic' ? (
+
                     <styles.assess.ResultBarInner $isFullScreen={isFullScreen}>
                         <ResultBar
                             gauges={gauges}
@@ -129,102 +220,43 @@ function Assess() {
                             isLoading={isLoadingAssessment}
                         >
                             {/* Additional content for the expanded view */}
-                            <div style={{ padding: '20px 0' }}>
-                                <h3 style={{ marginBottom: '15px', fontSize: '1.2rem', fontWeight: '600' }}>Detailed Risk Analysis</h3>
+                            { assessementResults.current && 
+                                <div style={{ padding: '20px 0' }}>
+                                    <h3 style={{ marginBottom: '15px', fontSize: '1.2rem', fontWeight: '600' }}>Detailed Risk Analysis</h3>
 
-                                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                                    <div style={{ flex: '1', minWidth: '250px' }}>
-                                        <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Flood Risk Assessment</h4>
-                                        <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            Low risk area with a 10% probability of flooding in the next 30 years. The property sits
-                                            15m above the nearest flood plain and has adequate drainage infrastructure.
-                                        </p>
+                                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                                        <div style={{ flex: '1', minWidth: '250px' }}>
+                                            <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Flood Risk Assessment</h4>
+                                            <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
+                                                { floodDetails || "N/A" }
+                                            </p>
+                                        </div>
+
+                                        <div style={{ flex: '1', minWidth: '250px' }}>
+                                            <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Mudslide Risk Assessment</h4>
+                                            <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
+                                                { landSlideDetails || "N/A" }
+                                            </p>
+                                        </div>
+
+                                        <div style={{ flex: '1', minWidth: '250px' }}>
+                                            <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Earthquake Risk Assessment</h4>
+                                            <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
+                                                { earthQuakeDetails || "N/A" }
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    <div style={{ flex: '1', minWidth: '250px' }}>
-                                        <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Mudslide Risk Assessment</h4>
-                                        <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            Moderate risk with a 65% probability of soil instability issues. The property is on a 12° slope
-                                            with historical instances of land movement within 500m of the location.
-                                        </p>
-                                    </div>
-
-                                    <div style={{ flex: '1', minWidth: '250px' }}>
-                                        <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Earthquake Risk Assessment</h4>
-                                        <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            High risk area with 92% probability of significant seismic activity in the next 50 years.
-                                            Location is within 5km of a major fault line with historical 6.5+ magnitude events.
-                                        </p>
-                                    </div>
+                                    {context.user && (
+                                        <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+                                            <styles.common.Button onClick={saveReport}>Save Report</styles.common.Button>
+                                        </div>
+                                    )}
                                 </div>
-
-                                {user && (
-                                    <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                                        <styles.common.Button>Save Report</styles.common.Button>
-                                        <styles.common.Button $secondary style={{ marginLeft: '10px' }}>
-                                            Save Location
-                                        </styles.common.Button>
-                                    </div>
-                                )}
-                            </div>
+                            }
                         </ResultBar>
                     </styles.assess.ResultBarInner>
-                ) : (
-                    <styles.assess.ResultBarInner $isFullScreen={isAdvancedFullScreen}>
-                        <ResultBar
-                            gauges={gauges}
-                            isFullScreen={isAdvancedFullScreen}
-                            onToggleFullScreen={() => setIsAdvancedFullScreen(!isAdvancedFullScreen)}
-                            isLoading={isLoadingAssessment}
-                        >
-                            <AdvancedBar
-                                settings={settings}
-                                isFullScreen={isAdvancedFullScreen}
-                                onToggleFullScreen={() => setIsAdvancedFullScreen(!isAdvancedFullScreen)}
-                                onUpdateSettings={handleUpdateSettings}
-                            />
-                            {/* Additional content for the expanded view */}
-                            <div style={{ padding: '20px 0' }}>
-                                <h3 style={{ marginBottom: '15px', fontSize: '1.2rem', fontWeight: '600' }}>Detailed Risk Analysis</h3>
-
-                                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                                    <div style={{ flex: '1', minWidth: '250px' }}>
-                                        <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Flood Risk Assessment</h4>
-                                        <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            Low risk area with a 10% probability of flooding in the next 30 years. The property sits
-                                            15m above the nearest flood plain and has adequate drainage infrastructure.
-                                        </p>
-                                    </div>
-
-                                    <div style={{ flex: '1', minWidth: '250px' }}>
-                                        <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Mudslide Risk Assessment</h4>
-                                        <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            Moderate risk with a 65% probability of soil instability issues. The property is on a 12° slope
-                                            with historical instances of land movement within 500m of the location.
-                                        </p>
-                                    </div>
-
-                                    <div style={{ flex: '1', minWidth: '250px' }}>
-                                        <h4 style={{ fontSize: '1rem', marginBottom: '10px', fontWeight: '500' }}>Earthquake Risk Assessment</h4>
-                                        <p style={{ lineHeight: '1.5', color: '#4a5568' }}>
-                                            High risk area with 92% probability of significant seismic activity in the next 50 years.
-                                            Location is within 5km of a major fault line with historical 6.5+ magnitude events.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {user && (
-                                    <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
-                                        <styles.common.Button>Save Report</styles.common.Button>
-                                        <styles.common.Button $secondary style={{ marginLeft: '10px' }}>
-                                            Save Location
-                                        </styles.common.Button>
-                                    </div>
-                                )}
-                            </div>
-                        </ResultBar>
-                    </styles.assess.ResultBarInner>
-                )}
+                
             </styles.assess.ResultBarWrapper>
         </styles.assess.Container>
     );

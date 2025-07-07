@@ -870,7 +870,6 @@ const gaugeStyles = {
                 return `conic-gradient(${props.$fillColor || '#007aff'} 0deg ${degrees}deg, transparent ${degrees}deg 360deg)`;
             }
         }};
-        transition: all 0.5s ease-in-out;
     `,
 
     GaugeInnerCircle: styled.div`
@@ -1914,6 +1913,170 @@ const savedStyles = {
     `
 };
 
+
+const contextMenuStyles = {
+
+    ContextMenu: styled.div`
+        position: absolute;
+        z-index: 1000000;
+        top: ${props => props.$top}px;
+        left: ${props => props.$left}px;
+        padding: 0px;
+        border: 1px solid #cacaca;
+        border-radius: ${borderRadius.medium};
+        display: flex;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        width: 220px;
+        overflow: hidden;
+        background-color: #ffffff;
+    `,
+
+    Header: styled.div`
+        width: 100%;
+        border-bottom: 1px solid #cacaca;
+        background-color: #f0f0f0;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 10px;
+        box-sizing: border-box;
+        position: relative;
+        font-weight: 700;
+    `,
+
+    Close: styled.div`
+        margin: 0px;
+        padding: 0px;
+        display: flex;
+        transition: all 0.3s;
+        border-radius: 50%;
+        padding: 3px;
+        box-sizing: border-box;
+        cursor: pointer;
+
+        &:hover {
+            background-color: #e0e0e0;
+        }
+    `,
+
+    Item: styled.div`
+        border-bottom: 1px solid #cacaca;
+        width: 100%;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        cursor: pointer;
+
+        &:last-child {
+            border-bottom: none;
+        }
+    `,
+
+    ItemInline: styled.div`
+        width: 50%;
+        text-align: center;
+    `,
+
+    Button: styled.div`
+        padding: 8px 10px;
+        white-space: nowrap;
+        width: 100%;
+        transition: all 0.3s;
+        text-align: left;
+
+        &:hover {
+            background-color: #e0e0e0;
+        }
+    `,
+};
+
+
+const popupStyles = {
+    PopupElement: styled.div`
+        position: fixed;
+        z-index: 1000000;
+        left: 50%;
+        top: 50%;
+        width: 500px;
+        transform: translate(-50%, -50%);
+
+        background-color: ${colors.white};
+        border-radius: ${borderRadius.medium};
+        box-shadow: ${shadows.small};
+        overflow: hidden;
+        transition: transform 0.2s, box-shadow 0.2s;
+
+        &:hover {
+            box-shadow: ${shadows.large};
+        }
+    `,
+
+    PopupHeader: styled.div`
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: ${spacing.md};
+        border-bottom: 1px solid ${colors.border};
+    `,
+
+    PopupTitle: styled.h3`
+        margin: 0;
+        font-size: 1.2rem;
+        color: ${colors.textDark};
+    `,
+
+    
+    PopupContent: styled.div`
+        padding: ${spacing.md};
+        text-align: left;
+    `,
+
+    PopupActions: styled.div`
+        display: flex;
+        justify-content: right;
+        padding: ${spacing.md};
+        border-top: 1px solid ${colors.border};
+    `,
+
+    Input: styled.input`
+        width: 100%;
+        padding: ${spacing.md};
+        border: 1px solid ${colors.border};
+        border-radius: ${borderRadius.small};
+        font-size: 1rem;
+        transition: all 0.2s;
+        height: 48px;
+        box-sizing: border-box;
+
+        &:focus {
+            outline: none;
+            border-color: ${colors.primary};
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+        }
+    `,
+
+    FormGroup: styled.div`
+        margin-bottom: ${spacing.md};
+        text-align: left;
+        width: 100%;
+        padding: 0px ${spacing.md};
+        box-sizing: border-box;
+    `,
+
+    Label: styled.label`
+        display: block;
+        margin-bottom: ${spacing.xs};
+        font-weight: 500;
+        color: ${colors.textDark};
+        font-size: 0.95rem;
+    `,
+};
+
+
 const appStyles = {
     colors,
     spacing,
@@ -1930,6 +2093,8 @@ const appStyles = {
     search: searchBarStyles,
     advanced: advancedStyles,
     saved: savedStyles, // Add this line
+    ctxMenu: contextMenuStyles,
+    popup: popupStyles,
 };
 
 

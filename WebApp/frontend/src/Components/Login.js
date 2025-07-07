@@ -60,7 +60,7 @@ function Login() {
                     <styles.login.LogoText>GeoMetrics</styles.login.LogoText>
                     <styles.login.AppDescription>Smart risk assessment app</styles.login.AppDescription>
                 </styles.login.LogoSection>
-                <styles.login.FormTitle>Login</styles.login.FormTitle>
+                <styles.login.FormTitle>Log In</styles.login.FormTitle>
 
                 {error && <styles.login.ErrorMessage>{error}</styles.login.ErrorMessage>}
 
@@ -93,7 +93,7 @@ function Login() {
                         type="submit"
                         disabled={loading}
                     >
-                        {loading ? 'Processing...' : 'Login'}
+                        {loading ? 'Processing...' : 'Log In'}
                     </styles.login.SubmitButton>
                 </form>
 

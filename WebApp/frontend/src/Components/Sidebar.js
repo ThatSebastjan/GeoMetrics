@@ -67,73 +67,33 @@ function Sidebar() {
                 Assessment
               </styles.layout.DropdownItem>
               <styles.layout.DropdownItem
-                  onClick={() => handleNavigation('/assess/advanced', 'assess')}
-                  $isActive={activeRoute === '/assess/advanced'}
+                  onClick={() => handleNavigation('/work-in-progress', 'assess')}
+                  $isActive={activeRoute === '/work-in-progress'}
               > <styles.layout.IconWrapper><icons.ZapIcon /></styles.layout.IconWrapper>
                 Advanced
               </styles.layout.DropdownItem>
             </styles.layout.DropdownMenu>
           </styles.layout.DropdownContainer>
 
-          {/* Smart Select Dropdown */}
           <styles.layout.DropdownContainer>
-            <styles.layout.NavItemWithIcon
-                onClick={() => toggleDropdown('smart-select')}
-                $isActive={openDropdowns['smart-select']}
-            >
+            <styles.layout.StyledNavItem onClick={() => navigate('/smart-select')}>
               <styles.layout.NavItemContent>
                 <styles.layout.IconWrapper><icons.TargetIcon /></styles.layout.IconWrapper>
                 Smart Select
               </styles.layout.NavItemContent>
-              <styles.layout.IconWrapper style={{ marginLeft: 'auto' }}>
-                {openDropdowns['smart-select'] ? <FaChevronUp /> : <FaChevronDown />}
-              </styles.layout.IconWrapper>
-            </styles.layout.NavItemWithIcon>
-            <styles.layout.DropdownMenu $isOpen={openDropdowns['smart-select']}>
-              <styles.layout.DropdownItem
-                  onClick={() => handleNavigation('/smart-select', 'smart-select')}
-                  $isActive={activeRoute === '/smart-select'}
-              > <styles.layout.IconWrapper><icons.SelectIcon /></styles.layout.IconWrapper>
-                Select Area
-              </styles.layout.DropdownItem>
-              <styles.layout.DropdownItem
-                  onClick={() => handleNavigation('/smart-select/parameters', 'smart-select')}
-                  $isActive={activeRoute === '/smart-select/parameters'}
-              > <styles.layout.IconWrapper><icons.CheckboxIcon /></styles.layout.IconWrapper>
-                Parameters
-              </styles.layout.DropdownItem>
-            </styles.layout.DropdownMenu>
+            </styles.layout.StyledNavItem>
           </styles.layout.DropdownContainer>
 
           {/* Side by Side Dropdown */}
           <styles.layout.DropdownContainer>
-            <styles.layout.NavItemWithIcon
-                onClick={() => toggleDropdown('side-by-side')}
-                $isActive={openDropdowns['side-by-side']}
-            >
+            <styles.layout.StyledNavItem onClick={() => navigate('/side-by-side')}>
               <styles.layout.NavItemContent>
-                <styles.layout.IconWrapper><icons.SideBySideIcon /></styles.layout.IconWrapper>
+                <styles.layout.IconWrapper><icons.SideBySideIcon/></styles.layout.IconWrapper>
                 Side By Side
               </styles.layout.NavItemContent>
-              <styles.layout.IconWrapper style={{ marginLeft: 'auto' }}>
-                {openDropdowns['side-by-side'] ? <FaChevronUp /> : <FaChevronDown />}
-              </styles.layout.IconWrapper>
-            </styles.layout.NavItemWithIcon>
-            <styles.layout.DropdownMenu $isOpen={openDropdowns['side-by-side']}>
-              <styles.layout.DropdownItem
-                  onClick={() => handleNavigation('/side-by-side', 'side-by-side')}
-                  $isActive={activeRoute === '/side-by-side'}
-              > <styles.layout.IconWrapper><icons.SearchIcon /></styles.layout.IconWrapper>
-                Select
-              </styles.layout.DropdownItem>
-              <styles.layout.DropdownItem
-                  onClick={() => handleNavigation('/side-by-side/compare', 'side-by-side')}
-                  $isActive={activeRoute === '/side-by-side/compare'}
-              > <styles.layout.IconWrapper><icons.ShuffleIcon /></styles.layout.IconWrapper>
-                Compare
-              </styles.layout.DropdownItem>
-            </styles.layout.DropdownMenu>
+            </styles.layout.StyledNavItem>
           </styles.layout.DropdownContainer>
+
           <styles.layout.DropdownContainer>
             <styles.layout.StyledNavItem onClick={() => navigate('/risk-lens')}>
               <styles.layout.NavItemContent>

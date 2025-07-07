@@ -3,10 +3,13 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - main
+      - release
     paths:
       - 'WebApp/frontend/**'
       - 'WebApp/backend/**'
+  pull_request:
+    branches:
+       - release
   workflow_dispatch:
 
 jobs:

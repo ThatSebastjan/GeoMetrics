@@ -1,0 +1,32 @@
+name: Node.js CI Tests
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - WebApp/backend/** 
+  pull_request:
+    branches:
+       - "**"
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x] #Testing just on 22.x version for now
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Test backend with Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        cache-dependency-path: ./WebApp/backend/package-lock.json
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - run: cd ./WebApp/backend/ && npm i && npm test
+      env:
+        ACCESS_TOKEN: PlaceholderValue #Placeholder value to prevent error on startup
