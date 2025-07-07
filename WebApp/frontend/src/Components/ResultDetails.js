@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { UserContext } from '../Contexts/UserContext.js';
 import styles from '../styles';
 import icons from './Icons';
 import html2pdf from 'html2pdf.js';
 import Minimap from "./Minimap";
+import { PopupContext } from "../Contexts/CustomPopups";
+
 
 function ResultDetails() {
     const { id } = useParams();
@@ -11,39 +14,73 @@ function ResultDetails() {
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(true);
     const exportTemplateRef = useRef(null);
+    const context = useContext(UserContext);
+    const { alert, confirm } = useContext(PopupContext);
+
 
     useEffect(() => {
-        const mockResult = {
-            id: parseInt(id) || 1,
-            title: `Property Assessment #${id || 1}`,
-            address: "123 Main Street, Cityville",
-            date: new Date(2024, 4, 21, 12,30,60,23),
-            scores: {
-                floodRisk: 20,
-                landslideRisk: 53,
-                earthquakeRisk: 78
-            },
-            coordinates: { lat: 40.7128, lng: -74.0060 },
-            summary: "AI generated summary shall be generated here :)",
-            details: {
-                flood: "Low risk area with a 10% probability of flooding in the next 30 years. The property sits 15m above the nearest flood plain and has adequate drainage infrastructure.",
-                landslide: "Moderate risk with a 65% probability of soil instability issues. The property is on a 12° slope with historical instances of land movement within 500m of the location.",
-                earthquake: "High risk area with 92% probability of significant seismic activity in the next 50 years. Location is within 5km of a major fault line with historical 6.5+ magnitude events."
-            },
-            propertyDetails: {
-                size: "460 km²",
-                elevation: "125m above sea level",
-                proximityToWater: "500m to nearest stream",
-                proximityToFirstResponders: "5km from nearest Fire station",
+
+        const getData = async () => {
+            const req = await fetch(`http://${window.location.hostname}:3001/users/getReportDetails/${id}`, {
+                headers: { "Authorization": context.token },
+            });
+
+            const resp = await req.json();
+
+            if(req.status == 200){
+                resp.date = new Date(resp.date); //Convert date string to date obj
+
+                setResult(resp);
+                setLoading(false);
             }
+            else {
+                alert(`Error: ${resp.message}`);
+            };
         };
 
-        setResult(mockResult);
-        setLoading(false);
+        getData();
     }, [id]);
 
     const calculateSafetyScore = (riskScore) => {
         return Math.round(riskScore / 10);
+    };
+
+
+    const handleViewOnMap = () => {
+        // Navigate to assess page with the lot coordinates
+        navigate(`/assess/basic?lat=${result.coordinates.lat}&lng=${result.coordinates.lng}&id=${result.lotId}`);
+    };
+
+
+    const shareURL = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            alert("URL copied to clipboard!\nShare it with others!");
+        }
+        catch(err){
+            alert(`Failed to copy URL: ${err.message}`);
+        };
+    };
+
+
+    const handleDelete = async () => {
+        if((await confirm(`Are you sure you want to delete report "${result.title}"?`)) == false){
+            return;
+        };
+
+        const req = await fetch(`http://${window.location.hostname}:3001/users/report/${id}`, {
+            method: "DELETE",
+            headers: { "Authorization": context.token },
+        });
+
+        const resp = await req.json();
+
+        if(req.status == 200){
+            navigate("/results");
+        }
+        else {
+            alert(`Error: ${resp.message}`);
+        };
     };
 
 
@@ -131,7 +168,7 @@ function ResultDetails() {
 
     if (loading) {
         return <styles.common.Loading>Loading assessment details...</styles.common.Loading>;
-    }
+    };
 
     return (
         <div>
@@ -287,8 +324,10 @@ function ResultDetails() {
                                 </styles.results.DetailCardContent>
                             </styles.results.DetailCard>
                             <styles.results.ActionButtonsContainer>
-                                <styles.common.Button>Share Assessment</styles.common.Button>
+                                <styles.common.Button onClick={shareURL}>Share Assessment</styles.common.Button>
                                 <styles.common.Button onClick={exportAsPDF}>Export as PDF</styles.common.Button>
+                                <styles.common.Button onClick={handleViewOnMap}>View on map</styles.common.Button>
+                                <styles.common.Button style={{ backgroundColor: styles.colors.danger }} onClick={handleDelete}>Delete report</styles.common.Button>
                             </styles.results.ActionButtonsContainer>
                         </styles.results.DetailSidebar>
                     </styles.results.DetailGrid>

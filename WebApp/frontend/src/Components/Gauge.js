@@ -24,6 +24,8 @@ const Gauge = ({
 
     useEffect(() => {
         if(value == null) return;
+
+        let animFrameHandle = -1;
         
         if (animated) {
             // Animate the value change
@@ -40,13 +42,20 @@ const Gauge = ({
                 setDisplayValue(Math.max(startValue + (value - startValue) * newPercentage, 0));
 
                 if (progress < duration) {
-                    requestAnimationFrame(animate);
+                    animFrameHandle = requestAnimationFrame(animate);
                 }
             };
 
-            requestAnimationFrame(animate);
+            animFrameHandle = requestAnimationFrame(animate);
         } else {
             setDisplayValue(value);
+            setFillPercentage(percentage);
+        }
+
+        return () => {
+            if(animFrameHandle != -1){
+                cancelAnimationFrame(animFrameHandle);
+            };
         }
 
     }, [value, animated/*, displayValue*/]);
