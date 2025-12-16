@@ -39,7 +39,7 @@ const ResultBar = ({
                         stroke="5"
                         bgOpacity="0"
                         speed="2"
-                        color="black" 
+                        color="black"
                     />
                 </div>) :
 
@@ -53,9 +53,9 @@ const ResultBar = ({
                             label={gauge.label}
                             fillColor={gauge.fillColor}
                             trackColor={gauge.trackColor}
-                            innerColor={gauge.innerColor}
-                            valueColor={gauge.valueColor}
-                            labelColor={gauge.labelColor}
+                            innerColor={styles.colors.backgroundTransparent}
+                            valueColor={styles.colors.text}
+                            labelColor={styles.colors.text}
                             fillGradient={gauge.fillGradient}
                             valueFormatter={gauge.valueFormatter}
                         />

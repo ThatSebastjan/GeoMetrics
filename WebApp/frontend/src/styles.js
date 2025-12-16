@@ -1,11 +1,11 @@
 import styled from 'styled-components';
 
 // Theme constants
-const colors = {
+const colorsLight = {
     primary: '#000000',
     primaryLight: '#1b1b1b',
     primarySuperLight: '#454545',
-    secondary: '#838383',
+    secondary: '#414141',
     secondaryLight: '#a8a8a8',
     secondarySuperLight: '#eeeeee',
     danger: '#f44336',
@@ -21,10 +21,56 @@ const colors = {
     light: '#f5f5f5',
     white: '#ffffff',
     offWhite: '#fdfdfd',
+    background: '#ffffff',
+    backgroundTransparent: 'rgba(255,255,255,0.8)',
+    backgroundGlassTransparent: 'rgba(255,255,255,0.7)',
     border: '#ddd',
     text: '#333',
+    textInverted : '#ffffff',
     highlight: '#e3f2fd',
 };
+
+const colorsDark = {
+    primary: '#a4a4a4',
+    primaryLight: '#b4b4b4',
+    primarySuperLight: '#c0c0c0',
+    secondary: '#c7c7c7',
+    secondaryLight: '#b0bec5',
+    secondarySuperLight: '#333333',
+    danger: '#f44336',
+    warning: '#dd6b20',
+    dangerDark: '#d32f2f',
+    error: '#3a1f1f',
+    errorText: '#ffb4b4',
+    success: '#38a169',
+    lightGray: '#2a2a2a',
+    textDark: '#e6eef8',
+    textMedium: '#cbd5e1',
+    disabled: '#6b7280',
+    light: '#121212',
+    white: '#0b0b0b',
+    offWhite: '#121212',
+    background: '#0b0b0b',
+    backgroundTransparent: 'rgba(11,11,11,0.8)',
+    backgroundGlassTransparent: 'rgba(11,11,11,0.6)',
+    border: '#2b2b2b',
+    text: '#ffffff',
+    textInverted : '#333',
+    highlight: '#083d77',
+};
+
+
+
+let colors;
+if (typeof window !== 'undefined' && window.matchMedia) {
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        colors = colorsDark;
+    } else {
+        colors = colorsLight;
+    }
+} else {
+    colors = colorsLight;
+}
 
 const spacing = {
     xs: '0.5rem',
@@ -333,7 +379,7 @@ const commonStyles = {
         transform: translateY(-50%);
         display: flex;
         flex-direction: column;
-        background-color: rgba(255, 255, 255, 0.9);
+        background-color: ${colors.backgroundGlassTransparent};
         border-radius: 30px;
         padding: 10px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
@@ -351,8 +397,8 @@ const commonStyles = {
         justify-content: center;
         font-size: 20px;
         cursor: pointer;
-            background-color: ${props => props.$isActive ? props.$customColor || '#3498db' : 'white'};
-        color: ${props => props.$isActive ? 'white' : '#333'};
+        background-color: ${props => props.$isActive ? (props.$customColor || '#3498db') : colors.white};
+        color: ${props => props.$isActive ? 'white' : colors.text};
         transition: all 0.2s ease;
             box-shadow: ${props => props.$isActive ? 
                 `0 0 10px ${props.$customColor ? props.$customColor.replace(')', ', 0.7)').replace('rgb', 'rgba') : 'rgba(52, 152, 219, 0.7)'}` : 
@@ -368,22 +414,22 @@ const layoutStyles = {
     Container: styled.div`
         display: flex;
         min-height: 100vh;
-        overflow: hidden; /* Prevent content overflow */
+        overflow: hidden;
     `,
 
     Sidebar: styled.div`
         width: 250px;
-        min-width: 250px; /* Ensures sidebar doesn't shrink */
+        min-width: 250px;
         height: 100vh;
-        background-color: ${colors.primaryDark};
+        background-color: ${colors.background};
         display: flex;
         flex-direction: column;
         padding: ${spacing.md} 0;
-        position: fixed; /* Fix the sidebar */
+        position: fixed; 
         left: 0;
         top: 0;
         z-index: 100;
-        overflow-y: auto; /* Make sidebar content scrollable if needed */
+        overflow-y: auto;
     `,
 
     Logo: styled.div`
@@ -392,12 +438,10 @@ const layoutStyles = {
         color: ${colors.text};
         padding: ${spacing.md};
         margin-bottom: ${spacing.lg};
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     `,
 
     NavMenu: styled.nav`
         flex: 1;
-        width: ;
     `,
 
     NavItem: styled.div`
@@ -409,7 +453,7 @@ const layoutStyles = {
         transition: background-color 0.3s;
 
         &:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+            background-color: red;
         }
     `,
 
@@ -496,12 +540,12 @@ const layoutStyles = {
 
         ${props => props.$isActive && `
             background: ${colors.primary};
-            color: ${colors.white};
+            color: ${colors.textInverted};
             border-radius: ${borderRadius.medium} ${borderRadius.medium} 0 0;
         `}
         &:hover {
             background: ${colors.primary};
-            color: white;
+            color: ${colors.textInverted};
 
         }
     `,
@@ -658,7 +702,7 @@ const settingsStyles = {
 
     Section: styled.div`
         align-items: center;
-        border: 1px solid ${colors.border};
+        //border: 1px solid ${colors.border};
         background: ${colors.offWhite};
         padding: ${spacing.xl};
         margin: 0px;
@@ -905,7 +949,7 @@ const gaugeStyles = {
 
 const resultStyles = {
     Container: styled.div`
-        background-color: ${props => props.$isFullScreen ? 'rgba(255, 255, 255, 0.95)' : colors.white};
+        background-color: ${colors.backgroundTransparent};
         border-radius: ${borderRadius.medium} ${borderRadius.medium} 0 0;
         box-shadow: ${shadows.small};
         transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
@@ -945,6 +989,7 @@ const resultStyles = {
 
 
     GaugeGrid: styled.div`
+        //background-color: ${colors.background};
         display: flex;
         flex-wrap: ${props => props.$isFullScreen ? 'wrap' : 'nowrap'};
         justify-content: center;
@@ -1005,9 +1050,10 @@ const resultStyles = {
         visibility: ${props => props.$isFullScreen ? 'visible' : 'hidden'};
         transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         border-top: ${props => props.$isFullScreen ? `1px solid ${colors.border}` : 'none'};
+        color: ${colors.text};
+        //background-color: ${colors.background};
     `,
 
-    // Add these to resultStyles object
     ResultsGrid: styled.div`
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -2092,7 +2138,7 @@ const appStyles = {
     assess: assessStyles,
     search: searchBarStyles,
     advanced: advancedStyles,
-    saved: savedStyles, // Add this line
+    saved: savedStyles,
     ctxMenu: contextMenuStyles,
     popup: popupStyles,
 };
