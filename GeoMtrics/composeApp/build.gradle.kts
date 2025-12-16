@@ -1,5 +1,13 @@
-import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+val localPropsFile = rootProject.file("gradle.properties.local")
+if (localPropsFile.exists()) {
+    val localProps = Properties().apply { localPropsFile.reader().use { load(it) } }
+    localProps.forEach { (k, v) ->
+        project.extensions.extraProperties.set(k.toString(), v)
+    }
+}
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
