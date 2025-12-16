@@ -27,12 +27,10 @@ import com.mapbox.maps.MapView
 @Composable
 fun MapBoxContainer(
     modifier: Modifier = Modifier,
-    heightDp: Int = 300
+    heightDp: Int = 300,
+    zoomLevel: Double = 14.0
 ) {
-    if (LocalInspectionMode.current) {
-        Text("Map placeholder")
-        return
-    }
+    if (LocalInspectionMode.current) return
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -61,11 +59,11 @@ fun MapBoxContainer(
                 mapView.getMapboxMap().setCamera(
                     CameraOptions.Builder()
                         .center(Point.fromLngLat(location.longitude, location.latitude))
-                    .zoom(14.0)
+                    .zoom(zoomLevel)
                     .build()
                 )
             }
-        } catch (_: Exception) { /* ignore or log */ }
+        } catch (_: Exception) {  }
     }
 
     DisposableEffect(lifecycleOwner, mapView) {
@@ -87,7 +85,7 @@ fun MapBoxContainer(
     }
 
     AndroidView(
-        factory = { mapView ?: TextView(context).apply { text = "Map unavailable" } },
+        factory = { mapView ?: android.view.View(context) },
         modifier = modifier
             .fillMaxWidth()
             .height(heightDp.dp)

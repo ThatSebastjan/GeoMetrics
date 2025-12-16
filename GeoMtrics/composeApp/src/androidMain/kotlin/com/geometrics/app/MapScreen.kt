@@ -12,7 +12,7 @@ import com.mapbox.maps.MapboxMap
 
 
 @Composable
-@Preview
+@Preview(showBackground = true)
 fun MapScreen(
     modifier: Modifier = Modifier,
 ) {
