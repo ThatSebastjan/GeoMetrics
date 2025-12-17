@@ -20,6 +20,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapView
@@ -33,7 +34,7 @@ fun MapBoxContainer(
     if (LocalInspectionMode.current) return
 
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val mapView = rememberMapView(context)
 
     // Runtime permission launcher
@@ -56,7 +57,7 @@ fun MapBoxContainer(
             val last = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                 ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
             last?.let { location ->
-                mapView.getMapboxMap().setCamera(
+                mapView.mapboxMap.setCamera(
                     CameraOptions.Builder()
                         .center(Point.fromLngLat(location.longitude, location.latitude))
                     .zoom(zoomLevel)

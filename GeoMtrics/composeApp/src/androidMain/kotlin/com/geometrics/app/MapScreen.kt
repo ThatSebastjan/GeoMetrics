@@ -1,6 +1,7 @@
 package com.app.geometrics
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,17 +17,14 @@ import com.mapbox.maps.MapboxMap
 fun MapScreen(
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
+    Surface(
+        modifier = Modifier
+            .fillMaxSize(),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
     ) {
-        Text("Map", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(12.dp))
-        Text ("Placeholder view for the Map view")
-        Spacer(modifier = Modifier.height(12.dp))
+
+
         MapBoxContainer(
             modifier = Modifier
                 .fillMaxSize()

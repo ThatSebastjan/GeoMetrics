@@ -11,6 +11,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.geometrics.app.components.GaugeComponent
 import com.geometrics.app.components.MapBoxContainer
 import com.mapbox.maps.extension.style.expressions.dsl.generated.color
@@ -27,71 +28,74 @@ fun AssessScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
+
         Text("Assess", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(32.dp))
-            Row(
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.background,
+                    shape = RoundedCornerShape(topStart = 48.dp, topEnd = 48.dp)
+                )
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth(.95f)
-                    .padding(bottom = 16.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.background,
-                        shape = RoundedCornerShape(48.dp)
-                    )
                     .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                Column(
-                    modifier = Modifier
-                        .padding(8.dp),
-                ) {
-                    GaugeComponent(
-                        100f, size = 100.dp, strokeWidth = 12.dp, startColor = Color(
-                            0xFF00FFF5
-                        ), endColor = Color(0xFF002AFF)
-                    )
-                    Text("Flood", modifier = Modifier.align(Alignment.CenterHorizontally))
-                }
-                Column(
-                    modifier = Modifier
-                        .padding(8.dp),
-                ) {
-                    GaugeComponent(
-                        100f, size = 100.dp, strokeWidth = 12.dp, startColor = Color(
-                            0xFFFFE500
-                        ), endColor = Color(0xFFFF5722)
-                    )
-                    Text("Landslide", modifier = Modifier.align(Alignment.CenterHorizontally))
-
-                }
-                Column(
-                    modifier = Modifier
-                        .padding(8.dp),
-                ) {
-                    GaugeComponent(
-                        100f, size = 100.dp, strokeWidth = 12.dp, startColor = Color(
-                            0xFFFF857D
-                        ), endColor = Color(0xFFF70303)
-                    )
-                    Text("Earthquake", modifier = Modifier.align(Alignment.CenterHorizontally))
-
-                }
+                GaugeComponent(
+                    100f, size = 100.dp, strokeWidth = 12.dp, startColor = Color(
+                        0xFF00FFF5
+                    ), endColor = Color(0xFF002AFF)
+                )
+                Text("Flood", modifier = Modifier.align(Alignment.CenterHorizontally))
             }
+            Column(
+                modifier = Modifier
+                    .padding(8.dp),
+            ) {
+                GaugeComponent(
+                    100f, size = 100.dp, strokeWidth = 12.dp, startColor = Color(
+                        0xFFFFE500
+                    ), endColor = Color(0xFFFF5722)
+                )
+                Text("Landslide", modifier = Modifier.align(Alignment.CenterHorizontally))
 
+            }
+            Column(
+                modifier = Modifier
+                    .padding(8.dp),
+            ) {
+                GaugeComponent(
+                    100f, size = 100.dp, strokeWidth = 12.dp, startColor = Color(
+                        0xFFFF857D
+                    ), endColor = Color(0xFFF70303)
+                )
+                Text("Earthquake", modifier = Modifier.align(Alignment.CenterHorizontally))
 
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomCenter
+    ) {
         Surface(
             modifier = Modifier
-                .fillMaxHeight(.95f),
-            shape = RoundedCornerShape(48.dp),
-            tonalElevation = 2.dp,
-            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                .fillMaxWidth()
+                .fillMaxHeight(.71f)
+                .zIndex(1f)
         ) {
             MapBoxContainer(
                 zoomLevel = 18.0,
-                modifier = Modifier
-                    .fillMaxWidth(.95f)
-                    .height(300.dp)
+                modifier = Modifier.fillMaxSize()
             )
         }
     }
 }
+
+
 
