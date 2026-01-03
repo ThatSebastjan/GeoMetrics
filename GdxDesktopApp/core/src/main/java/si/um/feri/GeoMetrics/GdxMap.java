@@ -1,32 +1,44 @@
 package si.um.feri.GeoMetrics;
 
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.Game;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.Logger;
+import si.um.feri.GeoMetrics.screen.MapScreen;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
-public class GdxMap extends ApplicationAdapter {
+
+public class GdxMap extends Game {
+
     private SpriteBatch batch;
-    private Texture image;
+    private AssetManager assetManager;
+
 
     @Override
     public void create() {
         batch = new SpriteBatch();
-        image = new Texture("libgdx.png");
+
+        assetManager = new AssetManager();
+        assetManager.getLogger().setLevel(Logger.DEBUG);
+
+        setScreen(new MapScreen(this));
     }
 
-    @Override
-    public void render() {
-        ScreenUtils.clear(0.15f, 0.15f, 0.2f, 1f);
-        batch.begin();
-        batch.draw(image, 140, 210);
-        batch.end();
-    }
 
     @Override
     public void dispose() {
+        //assetManager.dispose();
         batch.dispose();
-        image.dispose();
     }
+
+
+
+    public AssetManager getAssetManager() {
+        return assetManager;
+    }
+
+
+    public SpriteBatch getBatch() {
+        return batch;
+    }
+
 }
