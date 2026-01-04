@@ -20,7 +20,7 @@ public class AppConfig {
     public static final int WINDOW_WIDTH = 1600;
     public static final int WINDOW_HEIGHT = 900;
 
-    public static final int TILE_SIZE = 512;
+    //public static final int TILE_SIZE = 512;
 
 
     //THIS HERE IS TEMPORARY!
