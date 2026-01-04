@@ -59,7 +59,7 @@ public class MapScreen extends ScreenAdapter implements InputProcessor {
 
     //Min / max zoom for out tileset - should probably move somewhere else
     private static final float minMapZoom = 9.f;
-    private static final float maxMapZoom = 14.f;
+    private static final float maxMapZoom = 15.f;
 
 
 
@@ -88,6 +88,11 @@ public class MapScreen extends ScreenAdapter implements InputProcessor {
 
         //Enable input handling
         Gdx.input.setInputProcessor(this);
+
+
+        //Set initial camera position
+        Vector2 worldCenter = GeoPoint.toWorldCoordinates(AppConfig.MAP_BOUNDS.getCenter());
+        camera.position.set(worldCenter.x, worldCenter.y, 0.f);
     }
 
 
@@ -361,8 +366,11 @@ public class MapScreen extends ScreenAdapter implements InputProcessor {
         else if(camZoom > 0.03125f){
             return 13.f;
         }
+        else if(camZoom > .015625f){
+            return 14.f;
+        }
 
-        return 14.f;
+        return 15.f;
     }
 
 
@@ -375,16 +383,6 @@ public class MapScreen extends ScreenAdapter implements InputProcessor {
 
     @Override
     public boolean keyDown(int i) {
-
-        if(i == Input.Keys.LEFT){
-            mapZoom = Math.max(minMapZoom, mapZoom - 1.f);
-            return true;
-        }
-        else if(i == Input.Keys.RIGHT){
-            mapZoom = Math.min(maxMapZoom, mapZoom + 1.f);
-            return true;
-        }
-
         return false;
     }
 
@@ -442,7 +440,7 @@ public class MapScreen extends ScreenAdapter implements InputProcessor {
     @Override
     public boolean scrolled(float v, float v1) {
         targetZoom += v1 * getZoomDelta(targetZoom);
-        targetZoom = Math.max(targetZoom, 0.01f); //Limit max zoom
+        targetZoom = Math.max(targetZoom, 0.001f); //Limit max zoom
         targetZoom = Math.min(targetZoom, 1.f);
 
         return true;
