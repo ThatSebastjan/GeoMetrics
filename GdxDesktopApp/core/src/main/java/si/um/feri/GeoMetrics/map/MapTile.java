@@ -1,7 +1,6 @@
 package si.um.feri.GeoMetrics.map;
 
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.math.Vector2;
 
 
 public class MapTile {
@@ -17,6 +16,11 @@ public class MapTile {
         this.y = y;
         this.zoomLevel = zoomLevel;
         texture = tx;
+    }
+
+
+    public long hashKey(){
+        return getHashKey(x, y, zoomLevel);
     }
 
 

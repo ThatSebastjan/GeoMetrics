@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Texture;
 import si.um.feri.GeoMetrics.config.AppConfig;
 
 import java.util.HashMap;
+import java.util.Iterator;
 
 
 public class MapTileManager {
@@ -27,7 +28,8 @@ public class MapTileManager {
     }
 
 
-    public MapTile getTile(int tileX, int tileY, int zoomLevel) {
+    //Get tile if loaded
+    public MapTile tryGetTile(int tileX, int tileY, int zoomLevel) {
 
         if((zoomLevel < minZoom) || (zoomLevel > maxZoom)){
             throw new IllegalArgumentException("Zoom level out of range!"); //Sanity check
@@ -39,17 +41,71 @@ public class MapTileManager {
             return tileHashMap.get(hashKey);
         }
 
-        String filePath = getPathForTile(tileX, tileY, zoomLevel);
-        assetManager.load(filePath, Texture.class);
+        return null; //Pending load
+    }
 
-        //TODO: TEMPORARY SYNC LOADING! FREEZES APP ON ZOOM
-        assetManager.finishLoading();
 
-        Texture texture = assetManager.get(filePath, Texture.class);
-        MapTile tile = new MapTile(tileX, tileY, zoomLevel, texture);
-        tileHashMap.put(hashKey, tile);
+    public TilePreloadAction preloadAsync(MapTileRegion region, int targetZoomLevel){
 
-        return tile;
+        if((targetZoomLevel < minZoom) || (targetZoomLevel > maxZoom)){
+            throw new IllegalArgumentException("Zoom level out of range!"); //Sanity check
+        }
+
+        TilePreloadAction action = new TilePreloadAction(region, targetZoomLevel);
+
+        for(int tileY = region.startTileY; tileY <= region.endTileY; tileY++) {
+            for (int tileX = region.startTileX; tileX <= region.endTileX; tileX++) {
+
+                MapTile preloadTile = new MapTile(tileX, tileY, targetZoomLevel, null);
+                action.pendingTiles.add(preloadTile);
+            }
+        }
+
+        //Queue loading
+        Iterator<MapTile> it = action.pendingTiles.iterator();
+
+        while(it.hasNext()){
+            MapTile t = it.next();
+
+            if(tileHashMap.containsKey(t.hashKey())){
+                it.remove(); //Remove already loaded
+                continue;
+            }
+
+            String filePath = getPathForTile(t.x, t.y, t.zoomLevel);
+            assetManager.load(filePath, Texture.class);
+        }
+
+        return action;
+    }
+
+
+    public boolean isPreloadActionComplete(TilePreloadAction action){
+        Iterator<MapTile> it = action.pendingTiles.iterator();
+
+        while(it.hasNext()){
+            MapTile t = it.next();
+            String filePath = getPathForTile(t.x, t.y, t.zoomLevel);
+
+            if(!assetManager.isLoaded(filePath, Texture.class)){
+                return false;
+            }
+
+            //Populate texture
+            t.texture = assetManager.get(filePath, Texture.class);
+
+            //Add to tile hash map
+            tileHashMap.put(t.hashKey(), t);
+
+            it.remove(); //Remove from pending
+        }
+
+        return true;
+    }
+
+
+    public boolean preloadUpdate(){
+        return assetManager.update();
     }
 
 
@@ -106,6 +162,6 @@ public class MapTileManager {
         int bottomTile = MapTile.latitudeToTile(AppConfig.MAP_BOUNDS.yMax, zoomLevel);
         int rightTile = MapTile.longitudeToTile(AppConfig.MAP_BOUNDS.xMax, zoomLevel);
 
-        return new MapTileRegion(leftTile, rightTile, bottomTile, topTile);
+        return new MapTileRegion(leftTile, rightTile, bottomTile, topTile, zoomLevel);
     }
 }

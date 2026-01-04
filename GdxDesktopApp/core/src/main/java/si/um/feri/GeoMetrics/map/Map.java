@@ -15,9 +15,15 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.utils.TimeUtils;
 import com.badlogic.gdx.utils.viewport.FillViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import si.um.feri.GeoMetrics.config.AppConfig;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import static com.badlogic.gdx.math.MathUtils.lerp;
 
 
@@ -36,10 +42,13 @@ public class Map implements InputProcessor, Disposable {
 
 
     private int mapZoom; //Map tile zoom level
+
     private float targetZoom = 1.f; //Target camera zoom for interpolation
+    private boolean lerpingZoom = false;
     private final float minCameraZoom = 0.001f;
     private final float maxCameraZoom = 1f;
 
+    private ArrayList<TilePreloadAction> preloadActions = new ArrayList<>();
 
 
     private Vector2 lastTouchPoint = new Vector2();
@@ -76,6 +85,9 @@ public class Map implements InputProcessor, Disposable {
 
         //Set initial zoom level
         mapZoom = tileManager.getMinZoom();
+
+        //Trigger initial tile preload
+        onCameraPan();
     }
 
 
@@ -89,19 +101,39 @@ public class Map implements InputProcessor, Disposable {
     //Should be called on resize event
     public void onResize(int width, int height){
         viewport.update(width, height, false);
+
+        onCameraPan(); //Trigger tile load on resize
     }
 
 
     public void update(float dt){
 
+
+        //Update preload requests
+        if(!preloadActions.isEmpty()){
+            tileManager.preloadUpdate();
+
+            Iterator<TilePreloadAction> it = preloadActions.iterator();
+
+            while(it.hasNext()){
+                TilePreloadAction action = it.next();
+
+                if(tileManager.isPreloadActionComplete(action)){
+                    mapZoom = action.targetZoomLevel; //Update target zoom
+                    it.remove();
+                    System.out.printf("Async action complete. New zoom: %d\n", action.targetZoomLevel);
+                }
+                else {
+                    System.out.printf("Async action has %d items left\n", action.pendingTiles.size());
+                }
+            }
+        }
+
+
         //Handle zoom updates
         if(Math.abs(targetZoom - camera.zoom) > 0.0001f) {
-
+            lerpingZoom = true;
             camera.zoom = lerp(camera.zoom, targetZoom, 0.08f);
-            mapZoom = tileManager.getMapZoomLevel(camera.zoom);
-
-            //TODO: load visible tiles on mapZoom change; Only update mapZoom once all are loaded!
-
 
             Vector3 mouseWorldLocOld = viewport.unproject(new Vector3(lastMousePos.x, lastMousePos.y, 0.f));
 
@@ -112,8 +144,67 @@ public class Map implements InputProcessor, Disposable {
             Vector3 mDelta = mouseWorldLocNew.cpy().sub(mouseWorldLocOld);
 
             camera.position.sub(mDelta.x, mDelta.y, 0.f);
+
+
+            //Update level of detail
+            int newMapZoom = tileManager.getMapZoomLevel(camera.zoom);
+
+            //Load visible tiles on mapZoom change; Only update mapZoom once all are loaded
+            if(newMapZoom != mapZoom){
+                MapTileRegion region = getVisibleTileRegion(newMapZoom);
+
+                if(queueTilePreload(region, newMapZoom)){
+                    System.out.printf("Schedule preload for zoom %d (%d)\n", newMapZoom, preloadActions.size());
+                }
+            }
+        }
+        else {
+
+            //Zoom interpolation complete
+            if(lerpingZoom) {
+                onZoomComplete();
+            }
+
+            lerpingZoom = false;
         }
 
+    }
+
+
+    //Queue tile region preload. Returns true if new tiles have been scheduled for loading, false otherwise
+    boolean queueTilePreload(MapTileRegion region, int targetZoom){
+
+        //Check if this region is already pending preload and is scheduled at same target zoom level
+        if(preloadActions.stream().noneMatch(x -> (x.region.zoomLevel == region.zoomLevel) && x.region.contains(region))) {
+            TilePreloadAction loadReq = tileManager.preloadAsync(region, targetZoom);
+
+            if(!tileManager.isPreloadActionComplete(loadReq) || (targetZoom != mapZoom)) { //Already loaded and no zoom switch?
+                preloadActions.add(loadReq);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+
+    //Camera moved, schedule tile preload
+    void onCameraPan(){
+        MapTileRegion region = getVisibleTileRegion(mapZoom);
+
+        if(queueTilePreload(region, mapZoom)){
+            System.out.printf("Schedule pan preload for zoom %d (%d)\n", mapZoom, preloadActions.size());
+        }
+    }
+
+
+    //Zoom action completed
+    void onZoomComplete(){
+        MapTileRegion region = getVisibleTileRegion(mapZoom);
+
+        if(queueTilePreload(region, mapZoom)){
+            System.out.printf("Schedule zoom complete preload for zoom %d (%d)\n", mapZoom, preloadActions.size());
+        }
     }
 
 
@@ -124,7 +215,8 @@ public class Map implements InputProcessor, Disposable {
         batch.begin();
 
 
-        MapTileRegion visibleRegion = getVisibleTileRegion();
+        long timeNow = TimeUtils.millis();
+        MapTileRegion visibleRegion = getVisibleTileRegion(mapZoom);
 
         for(int tileY = visibleRegion.startTileY; tileY <= visibleRegion.endTileY; tileY++){
             for(int tileX = visibleRegion.startTileX; tileX <= visibleRegion.endTileX; tileX++){
@@ -138,7 +230,12 @@ public class Map implements InputProcessor, Disposable {
                 float width = bottomRight.x - topLeft.x;
                 float height = bottomRight.y - topLeft.y;
 
-                MapTile tile = tileManager.getTile(tileX, tileY, mapZoom);
+                MapTile tile = tileManager.tryGetTile(tileX, tileY, mapZoom);
+
+                if(tile == null){
+                    continue; //Still loading
+                }
+
 
                 batch.draw(tile.texture, topLeft.x, topLeft.y - height, width, height);
             }
@@ -243,10 +340,10 @@ public class Map implements InputProcessor, Disposable {
     }
 
 
-    MapTileRegion getVisibleTileRegion(){
+    MapTileRegion getVisibleTileRegion(int zoomLevel){
 
         //Get map bounds
-        MapTileRegion mapTileBounds = MapTileManager.getMapTileBounds(mapZoom);
+        MapTileRegion mapTileBounds = MapTileManager.getMapTileBounds(zoomLevel);
 
         //Get visible tile range
         Vector3 screenTopLeft = viewport.unproject(new Vector3(0.f, 0.f, 0.f));
@@ -256,7 +353,7 @@ public class Map implements InputProcessor, Disposable {
         GeoPoint pointBottomRight = GeoPoint.fromWorldCoordinates(screenBottomRight.x, screenBottomRight.y);
 
         //Convert and limit
-        MapTileRegion visibleRegion = MapTileRegion.fromLngLat(pointTopLeft, pointBottomRight, mapZoom);
+        MapTileRegion visibleRegion = MapTileRegion.fromLngLat(pointTopLeft, pointBottomRight, zoomLevel);
         visibleRegion.limitToBounds(mapTileBounds); //Limit to dataset bounds
 
         return visibleRegion;
@@ -321,6 +418,8 @@ public class Map implements InputProcessor, Disposable {
         Vector2 worldDragDelta = viewport.unproject(dragDelta);
         camera.position.sub(worldDragDelta.x - basePos.x, worldDragDelta.y - basePos.y, 0.f);
         camera.update();
+
+        onCameraPan();
 
         return true;
     }
