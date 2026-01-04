@@ -131,7 +131,7 @@ public class Map implements InputProcessor, Disposable {
 
 
         //Handle zoom updates
-        if(Math.abs(targetZoom - camera.zoom) > 0.0001f) {
+        if(Math.abs(targetZoom - camera.zoom) > 0.00001f) {
             lerpingZoom = true;
             camera.zoom = lerp(camera.zoom, targetZoom, 0.08f);
 
@@ -363,8 +363,28 @@ public class Map implements InputProcessor, Disposable {
     //Zoom speed based on zoom
     float getZoomDelta(float camZoom){
         float baseDelta = 0.01f;
-        return (float)(baseDelta / (1 + Math.log10(1 / camZoom)));
+        return (float)(baseDelta / (1 + Math.log10(1 / camZoom))) * camZoom * 10;
     }
+
+
+
+    /*
+        Exposed utility functions
+    */
+
+    //GeoPoint to screen coordinates
+    public Vector2 project(GeoPoint p){
+        Vector2 worldPos = GeoPoint.toWorldCoordinates(p);
+        return viewport.project(worldPos);
+    }
+
+
+    //Screen position to GeoPoint
+    public GeoPoint unproject(Vector2 screenPos){
+        Vector3 worldPos = viewport.unproject(new Vector3(screenPos.x, screenPos.y, 0.f));
+        return GeoPoint.fromWorldCoordinates(worldPos.x, worldPos.y);
+    }
+
 
 
 
