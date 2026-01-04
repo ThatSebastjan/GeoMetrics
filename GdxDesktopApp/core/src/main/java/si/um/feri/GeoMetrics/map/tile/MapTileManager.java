@@ -1,4 +1,4 @@
-package si.um.feri.GeoMetrics.map;
+package si.um.feri.GeoMetrics.map.tile;
 
 import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Texture;

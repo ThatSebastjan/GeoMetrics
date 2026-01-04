@@ -1,8 +1,6 @@
 package si.um.feri.GeoMetrics.map;
 
 
-import com.badlogic.gdx.math.Vector2;
-
 public class Bbox {
 
     public final double xMin;
@@ -39,4 +37,18 @@ public class Bbox {
         return (xMin < longitude) && (xMax > longitude) && (yMin < latitude) && (yMax > latitude);
     }
 
+
+    public boolean overlaps(Bbox other){
+        return !((xMin > other.xMax) || (xMax < other.xMin) || (yMin > other.yMax) || (yMax < other.yMin));
+    }
+
+
+    public static Bbox fromPoints(GeoPoint a, GeoPoint b){
+        double minLon = Math.min(a.longitude, b.longitude);
+        double minLat = Math.min(a.latitude, b.latitude);
+        double maxLon = Math.max(a.longitude, b.longitude);
+        double maxLat = Math.max(a.latitude, b.latitude);
+
+        return new Bbox(minLon, minLat, maxLon, maxLat);
+    }
 }

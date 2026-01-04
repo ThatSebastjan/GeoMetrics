@@ -1,5 +1,8 @@
-package si.um.feri.GeoMetrics.map;
+package si.um.feri.GeoMetrics.map.tile;
 
+
+import si.um.feri.GeoMetrics.map.Bbox;
+import si.um.feri.GeoMetrics.map.GeoPoint;
 
 public class MapTileRegion {
     public int startTileX;

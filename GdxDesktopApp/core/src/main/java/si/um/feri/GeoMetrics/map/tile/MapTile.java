@@ -1,6 +1,7 @@
-package si.um.feri.GeoMetrics.map;
+package si.um.feri.GeoMetrics.map.tile;
 
 import com.badlogic.gdx.graphics.Texture;
+import si.um.feri.GeoMetrics.map.GeoPoint;
 
 
 public class MapTile {

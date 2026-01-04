@@ -1,4 +1,4 @@
-package si.um.feri.GeoMetrics.map;
+package si.um.feri.GeoMetrics.map.tile;
 
 import java.util.ArrayList;
 

@@ -6,6 +6,9 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import si.um.feri.GeoMetrics.GdxMap;
 import si.um.feri.GeoMetrics.config.AppConfig;
 import si.um.feri.GeoMetrics.map.*;
+import si.um.feri.GeoMetrics.map.layer.MapDebugLayer;
+import si.um.feri.GeoMetrics.map.layer.MapGeoJsonLayer;
+import si.um.feri.GeoMetrics.map.tile.MapTileManager;
 
 
 public class MapScreen extends ScreenAdapter {
@@ -30,6 +33,10 @@ public class MapScreen extends ScreenAdapter {
 
         //Set map input handling
         Gdx.input.setInputProcessor(map);
+
+        //Add map layers
+        map.addLayer(new MapGeoJsonLayer("C:/Users/Rok/Desktop/GeoJsonData/large.json"));
+        map.addLayer(new MapDebugLayer());
     }
 
 

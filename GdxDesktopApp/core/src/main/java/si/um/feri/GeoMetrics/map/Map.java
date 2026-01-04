@@ -3,26 +3,24 @@ package si.um.feri.GeoMetrics.map;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Disposable;
-import com.badlogic.gdx.utils.TimeUtils;
 import com.badlogic.gdx.utils.viewport.FillViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import si.um.feri.GeoMetrics.config.AppConfig;
+import si.um.feri.GeoMetrics.map.layer.MapLayer;
+import si.um.feri.GeoMetrics.map.tile.MapTile;
+import si.um.feri.GeoMetrics.map.tile.MapTileManager;
+import si.um.feri.GeoMetrics.map.tile.MapTileRegion;
+import si.um.feri.GeoMetrics.map.tile.TilePreloadAction;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 import static com.badlogic.gdx.math.MathUtils.lerp;
 
@@ -32,16 +30,13 @@ public class Map implements InputProcessor, Disposable {
 
     private OrthographicCamera camera;
     private Viewport viewport;
-
     private ShapeRenderer sr;
-    private BitmapFont font;
-
     private SpriteBatch batch;
 
     private MapTileManager tileManager;
 
 
-    private int mapZoom; //Map tile zoom level
+    private int mapZoom; //Map tile zoom / detail level
 
     private float targetZoom = 1.f; //Target camera zoom for interpolation
     private boolean lerpingZoom = false;
@@ -49,6 +44,9 @@ public class Map implements InputProcessor, Disposable {
     private final float maxCameraZoom = 1f;
 
     private ArrayList<TilePreloadAction> preloadActions = new ArrayList<>();
+
+
+    private ArrayList<MapLayer> layers = new ArrayList<>();
 
 
     private Vector2 lastTouchPoint = new Vector2();
@@ -70,15 +68,6 @@ public class Map implements InputProcessor, Disposable {
 
     private void init(){
 
-        //Test freetype font
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/Ubuntu.ttf"));
-        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.size = 24;
-
-        font = generator.generateFont(parameter);
-        generator.dispose();
-
-
         //Set initial camera position
         Vector2 worldCenter = GeoPoint.toWorldCoordinates(AppConfig.MAP_BOUNDS.getCenter());
         camera.position.set(worldCenter.x, worldCenter.y, 0.f);
@@ -93,8 +82,12 @@ public class Map implements InputProcessor, Disposable {
 
     @Override
     public void dispose() {
+
+        for(MapLayer layer : layers){
+            layer.dispose();
+        }
+
         sr.dispose();
-        font.dispose();
     }
 
 
@@ -168,6 +161,12 @@ public class Map implements InputProcessor, Disposable {
             lerpingZoom = false;
         }
 
+
+        //Update layers
+        for(MapLayer layer : layers){
+            layer.update(this, dt);
+        }
+
     }
 
 
@@ -215,7 +214,6 @@ public class Map implements InputProcessor, Disposable {
         batch.begin();
 
 
-        long timeNow = TimeUtils.millis();
         MapTileRegion visibleRegion = getVisibleTileRegion(mapZoom);
 
         for(int tileY = visibleRegion.startTileY; tileY <= visibleRegion.endTileY; tileY++){
@@ -244,99 +242,11 @@ public class Map implements InputProcessor, Disposable {
         batch.end();
 
 
-        //DEBUG RENDER
-        debugRender(dt, visibleRegion);
-    }
-
-
-    //DEBUG RENDERING
-    void debugRender(float dt, MapTileRegion visibleRegion){
-
-        sr.setProjectionMatrix(batch.getProjectionMatrix());
-        sr.begin(ShapeRenderer.ShapeType.Line);
-
-
-        class Tmp {
-            public final String str;
-            public final Vector2 pos;
-
-            public Tmp(String s, Vector2 v){
-                str = s;
-                pos = v;
-            }
+        //Render layers
+        for(MapLayer layer : layers){
+            layer.render(this, dt, visibleRegion);
         }
 
-        Array<Tmp> points = new Array<>();
-
-
-        //Draw tile bounds
-        sr.setColor(1.f, 0.48f, 0.26f, 1.f);
-
-        for(int ty = visibleRegion.startTileY; ty <= visibleRegion.endTileY; ty++){
-            for(int tx = visibleRegion.startTileX; tx <= visibleRegion.endTileX; tx++){
-
-                GeoPoint tileTopLeft = MapTile.getTileGeoPoint(tx, ty, mapZoom);
-                GeoPoint tileBottomRight = MapTile.getTileGeoPoint(tx + 1, ty - 1, mapZoom);
-
-                Vector2 topLeft = GeoPoint.toWorldCoordinates(tileTopLeft);
-                Vector2 bottomRight = GeoPoint.toWorldCoordinates(tileBottomRight);
-
-
-                float width = bottomRight.x - topLeft.x;
-                float height = bottomRight.y - topLeft.y;
-
-                topLeft.y -= height;
-
-                sr.line(topLeft.x, topLeft.y, topLeft.x + width, topLeft.y);
-                sr.line(topLeft.x, topLeft.y + height, topLeft.x + width, topLeft.y + height);
-                sr.line(topLeft.x, topLeft.y, topLeft.x, topLeft.y + height);
-                sr.line(topLeft.x + width, topLeft.y, topLeft.x + width, topLeft.y + height);
-
-                Vector2 center = new Vector2(topLeft.x + width / 2.f, topLeft.y + height / 2.f);
-                points.add(new Tmp((tx) + "_" + (ty), viewport.project(center)));
-            }
-        }
-
-
-        //Draw map bounds
-        sr.setColor(Color.WHITE);
-
-        Vector2 topLeft = GeoPoint.toWorldCoordinates(AppConfig.MAP_BOUNDS.xMin, AppConfig.MAP_BOUNDS.yMax);
-        Vector2 topRight = GeoPoint.toWorldCoordinates(AppConfig.MAP_BOUNDS.xMax, AppConfig.MAP_BOUNDS.yMax);
-        Vector2 bottomLeft = GeoPoint.toWorldCoordinates(AppConfig.MAP_BOUNDS.xMin, AppConfig.MAP_BOUNDS.yMin);
-        Vector2 bottomRight = GeoPoint.toWorldCoordinates(AppConfig.MAP_BOUNDS.xMax, AppConfig.MAP_BOUNDS.yMin);
-
-        sr.line(topLeft.x, topLeft.y, bottomLeft.x, bottomLeft.y);
-        sr.line(topLeft.x, topLeft.y, topRight.x, topRight.y);
-        sr.line(bottomLeft.x, bottomLeft.y, bottomRight.x, bottomRight.y);
-        sr.line(topRight.x, topRight.y, bottomRight.x, bottomRight.y);
-
-        sr.end();
-
-
-
-        /*
-            Screen space rendering here...
-        */
-
-        Matrix4 uiMatrix = viewport.getCamera().combined.cpy();
-        uiMatrix.setToOrtho2D(viewport.getScreenX(), viewport.getScreenY(), viewport.getScreenWidth(), viewport.getScreenHeight());
-        batch.setProjectionMatrix(uiMatrix);
-        batch.begin();
-
-        GlyphLayout gl = new GlyphLayout();
-
-        for(Tmp pp : points){
-            gl.setText(font, pp.str);
-            font.draw(batch, pp.str, pp.pos.x - gl.width / 2.f, pp.pos.y + gl.height / 2.f);
-        }
-
-
-        font.draw(batch, String.format("Rendered tiles: %d", visibleRegion.getNumTiles()), 10.f, 128.f);
-        font.draw(batch, String.format("Camera zoom: %.4f", camera.zoom), 10.f, 96.f);
-        font.draw(batch, String.format("Map zoom: %d", mapZoom), 10.f, 64.f);
-
-        batch.end();
     }
 
 
@@ -372,9 +282,28 @@ public class Map implements InputProcessor, Disposable {
         Exposed utility functions
     */
 
+    public void addLayer(MapLayer layer){
+
+        for(MapLayer l : layers){
+            if(l.getUuid() == layer.getUuid()){
+                throw new IllegalArgumentException("Layer already present!"); //Sanity check to prevent multiple same layers
+            }
+        }
+
+        layers.add(layer);
+        layer.onAddedToMap(this);
+    }
+
+
     //GeoPoint to screen coordinates
     public Vector2 project(GeoPoint p){
         Vector2 worldPos = GeoPoint.toWorldCoordinates(p);
+        return viewport.project(worldPos);
+    }
+
+
+    //World coordinates to screen coordinates
+    public Vector2 project(Vector2 worldPos){
         return viewport.project(worldPos);
     }
 
@@ -386,6 +315,32 @@ public class Map implements InputProcessor, Disposable {
     }
 
 
+    public Batch getBatch(){
+        return batch;
+    }
+
+
+    public Viewport getViewport(){
+        return viewport;
+    }
+
+
+    public ShapeRenderer getShapeRenderer(){
+        return sr;
+    }
+
+
+    //Get map detail level
+    public int getMapZoom(){
+        return mapZoom;
+    }
+
+
+    public OrthographicCamera getCamera(){
+        return camera;
+    }
+
+
 
 
     /*
@@ -394,11 +349,21 @@ public class Map implements InputProcessor, Disposable {
 
     @Override
     public boolean keyDown(int i) {
+
+        for(MapLayer l : layers){
+            l.onKeyDown(i);
+        }
+
         return false;
     }
 
     @Override
     public boolean keyUp(int i) {
+
+        for(MapLayer l : layers){
+            l.onKeyUp(i);
+        }
+
         return false;
     }
 
