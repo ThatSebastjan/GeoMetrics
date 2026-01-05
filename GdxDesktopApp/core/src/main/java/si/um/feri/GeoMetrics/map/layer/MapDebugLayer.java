@@ -120,7 +120,7 @@ public class MapDebugLayer extends MapLayer {
         mapSr.line(topLeft.x, topLeft.y, topRight.x, topRight.y);
         mapSr.line(bottomLeft.x, bottomLeft.y, bottomRight.x, bottomRight.y);
         mapSr.line(topRight.x, topRight.y, bottomRight.x, bottomRight.y);
-
+        
         mapSr.end();
 
 

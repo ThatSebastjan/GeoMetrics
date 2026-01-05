@@ -137,6 +137,7 @@ public class Map implements InputProcessor, Disposable {
             Vector3 mDelta = mouseWorldLocNew.cpy().sub(mouseWorldLocOld);
 
             camera.position.sub(mDelta.x, mDelta.y, 0.f);
+            clampCamera();
 
 
             //Update level of detail
@@ -277,6 +278,34 @@ public class Map implements InputProcessor, Disposable {
     }
 
 
+    //Clamp camera position to Map bounds
+    void clampCamera(){
+        Vector2 mapMin = GeoPoint.toWorldCoordinates(AppConfig.MAP_BOUNDS.xMin, AppConfig.MAP_BOUNDS.yMin);
+        Vector2 mapMax = GeoPoint.toWorldCoordinates(AppConfig.MAP_BOUNDS.xMax, AppConfig.MAP_BOUNDS.yMax);
+
+        Vector3 camMin = viewport.unproject(new Vector3(0.f, 0.f, 0.f));
+        Vector3 camMax = viewport.unproject(new Vector3(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), 0.f));
+
+        float halfViewWidth = (camMax.x - camMin.x) * 0.5f;
+        float halfViewHeight = (camMin.y - camMax.y) * 0.5f;
+
+        if((camera.position.x - halfViewWidth) < mapMin.x){
+            camera.position.x = mapMin.x + halfViewWidth;
+        }
+        else if((camera.position.x + halfViewWidth) > mapMax.x){
+            camera.position.x = mapMax.x - halfViewWidth;
+        }
+
+        if((camera.position.y - halfViewHeight) < mapMin.y){
+            camera.position.y = mapMin.y + halfViewHeight;
+        }
+        else if((camera.position.y + halfViewHeight) > mapMax.y){
+            camera.position.y = mapMax.y - halfViewHeight;
+        }
+
+    }
+
+
 
     /*
         Exposed utility functions
@@ -402,6 +431,10 @@ public class Map implements InputProcessor, Disposable {
         Vector2 basePos = viewport.unproject(new Vector2(0.f, 0.f));
         Vector2 worldDragDelta = viewport.unproject(dragDelta);
         camera.position.sub(worldDragDelta.x - basePos.x, worldDragDelta.y - basePos.y, 0.f);
+
+        //Limit camera to world bounds
+        clampCamera();
+
         camera.update();
 
         onCameraPan();

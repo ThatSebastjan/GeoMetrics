@@ -1,14 +1,17 @@
 package si.um.feri.GeoMetrics.map.layer;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g3d.ModelBatch;
+import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.utils.QuadTreeFloat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.locationtech.jts.geom.*;
+import org.locationtech.jts.index.quadtree.Quadtree;
 import org.locationtech.jts.triangulate.polygon.PolygonTriangulator;
 import si.um.feri.GeoMetrics.map.Bbox;
 import si.um.feri.GeoMetrics.map.GeoPoint;
@@ -21,6 +24,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 
@@ -28,10 +32,14 @@ import java.util.Objects;
 public class MapGeoJsonLayer extends MapLayer {
 
     private Batch mapBatch;
-    private ShapeRenderer mapSr;
+    //private ShapeRenderer mapSr;
 
     private final String dataPath;
     private final ArrayList<GeoJsonGeometry> geometryList;
+    private final Quadtree quadtree;
+
+    //Static test shader
+    static ShaderProgram geoJsonShader = null;
 
 
     public MapGeoJsonLayer(String dataPath){
@@ -39,6 +47,7 @@ public class MapGeoJsonLayer extends MapLayer {
 
         this.dataPath = dataPath;
         geometryList = new ArrayList<>();
+        quadtree = new Quadtree();
     }
 
 
@@ -46,7 +55,7 @@ public class MapGeoJsonLayer extends MapLayer {
     public void onAddedToMap(Map map) {
 
         mapBatch = map.getBatch();
-        mapSr = map.getShapeRenderer();
+        //mapSr = map.getShapeRenderer();
 
 
         //Load geometry from file
@@ -64,7 +73,11 @@ public class MapGeoJsonLayer extends MapLayer {
 
         for(int i = 0; i < features.length(); i++){
             JSONObject feature = features.getJSONObject(i);
-            geometryList.add(GeoJsonGeometry.fromJson(feature));
+
+            GeoJsonGeometry geom = GeoJsonGeometry.fromJson(feature);
+            geometryList.add(geom);
+
+            quadtree.insert(geom.getEnvelopeBounds(), geom);
         }
 
     }
@@ -109,66 +122,47 @@ public class MapGeoJsonLayer extends MapLayer {
 
         Bbox viewBounds = Bbox.fromPoints(topLeft, bottomRight);
 
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-
-        mapSr.setProjectionMatrix(mapBatch.getProjectionMatrix());
-        mapSr.begin(ShapeRenderer.ShapeType.Filled);
-
-        mapSr.setColor(Color.RED);
-
-        for(GeoJsonGeometry geom : geometryList){
-
-            if(!viewBounds.overlaps(geom.getBbox())){
-                continue; //Basic visibility check
-            }
+        Gdx.gl.glEnable(GL32.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL32.GL_SRC_ALPHA, GL32.GL_ONE_MINUS_SRC_ALPHA);
 
 
-            /*
-            ArrayList<Vector2> worldPoints = geom.getWorldCoordinates();
-            Vector2 previous = worldPoints.get(0);
-
-            for(int i = 1; i < worldPoints.size(); i++){
-                Vector2 point = worldPoints.get(i);
-                mapSr.line(previous, point);
-                previous = point;
-            }
-            */
+        //Set shader constants
+        ShaderProgram shaderProgram = getGeoJsonShader();
+        shaderProgram.bind();
+        shaderProgram.setUniformMatrix("u_projTrans", mapBatch.getProjectionMatrix());
+        shaderProgram.setUniformf("u_inColor", new Color(1.f, 0.f, 0.f, 0.2f));
 
 
-            //TODO: THIS NEEDS TO BE REIMPLEMENTED USING VBOs SO WE DON'T RE-CREATE MILLIONS OF TRIANGLES EACH FRAME!
-            if(geom._debug_outlineGeometry == null) {
+        //Query visible items
+        Envelope visibleEnvelope = new Envelope(viewBounds.xMin, viewBounds.xMax, viewBounds.yMin, viewBounds.yMax);
 
-                ArrayList<Vector2> worldPoints = geom.getWorldCoordinates();
+        //long startTime = System.nanoTime();
+        List<GeoJsonGeometry> visibleGeometry = quadtree.query(visibleEnvelope);
 
-                Coordinate[] coords = new Coordinate[worldPoints.size()];
+        //long endTime = System.nanoTime();
+        //long duration = (endTime - startTime);
 
-                for (int i = 0; i < worldPoints.size(); i++) {
-                    Vector2 point = worldPoints.get(i);
-                    coords[i] = new Coordinate(point.x, point.y);
-                }
+        //System.out.printf("Num visible: %d (%d)\n", visibleGeometry.size(), duration);
 
-                GeometryFactory factory = new GeometryFactory();
-                LineString outlineString = factory.createLineString(coords);
-                Geometry outlineGeometry = outlineString.buffer(0.001f);
-                Geometry outlineTriangles = PolygonTriangulator.triangulate(outlineGeometry);
-
-                Polygon infillPolygon = factory.createPolygon(coords);
-                Geometry infillTriangles = PolygonTriangulator.triangulate(infillPolygon);
-
-                geom._debug_outlineGeometry = outlineTriangles;
-                geom._debug_infillGeometry = infillTriangles;
-            }
-
-            mapSr.setColor(1.f, 0.f, 0.f, 0.3f);
-            renderTriangles(geom._debug_infillGeometry);
-
-            mapSr.setColor(Color.RED);
-            renderTriangles(geom._debug_outlineGeometry);
-
+        //Render infill
+        for(GeoJsonGeometry geom : visibleGeometry) {
+            geom.infillMesh.render(shaderProgram, GL32.GL_TRIANGLES);
         }
 
-        mapSr.end();
+
+        //Render outlines
+        shaderProgram.setUniformf("u_inColor", Color.BLUE);
+
+        Gdx.gl.glLineWidth(5.f);
+        Gdx.gl.glDisable(GL32.GL_CULL_FACE);
+        Gdx.gl.glDisable(GL32.GL_DEPTH_TEST);
+
+        for(GeoJsonGeometry geom : visibleGeometry) {
+            geom.outlineMesh.render(shaderProgram, GL32.GL_LINE_STRIP);
+        }
+
+        Gdx.gl.glLineWidth(1.f);
+
     }
 
 
@@ -185,17 +179,16 @@ public class MapGeoJsonLayer extends MapLayer {
 
 
 
-    void renderTriangles(Geometry geom){
-        for (int i = 0; i < geom.getNumGeometries(); i++) {
-            Polygon triangle = (Polygon)geom.getGeometryN(i);
-            Coordinate[] coords = triangle.getCoordinates();
+    static ShaderProgram getGeoJsonShader(){
 
-            mapSr.triangle(
-                (float)coords[0].x, (float)coords[0].y,
-                (float)coords[1].x, (float)coords[1].y,
-                (float)coords[2].x, (float)coords[2].y
-            );
+        //Load on first call
+        if(geoJsonShader == null){
+            String vertexShader = Gdx.files.internal("assets/shaders/geojson_vertex.glsl").readString();
+            String fragmentShader = Gdx.files.internal("assets/shaders/geojson_fragment.glsl").readString();
+            geoJsonShader = new ShaderProgram(vertexShader, fragmentShader);
         }
+
+        return geoJsonShader;
     }
 
 }
