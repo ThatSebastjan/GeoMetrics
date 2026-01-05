@@ -74,7 +74,16 @@ public class MapGeoJsonLayer extends MapLayer {
         for(int i = 0; i < features.length(); i++){
             JSONObject feature = features.getJSONObject(i);
 
-            GeoJsonGeometry geom = GeoJsonGeometry.fromJson(feature);
+            boolean cutout = false;
+            JSONObject properties = feature.getJSONObject("properties");
+
+            if(properties != null){
+                if(properties.has("cutout")){
+                    cutout = properties.getBoolean("cutout");
+                }
+            }
+
+            GeoJsonGeometry geom = GeoJsonGeometry.fromJson(feature, cutout);
             geometryList.add(geom);
 
             quadtree.insert(geom.getEnvelopeBounds(), geom);
@@ -130,7 +139,7 @@ public class MapGeoJsonLayer extends MapLayer {
         ShaderProgram shaderProgram = getGeoJsonShader();
         shaderProgram.bind();
         shaderProgram.setUniformMatrix("u_projTrans", mapBatch.getProjectionMatrix());
-        shaderProgram.setUniformf("u_inColor", new Color(1.f, 0.f, 0.f, 0.2f));
+        shaderProgram.setUniformf("u_inColor", new Color(0.f, 0.f, 0.f, 0.4f));
 
 
         //Query visible items
@@ -151,7 +160,7 @@ public class MapGeoJsonLayer extends MapLayer {
 
 
         //Render outlines
-        shaderProgram.setUniformf("u_inColor", Color.BLUE);
+        shaderProgram.setUniformf("u_inColor", new Color(0.f, 0.f, 0.f, 0.7f));
 
         Gdx.gl.glLineWidth(5.f);
         Gdx.gl.glDisable(GL32.GL_CULL_FACE);

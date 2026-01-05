@@ -8,6 +8,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.locationtech.jts.geom.*;
 import org.locationtech.jts.triangulate.polygon.PolygonTriangulator;
+import si.um.feri.GeoMetrics.config.AppConfig;
 import si.um.feri.GeoMetrics.map.Bbox;
 import si.um.feri.GeoMetrics.map.GeoPoint;
 import java.util.Objects;
@@ -22,13 +23,15 @@ public class GeoJsonGeometry {
 
     public Mesh infillMesh = null;
     public Mesh outlineMesh = null;
+    private boolean cutout;
 
 
-    public GeoJsonGeometry(String type, GeoPoint[] coordinates){
+    public GeoJsonGeometry(String type, GeoPoint[] coordinates, boolean cutout){
         this.type = type;
         this.coordinates = coordinates;
         this.worldCoordinates = null;
         bounds = computeBbox();
+        this.cutout = cutout;
 
         createInfillMesh();
         createOutlineMesh();
@@ -91,7 +94,29 @@ public class GeoJsonGeometry {
         GeometryFactory factory = new GeometryFactory();
 
         Polygon infillPolygon = factory.createPolygon(coordList);
-        Geometry infillTriangles = PolygonTriangulator.triangulate(infillPolygon);
+
+        Geometry infillTriangles = null;
+
+        //Normal polygon
+        if(cutout == false){
+            infillTriangles = PolygonTriangulator.triangulate(infillPolygon);
+        }
+
+        //Inverse - fill whole world, center is a hole
+        else {
+
+            Coordinate[] worldBoundCoords = {
+                new Coordinate(0, 0),
+                new Coordinate(AppConfig.WORLD_WIDTH, 0),
+                new Coordinate(AppConfig.WORLD_WIDTH, AppConfig.WORLD_HEIGHT),
+                new Coordinate(0, AppConfig.WORLD_HEIGHT),
+                new Coordinate(0, 0)
+            };
+
+            Geometry quadGeom = factory.createPolygon(worldBoundCoords);
+            Geometry holed = quadGeom.difference(infillPolygon);
+            infillTriangles = PolygonTriangulator.triangulate(holed);
+        }
 
 
         int numTris = infillTriangles.getNumGeometries();
@@ -150,7 +175,7 @@ public class GeoJsonGeometry {
 
 
     //TODO: support for other features?
-    public static GeoJsonGeometry fromJson(JSONObject feature){
+    public static GeoJsonGeometry fromJson(JSONObject feature, boolean cutout){
         JSONObject geometry = feature.getJSONObject("geometry");
         String geometryType = geometry.getString("type");
 
@@ -172,6 +197,6 @@ public class GeoJsonGeometry {
             cList[cIdx] = new GeoPoint(cPair.getDouble(0), cPair.getDouble(1));
         }
 
-        return new GeoJsonGeometry(geometryType, cList);
+        return new GeoJsonGeometry(geometryType, cList, cutout);
     }
 }

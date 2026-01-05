@@ -35,9 +35,7 @@ public class MapScreen extends ScreenAdapter {
         Gdx.input.setInputProcessor(map);
 
         //Add map layers
-        //map.addLayer(new MapGeoJsonLayer("C:/Users/Rok/Desktop/GeoJsonData/si.json"));
-        //map.addLayer(new MapGeoJsonLayer("C:/Users/Rok/Desktop/GeoJsonData/ms.json"));
-        map.addLayer(new MapGeoJsonLayer("C:/Users/Rok/Desktop/GeoJsonData/large.json"));
+        map.addLayer(new MapGeoJsonLayer(Gdx.files.internal("assets/static/si_border.json").path()));
         map.addLayer(new MapDebugLayer());
     }
 
