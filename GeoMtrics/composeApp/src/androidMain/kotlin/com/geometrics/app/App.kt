@@ -47,9 +47,9 @@ fun App() {
         Scaffold(
             bottomBar = {
                 NavigationBar(
-                    modifier = Modifier
+                    modifier = Modifier,
 //                        .padding(horizontal = 16.dp, vertical = 8.dp) // floating bar
-                        .clip(RoundedCornerShape(topEnd = 48.dp, topStart = 48.dp)),
+//                        .clip(RoundedCornerShape(topEnd = 48.dp, topStart = 48.dp)),
                     containerColor = MaterialTheme.colorScheme.onPrimary
                 ) {
                     screens.forEach { screen ->
