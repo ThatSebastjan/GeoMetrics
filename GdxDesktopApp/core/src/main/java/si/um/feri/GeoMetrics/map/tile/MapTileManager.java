@@ -155,6 +155,16 @@ public class MapTileManager {
     }
 
 
+    //NOTE: This does not respect max tileset detail level
+    public float getMapZoomLevelFloat(float camZoom){
+        int numHalved = (int)(Math.log(1 / camZoom) / Math.log(2));
+        float rangLower = (float)Math.pow(0.5, numHalved + 1);
+        float rangUpper = (float)Math.pow(0.5, numHalved);
+        int intLevel = Math.max(minZoom, minZoom + numHalved); //NOTE: This does not respect max tileset detail level
+        return intLevel + (rangUpper - camZoom) / rangLower;
+    }
+
+
     //Get map tileset bounds based on zoom level
     public static MapTileRegion getMapTileBounds(int zoomLevel){
         int topTile = MapTile.latitudeToTile(AppConfig.MAP_BOUNDS.yMin, zoomLevel);

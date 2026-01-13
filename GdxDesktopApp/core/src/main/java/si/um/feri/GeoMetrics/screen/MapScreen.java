@@ -6,6 +6,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import si.um.feri.GeoMetrics.GdxMap;
 import si.um.feri.GeoMetrics.config.AppConfig;
 import si.um.feri.GeoMetrics.map.*;
+import si.um.feri.GeoMetrics.map.layer.LandLotLayer;
 import si.um.feri.GeoMetrics.map.layer.MapDebugLayer;
 import si.um.feri.GeoMetrics.map.layer.MapGeoJsonLayer;
 import si.um.feri.GeoMetrics.map.tile.MapTileManager;
@@ -17,7 +18,7 @@ public class MapScreen extends ScreenAdapter {
     private final AssetManager assetManager;
 
     private Map map;
-    private MapTileManager tileManager;
+    private Bbox previousViewBounds;
 
 
     public MapScreen(GdxMap mainInstance){
@@ -28,14 +29,17 @@ public class MapScreen extends ScreenAdapter {
 
     @Override
     public void show(){
-        tileManager = new MapTileManager(assetManager, AppConfig.TILE_DATA_PATH, 9, 15);
+        MapTileManager tileManager = new MapTileManager(assetManager, AppConfig.TILE_DATA_PATH, 9, 15);
         map = new Map(mainInstance.getBatch(), tileManager);
+
+        previousViewBounds = null;
 
         //Set map input handling
         Gdx.input.setInputProcessor(map);
 
         //Add map layers
         map.addLayer(new MapGeoJsonLayer(Gdx.files.internal("assets/static/si_border.json").path()));
+        map.addLayer(new LandLotLayer());
         map.addLayer(new MapDebugLayer());
     }
 

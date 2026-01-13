@@ -22,6 +22,7 @@ public class AppConfig {
 
     //public static final int TILE_SIZE = 512;
 
+    public static final String BACKEND_URL = "http://localhost:3001";
 
     //THIS HERE IS TEMPORARY!
     public static final String TILE_DATA_PATH = "C:/Users/Rok/Desktop/tile_grabber/data/";

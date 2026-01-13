@@ -71,7 +71,7 @@ public class MapDebugLayer extends MapLayer {
             return;
         }
 
-        mapSr.setProjectionMatrix(mapBatch.getProjectionMatrix());
+        mapSr.setProjectionMatrix(map.getCamera().combined);
         mapSr.begin(ShapeRenderer.ShapeType.Line);
 
         Array<DebugPoint> points = new Array<>();
@@ -145,7 +145,7 @@ public class MapDebugLayer extends MapLayer {
         font.draw(mapBatch, String.format("FPS: %d", Gdx.graphics.getFramesPerSecond()), 10.f, 160.f);
         font.draw(mapBatch, String.format("Rendered tiles: %d", visibleRegion.getNumTiles()), 10.f, 128.f);
         font.draw(mapBatch, String.format("Camera zoom: %.4f", map.getCamera().zoom), 10.f, 96.f);
-        font.draw(mapBatch, String.format("Map zoom: %d", mapZoom), 10.f, 64.f);
+        font.draw(mapBatch, String.format("Map zoom: %d (%.2f)", mapZoom, map.getMapZoomLevelFloat()), 10.f, 64.f);
 
         mapBatch.end();
     }

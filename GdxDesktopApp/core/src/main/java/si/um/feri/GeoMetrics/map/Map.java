@@ -51,6 +51,14 @@ public class Map implements InputProcessor, Disposable {
 
     private Vector2 lastTouchPoint = new Vector2();
     private Vector2 lastMousePos = new Vector2();
+    private boolean dragged = false;
+
+
+    public interface MapActionCallback {
+        void onViewChanged(Bbox viewBounds);
+    }
+
+    ArrayList<MapActionCallback> mapCallbacks = new ArrayList<>();
 
 
 
@@ -172,7 +180,7 @@ public class Map implements InputProcessor, Disposable {
 
 
     //Queue tile region preload. Returns true if new tiles have been scheduled for loading, false otherwise
-    boolean queueTilePreload(MapTileRegion region, int targetZoom){
+    private boolean queueTilePreload(MapTileRegion region, int targetZoom){
 
         //Check if this region is already pending preload and is scheduled at same target zoom level
         if(preloadActions.stream().noneMatch(x -> (x.region.zoomLevel == region.zoomLevel) && x.region.contains(region))) {
@@ -189,7 +197,7 @@ public class Map implements InputProcessor, Disposable {
 
 
     //Camera moved, schedule tile preload
-    void onCameraPan(){
+    private void onCameraPan(){
         MapTileRegion region = getVisibleTileRegion(mapZoom);
 
         if(queueTilePreload(region, mapZoom)){
@@ -199,12 +207,36 @@ public class Map implements InputProcessor, Disposable {
 
 
     //Zoom action completed
-    void onZoomComplete(){
+    private void onZoomComplete(){
         MapTileRegion region = getVisibleTileRegion(mapZoom);
 
         if(queueTilePreload(region, mapZoom)){
             System.out.printf("Schedule zoom complete preload for zoom %d (%d)\n", mapZoom, preloadActions.size());
         }
+
+        onViewChanged();
+    }
+
+
+    //Camera visible field changed (drag end, zoom end)
+    private void onViewChanged(){
+
+        Vector3 screenTopLeft = viewport.unproject(new Vector3(0.f, 0.f, 0.f));
+        Vector3 screenBottomRight = viewport.unproject(new Vector3(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), 0.f));
+
+        Bbox viewBounds = Bbox.fromPoints(
+            GeoPoint.fromWorldCoordinates(screenTopLeft.x, screenTopLeft.y),
+            GeoPoint.fromWorldCoordinates(screenBottomRight.x, screenBottomRight.y)
+        );
+
+        for(MapActionCallback cb : mapCallbacks){
+            cb.onViewChanged(viewBounds);
+        }
+    }
+
+
+    public void addCallback(MapActionCallback cb){
+        mapCallbacks.add(cb);
     }
 
 
@@ -251,7 +283,7 @@ public class Map implements InputProcessor, Disposable {
     }
 
 
-    MapTileRegion getVisibleTileRegion(int zoomLevel){
+    private MapTileRegion getVisibleTileRegion(int zoomLevel){
 
         //Get map bounds
         MapTileRegion mapTileBounds = MapTileManager.getMapTileBounds(zoomLevel);
@@ -272,14 +304,14 @@ public class Map implements InputProcessor, Disposable {
 
 
     //Zoom speed based on zoom
-    float getZoomDelta(float camZoom){
+    private float getZoomDelta(float camZoom){
         float baseDelta = 0.01f;
         return (float)(baseDelta / (1 + Math.log10(1 / camZoom))) * camZoom * 10;
     }
 
 
     //Clamp camera position to Map bounds
-    void clampCamera(){
+    private void clampCamera(){
         Vector2 mapMin = GeoPoint.toWorldCoordinates(AppConfig.MAP_BOUNDS.xMin, AppConfig.MAP_BOUNDS.yMin);
         Vector2 mapMax = GeoPoint.toWorldCoordinates(AppConfig.MAP_BOUNDS.xMax, AppConfig.MAP_BOUNDS.yMax);
 
@@ -365,6 +397,16 @@ public class Map implements InputProcessor, Disposable {
     }
 
 
+    public float getMapZoomLevelFloat(){
+        return tileManager.getMapZoomLevelFloat(camera.zoom);
+    }
+
+
+    public MapTileManager getTileManager(){
+        return tileManager;
+    }
+
+
     public OrthographicCamera getCamera(){
         return camera;
     }
@@ -407,6 +449,7 @@ public class Map implements InputProcessor, Disposable {
         //Mouse left down
         if(button == Input.Buttons.LEFT){
             lastTouchPoint.set(x, y);
+            dragged = false;
             return true;
         }
 
@@ -414,7 +457,17 @@ public class Map implements InputProcessor, Disposable {
     }
 
     @Override
-    public boolean touchUp(int i, int i1, int i2, int i3) {
+    public boolean touchUp(int x, int y, int pointer, int button) {
+
+        if(button == Input.Buttons.LEFT){
+
+            if(dragged){
+                dragged = false;
+                onViewChanged();
+            }
+
+        }
+
         return false;
     }
 
@@ -438,6 +491,7 @@ public class Map implements InputProcessor, Disposable {
         camera.update();
 
         onCameraPan();
+        dragged = true;
 
         return true;
     }

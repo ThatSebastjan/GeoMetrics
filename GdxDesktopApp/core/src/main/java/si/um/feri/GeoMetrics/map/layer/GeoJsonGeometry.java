@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.math.Vector2;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.locationtech.jts.algorithm.Centroid;
 import org.locationtech.jts.geom.*;
 import org.locationtech.jts.triangulate.polygon.PolygonTriangulator;
 import si.um.feri.GeoMetrics.config.AppConfig;
@@ -17,21 +18,30 @@ import java.util.Objects;
 public class GeoJsonGeometry {
 
     public final String type;
+    private int id;
     public final GeoPoint[] coordinates;
     private Vector2[] worldCoordinates;
     private Bbox bounds;
+    private Vector2 center;
+    private JSONObject properties;
 
     public Mesh infillMesh = null;
     public Mesh outlineMesh = null;
     private boolean cutout;
 
+    public Polygon infillPolygon = null;
 
-    public GeoJsonGeometry(String type, GeoPoint[] coordinates, boolean cutout){
+
+    public GeoJsonGeometry(String type, int id, GeoPoint[] coordinates, boolean cutout, JSONObject properties){
         this.type = type;
+        this.id = id;
         this.coordinates = coordinates;
         this.worldCoordinates = null;
         bounds = computeBbox();
         this.cutout = cutout;
+        this.properties = properties;
+
+        this.center = new Vector2(); //Set in createInfillMesh...
 
         createInfillMesh();
         createOutlineMesh();
@@ -82,6 +92,21 @@ public class GeoJsonGeometry {
     }
 
 
+    public Vector2 getCenter(){
+        return center;
+    }
+
+
+    public int getId(){
+        return id;
+    }
+
+
+    public JSONObject getProperties(){
+        return properties;
+    }
+
+
     private void createInfillMesh(){
         Vector2[] worldPoints = getWorldCoordinates();
         Coordinate[] coordList = new Coordinate[worldPoints.length];
@@ -93,12 +118,12 @@ public class GeoJsonGeometry {
 
         GeometryFactory factory = new GeometryFactory();
 
-        Polygon infillPolygon = factory.createPolygon(coordList);
+        infillPolygon = factory.createPolygon(coordList);
 
         Geometry infillTriangles = null;
 
         //Normal polygon
-        if(cutout == false){
+        if(!cutout){
             infillTriangles = PolygonTriangulator.triangulate(infillPolygon);
         }
 
@@ -117,6 +142,10 @@ public class GeoJsonGeometry {
             Geometry holed = quadGeom.difference(infillPolygon);
             infillTriangles = PolygonTriangulator.triangulate(holed);
         }
+
+        Centroid c = new Centroid(infillPolygon);
+        Coordinate centerCoord = c.getCentroid();
+        center.set((float)centerCoord.x, (float)centerCoord.y);
 
 
         int numTris = infillTriangles.getNumGeometries();
@@ -175,7 +204,7 @@ public class GeoJsonGeometry {
 
 
     //TODO: support for other features?
-    public static GeoJsonGeometry fromJson(JSONObject feature, boolean cutout){
+    public static GeoJsonGeometry fromJson(JSONObject feature, int id, boolean cutout){
         JSONObject geometry = feature.getJSONObject("geometry");
         String geometryType = geometry.getString("type");
 
@@ -183,11 +212,15 @@ public class GeoJsonGeometry {
             throw new IllegalArgumentException("Only polygon geometry supported for now!");
         }
 
+        JSONObject properties = feature.getJSONObject("properties");
         JSONArray coordinates = geometry.getJSONArray("coordinates");
 
+        //TODO: add support for holes! JTS supports it, we just need to handle mesh generation differently here
+        /*
         if(coordinates.length() != 1){
             throw new IllegalArgumentException("Only polygons with single ring are supported for now!");
         }
+        */
 
         JSONArray ring = coordinates.getJSONArray(0);
         GeoPoint[] cList = new GeoPoint[ring.length()];
@@ -197,6 +230,6 @@ public class GeoJsonGeometry {
             cList[cIdx] = new GeoPoint(cPair.getDouble(0), cPair.getDouble(1));
         }
 
-        return new GeoJsonGeometry(geometryType, cList, cutout);
+        return new GeoJsonGeometry(geometryType, id, cList, cutout, properties);
     }
 }

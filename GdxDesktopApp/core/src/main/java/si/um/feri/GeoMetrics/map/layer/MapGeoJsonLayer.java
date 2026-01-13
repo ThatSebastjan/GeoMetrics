@@ -3,16 +3,12 @@ package si.um.feri.GeoMetrics.map.layer;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.Batch;
-import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.QuadTreeFloat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.locationtech.jts.geom.*;
 import org.locationtech.jts.index.quadtree.Quadtree;
-import org.locationtech.jts.triangulate.polygon.PolygonTriangulator;
 import si.um.feri.GeoMetrics.map.Bbox;
 import si.um.feri.GeoMetrics.map.GeoPoint;
 import si.um.feri.GeoMetrics.map.Map;
@@ -31,12 +27,12 @@ import java.util.Objects;
 
 public class MapGeoJsonLayer extends MapLayer {
 
-    private Batch mapBatch;
+    protected Batch mapBatch;
     //private ShapeRenderer mapSr;
 
     private final String dataPath;
-    private final ArrayList<GeoJsonGeometry> geometryList;
-    private final Quadtree quadtree;
+    protected final ArrayList<GeoJsonGeometry> geometryList;
+    protected final Quadtree quadtree;
 
     //Static test shader
     static ShaderProgram geoJsonShader = null;
@@ -83,7 +79,7 @@ public class MapGeoJsonLayer extends MapLayer {
                 }
             }
 
-            GeoJsonGeometry geom = GeoJsonGeometry.fromJson(feature, cutout);
+            GeoJsonGeometry geom = GeoJsonGeometry.fromJson(feature, -1, cutout); //NOTE: same default id (-1)
             geometryList.add(geom);
 
             quadtree.insert(geom.getEnvelopeBounds(), geom);
@@ -92,7 +88,7 @@ public class MapGeoJsonLayer extends MapLayer {
     }
 
 
-    JSONObject readData(){
+    private JSONObject readData(){
         try {
             InputStream inStream = Gdx.files.absolute(dataPath).read();
 
