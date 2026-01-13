@@ -58,12 +58,15 @@ namespace mining {
         const std::string& block_data,
         std::chrono::system_clock::time_point block_ts,
         const sha256_hash& block_previous_hash,
-        int block_difficulty
+        int block_difficulty,
+        size_t* out_worker_hash_rate
     ) {
         size_t nonce = thread_id;
+        size_t local_hash_rate = 0;
         
         while (!solution_found.load(std::memory_order_relaxed) && networking::run_app) {
             sha256_hash hash = block::hash_block_data(block_index, block_ts, block_data, block_previous_hash, block_difficulty, nonce);
+            local_hash_rate++;
             
             if (hash.is_of_difficulty(block_difficulty)) {
                 mining_result* result = new mining_result(nonce, hash);
@@ -84,6 +87,8 @@ namespace mining {
             
             nonce += num_threads;
         }
+
+        *out_worker_hash_rate = local_hash_rate;
     }
 
     // Continuously mines new blocks using multiple worker threads.
@@ -120,6 +125,9 @@ namespace mining {
             std::vector<std::thread> workers;
             workers.reserve(num_threads);
 
+            auto start_time = std::chrono::high_resolution_clock::now();
+            std::vector<size_t> worker_hash_rates(num_threads, 0);
+
             for (unsigned int i = 0; i < num_threads; ++i) {
                 workers.emplace_back(
                     mining_worker,
@@ -129,13 +137,32 @@ namespace mining {
                     block_data,
                     block_ts,
                     block_previous_hash,
-                    block_difficulty
+                    block_difficulty,
+                    &worker_hash_rates[i]
                 );
             }
 
             for (auto& worker : workers) {
                 worker.join();
             }
+
+            //Sum hash rates
+            auto end_time = std::chrono::high_resolution_clock::now();
+            int64_t elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+            size_t total_hash_sum = 0;
+
+            for (size_t rate : worker_hash_rates) {
+                total_hash_sum += rate;
+            }
+
+            elapsed_time = std::max<int64_t>(1, elapsed_time); //Prevent division by zero
+
+            double hash_rate = (double)total_hash_sum / ((double)elapsed_time * 0.001);
+
+            rendering::add_log(std::format("Current hash rate: {:.2f}", hash_rate), { 255, 0, 200, 255 });
+            printf("[%d] Current hash rate: %.2f\n", GetCurrentProcessId(), hash_rate);
+            std::fflush(stdout);
+
 
             mining_result* result = mining_result_ptr.load(std::memory_order_acquire);
             if (result != nullptr && solution_found.load(std::memory_order_acquire)) {
