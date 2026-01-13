@@ -14,6 +14,7 @@ namespace mining {
     std::thread sync_thread;
     
     static std::atomic<bool> solution_found{false};
+    unsigned int num_mining_threads = -1;
     
     struct mining_result {
         size_t nonce;
@@ -87,10 +88,6 @@ namespace mining {
 
     // Continuously mines new blocks using multiple worker threads.
     void mine() {
-        unsigned int num_threads = std::thread::hardware_concurrency();
-        if (num_threads == 0) {
-            num_threads = 1;
-        }
         
         while (networking::run_app) {
             blockchain::block_chain_mtx.lock();
@@ -107,6 +104,17 @@ namespace mining {
             mining_result* old_result = mining_result_ptr.exchange(nullptr, std::memory_order_relaxed);
             if (old_result != nullptr) {
                 delete old_result;
+            }
+
+            //Start configured amount of mining threads
+            unsigned int num_threads = num_mining_threads;
+            
+            if (num_threads == -1) {
+                num_threads = std::thread::hardware_concurrency(); //Default fallback - max possible threads
+            }
+
+            if (num_threads <= 0) {
+                num_threads = 1;
             }
 
             std::vector<std::thread> workers;

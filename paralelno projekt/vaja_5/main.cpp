@@ -55,6 +55,7 @@ int main(int argc, char* argv[]) {
             networking::local_port,
             networking::local_uuid,
             is_mining,
+            &mining::num_mining_threads,
             []() {
                 mining::mining_thread = std::thread(mining::mine);
             },

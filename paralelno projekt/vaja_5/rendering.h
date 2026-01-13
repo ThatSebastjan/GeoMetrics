@@ -38,7 +38,7 @@ namespace rendering {
     void cleanup();
     void add_log(const std::string& msg, const std::initializer_list<uint8_t> color = { 255, 255, 255, 127 });
     void add_log(const std::string& lbl, const std::string& msg, const std::initializer_list<uint8_t> color = { 255, 255, 255, 127 });
-    void render_ui(int local_port, const std::string& local_uuid, bool& is_mining, std::function<void()> start_mining_callback, std::function<void(const std::string&, int)> connect_callback);
+    void render_ui(int local_port, const std::string& local_uuid, bool& is_mining, unsigned int* num_mining_threads, std::function<void()> start_mining_callback, std::function<void(const std::string&, int)> connect_callback);
 
 };
 

@@ -287,7 +287,7 @@ namespace rendering {
     }
 
     // Renders the main user interface with blockchain information and controls.
-    void render_ui(int local_port, const std::string& local_uuid, bool& is_mining, std::function<void()> start_mining_callback, std::function<void(const std::string&, int)> connect_callback) {
+    void render_ui(int local_port, const std::string& local_uuid, bool& is_mining, unsigned int* num_mining_threads, std::function<void()> start_mining_callback, std::function<void(const std::string&, int)> connect_callback) {
         ImGui::Begin("Block chain", nullptr, window_flags);
 
         ImGui::Text("Local port: %d", local_port);
@@ -323,6 +323,32 @@ namespace rendering {
 
             connect_callback("127.0.0.1", port_num);
         }
+
+        ImGui::SameLine();
+        ImGui::Dummy(ImVec2(30.f, 0.f));
+        ImGui::SameLine();
+
+
+        ImGui::Text("Mining threads:");
+        ImGui::SameLine();
+
+        static char num_threads_buf[6] = {};
+        ImGui::PushItemWidth(100);
+        ImGui::InputText("##num_threads", num_threads_buf, sizeof(num_threads_buf));
+        ImGui::PopItemWidth();
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Set") == true) {
+            int thread_num = strtol(num_threads_buf, nullptr, 10);
+            memset(num_threads_buf, 0, sizeof(num_threads_buf));
+
+            if (thread_num > 0) {
+                *num_mining_threads = thread_num;
+                add_log("", std::format("Set number of mining threds to: {}", thread_num), { 255, 255, 255, 255 });
+            }
+        }
+
 
         auto avail_region = ImGui::GetContentRegionAvail();
         ImGui::BeginChild("##logs", ImVec2(avail_region.x - 250, avail_region.y - 50.f), ImGuiChildFlags_Borders, ImGuiWindowFlags_AlwaysVerticalScrollbar);
