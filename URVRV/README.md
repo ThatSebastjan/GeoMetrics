@@ -36,8 +36,8 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 # For CPU only
 pip install torch torchvision
 
-# Install other dependencies
-pip install -r requirements.txt
+# Install additional dependencies
+pip install numpy Pillow opencv-python tqdm
 ```
 
 ## Usage
@@ -48,24 +48,23 @@ Follow these steps in order to create and use your water detection model:
 
 Use `download_tiles.py` to automatically download map images from OpenStreetMap to create your training dataset.
 
-**First, edit `download_tiles.py`** to set your area of interest:
-- Define the bounding box (latitude/longitude coordinates)
-- Set zoom level (higher = more detail)
-- Choose number of images to download
-
-```bash
-#These coordinates were used to create the current images in \images folder
-python .\download_tiles.py --z 15 --count 200 --minlat 46.6220022453 --minlon 16.1304616928 --maxlat 46.6486112860 --maxlon 16.2001991272 --sleep 1.0
-```
+**Run the script with command-line arguments** to set your area of interest:
+- `--minlat`, `--minlon`, `--maxlat`, `--maxlon`: Define the bounding box (latitude/longitude coordinates)
+- `--z`: Set zoom level (higher = more detail, default: 15)
+- `--count`: Number of images to download (default: 200)
+- `--sleep`: Delay between downloads in seconds (default: 1.0)
 
 ```bash
 # Activate virtual environment first
 .\venv\Scripts\activate  # Windows
 # source venv/bin/activate  # Linux/Mac
 
-# Run the download script
-python download_tiles.py
+# Example: Download 200 images from a specific area
+# These coordinates were used to create the current images in \images folder
+python download_tiles.py --z 15 --count 200 --minlat 46.6220022453 --minlon 16.1304616928 --maxlat 46.6486112860 --maxlon 16.2001991272 --sleep 1.0
 ```
+
+**Note**: All coordinate arguments (`--minlat`, `--minlon`, `--maxlat`, `--maxlon`) are required.
 
 This will create an `images/` folder with map screenshots (e.g., `img_001.png`, `img_002.png`, ...).
 
@@ -101,7 +100,23 @@ python train_model.py --epochs 100 --batch_size 8 --lr 0.0001
 
 # Resume training from checkpoint
 python train_model.py --resume checkpoints/best_model.pth
+
+# Advanced options
+python train_model.py --early_stop_patience 20 --max_grad_norm 1.0 --num_workers 4
 ```
+
+**Available training arguments:**
+- `--images_dir`: Directory with training images (default: `images`)
+- `--masks_dir`: Directory with mask images (default: `masks`)
+- `--epochs`: Number of training epochs (default: 50)
+- `--batch_size`: Batch size (default: 4)
+- `--lr`: Learning rate (default: 0.0001)
+- `--image_size`: Input image size (default: 256)
+- `--val_split`: Validation split ratio (default: 0.15)
+- `--early_stop_patience`: Early stopping patience in epochs (default: 15, set to 0 to disable)
+- `--max_grad_norm`: Maximum gradient norm for clipping (default: 1.0, set to 0 to disable)
+- `--num_workers`: DataLoader workers (default: auto-detect)
+- `--save_dir`: Directory to save checkpoints (default: `checkpoints`)
 
 **Training output:**
 - Progress bars showing loss, IoU, and Dice scores
@@ -123,17 +138,24 @@ python detect_water.py --folder path/to/images/
 
 # Adjust detection sensitivity (0.0-1.0, default: 0.5)
 python detect_water.py --image map.png --threshold 0.3
+
+# Use custom model or output directory
+python detect_water.py --folder images/ --model checkpoints/best_model.pth --output my_results/
+
+# Example usage
+python detect_water.py --image test_001.png
 ```
 
-**Output** (saved to `results/` folder):
+**Available detection arguments:**
+- `--image`: Path to a single image file
+- `--folder`: Path to folder containing images
+- `--model`: Path to trained model (default: `checkpoints/best_model.pth`)
+- `--threshold`: Detection threshold 0.0-1.0 (default: 0.5)
+- `--output`: Output directory for results (default: `results`)
+
+**Output** (saved to output directory):
 - `*_mask.png` - Binary mask (white = water, black = land)
 - `*_overlay.png` - Original image with water highlighted in blue
 - `*_comparison.png` - Side-by-side comparison of all three
 
-**Example output:**
-```
-Processing: my_map.png
-  ✓ WATER FOUND
-  Water coverage: 23.45%
-  Saved: my_map_mask.png, my_map_overlay.png, my_map_comparison.png
 ```

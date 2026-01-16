@@ -8,6 +8,7 @@ import torch
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 import cv2
+from tqdm import tqdm
 
 from model import UNetSmall
 
@@ -20,7 +21,7 @@ class WaterDetector:
         print(f"Loading model from {model_path}...")
         self.model = UNetSmall(in_channels=3, out_channels=1)
         
-        checkpoint = torch.load(model_path, map_location=self.device)
+        checkpoint = torch.load(model_path, map_location=self.device, weights_only=False)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model = self.model.to(self.device)
         self.model.eval()
@@ -35,16 +36,13 @@ class WaterDetector:
 
     def preprocess(self, image_path):
         image = Image.open(image_path).convert("RGB")
-        original_size = image.size  # (W, H)
+        original_size = image.size
         original_image = np.array(image)
         
-        # Resize for model
         image_resized = image.resize((self.image_size, self.image_size), Image.BILINEAR)
-        
-        # Convert to tensor and normalize
         tensor = TF.to_tensor(image_resized)
         tensor = self.normalize(tensor)
-        tensor = tensor.unsqueeze(0)  # Add batch dimension
+        tensor = tensor.unsqueeze(0)
         
         return tensor, original_image, original_size
 
@@ -55,6 +53,10 @@ class WaterDetector:
             output = self.model(tensor)
             prob = torch.sigmoid(output)
         prob = prob.squeeze().cpu().numpy()
+        
+        if self.device.type == "cuda":
+            torch.cuda.empty_cache()
+        
         mask_resized = cv2.resize(prob, original_size, interpolation=cv2.INTER_LINEAR)
         binary_mask = (mask_resized > self.threshold).astype(np.uint8) * 255
         water_pixels = np.sum(binary_mask > 0)
@@ -115,8 +117,34 @@ def main():
         threshold=args.threshold
     )
     if args.image:
-        image_paths = [args.image]
+        img_path = args.image
+        if not os.path.isabs(img_path):
+            img_path = os.path.abspath(img_path)
+        
+        if not os.path.exists(img_path):
+            possible_paths = [
+                img_path,
+                os.path.join("test_images", os.path.basename(img_path)),
+                os.path.join("images", os.path.basename(img_path)),
+            ]
+            found = False
+            for path in possible_paths:
+                if os.path.exists(path):
+                    img_path = os.path.abspath(path)
+                    found = True
+                    break
+            
+            if not found:
+                print(f"Error: Image file not found: {args.image}")
+                print(f"Tried: {possible_paths}")
+                print(f"Current working directory: {os.getcwd()}")
+                sys.exit(1)
+        
+        image_paths = [img_path]
     else:
+        if not os.path.exists(args.folder):
+            print(f"Error: Folder not found: {args.folder}")
+            sys.exit(1)
         image_paths = glob.glob(os.path.join(args.folder, "*.png"))
         image_paths += glob.glob(os.path.join(args.folder, "*.jpg"))
         image_paths += glob.glob(os.path.join(args.folder, "*.jpeg"))
@@ -131,26 +159,29 @@ def main():
     
     results_summary = []
     
-    for img_path in image_paths:
+    for img_path in tqdm(image_paths, desc="Processing images"):
         filename = os.path.basename(img_path)
-        print(f"\nProcessing: {filename}")
         
         try:
+            if not os.path.exists(img_path):
+                raise FileNotFoundError(f"Image file not found: {img_path}")
+            
             result = detector.detect(img_path)
             status = "✓ WATER FOUND" if result['found'] else "✗ No water detected"
-            print(f"  {status}")
-            print(f"  Water coverage: {result['water_percentage']:.2f}%")
+            
             base_name = os.path.splitext(filename)[0]
             mask_path = os.path.join(args.output, f"{base_name}_mask.png")
-            cv2.imwrite(mask_path, result['mask'])
             overlay_path = os.path.join(args.output, f"{base_name}_overlay.png")
-            overlay_bgr = cv2.cvtColor(result['overlay'], cv2.COLOR_RGB2BGR)
-            cv2.imwrite(overlay_path, overlay_bgr)
-            comparison = create_comparison(result['original'], result['mask'], result['overlay'])
             comparison_path = os.path.join(args.output, f"{base_name}_comparison.png")
-            cv2.imwrite(comparison_path, cv2.cvtColor(comparison, cv2.COLOR_RGB2BGR))
             
-            print(f"  Saved: {base_name}_mask.png, {base_name}_overlay.png, {base_name}_comparison.png")
+            try:
+                cv2.imwrite(mask_path, result['mask'])
+                overlay_bgr = cv2.cvtColor(result['overlay'], cv2.COLOR_RGB2BGR)
+                cv2.imwrite(overlay_path, overlay_bgr)
+                comparison = create_comparison(result['original'], result['mask'], result['overlay'])
+                cv2.imwrite(comparison_path, cv2.cvtColor(comparison, cv2.COLOR_RGB2BGR))
+            except Exception as save_error:
+                raise IOError(f"Failed to save output files: {str(save_error)}")
             
             results_summary.append({
                 'file': filename,
@@ -158,13 +189,16 @@ def main():
                 'percentage': result['water_percentage']
             })
             
+            tqdm.write(f"{filename}: {status} ({result['water_percentage']:.2f}% water)")
+            
         except Exception as e:
-            print(f"  Error processing: {e}")
+            error_msg = str(e)
+            tqdm.write(f"{filename}: ERROR - {error_msg}")
             results_summary.append({
                 'file': filename,
                 'found': False,
                 'percentage': 0,
-                'error': str(e)
+                'error': error_msg
             })
     print("\n" + "="*60)
     print("SUMMARY")

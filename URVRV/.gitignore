@@ -37,3 +37,9 @@ desktop.ini
 # Temporary files
 *.tmp
 *.bak
+
+# Images
+images/
+masks/
+results/
+test_images/

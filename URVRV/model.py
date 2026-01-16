@@ -32,7 +32,8 @@ class Down(nn.Module):
 
 class Up(nn.Module):
     """Upscaling then double conv."""
-    
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
         self.up = nn.ConvTranspose2d(in_channels, in_channels // 2, kernel_size=2, stride=2)
         self.conv = DoubleConv(in_channels, out_channels)
 
@@ -49,7 +50,6 @@ class Up(nn.Module):
 class UNet(nn.Module):
     def __init__(self, in_channels=3, out_channels=1, features=[64, 128, 256, 512]):
         super().__init__()
-        
         self.inc = DoubleConv(in_channels, features[0])
         
         self.down1 = Down(features[0], features[1])
@@ -70,7 +70,6 @@ class UNet(nn.Module):
         x3 = self.down2(x2)
         x4 = self.down3(x3)
         x5 = self.down4(x4)
-        
         x = self.up1(x5, x4)
         x = self.up2(x, x3)
         x = self.up3(x, x2)
@@ -83,7 +82,6 @@ class UNet(nn.Module):
 class UNetSmall(nn.Module):
     def __init__(self, in_channels=3, out_channels=1):
         super().__init__()
-        
         features = [32, 64, 128, 256]
         
         self.inc = DoubleConv(in_channels, features[0])
@@ -104,9 +102,7 @@ class UNetSmall(nn.Module):
         x2 = self.down1(x1)
         x3 = self.down2(x2)
         x4 = self.down3(x3)
-        
         x4 = self.dropout(x4)
-        
         x = self.up1(x4, x3)
         x = self.up2(x, x2)
         x = self.up3(x, x1)

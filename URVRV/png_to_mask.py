@@ -27,15 +27,12 @@ def fill_holes_per_component(mask: np.ndarray, max_hole_area: int = 500) -> np.n
     if hierarchy is None:
         return result
     
-    hierarchy = hierarchy[0]  # Shape: (N, 4) -> [next, prev, child, parent]
+    hierarchy = hierarchy[0]
     
-    # Iterate through contours and find holes (contours with a parent)
     for i, (cnt, h) in enumerate(zip(contours, hierarchy)):
         parent_idx = h[3]
-        # If this contour has a parent, it's a hole inside a water body
         if parent_idx >= 0:
             hole_area = cv2.contourArea(cnt)
-            # Only fill small holes
             if hole_area <= max_hole_area:
                 cv2.drawContours(result, [cnt], -1, 255, thickness=cv2.FILLED)
     
@@ -73,14 +70,8 @@ def filter_components(mask: np.ndarray, min_area: int, min_length: int,
         h = stats[lab, cv2.CC_STAT_HEIGHT]
         area = stats[lab, cv2.CC_STAT_AREA]
         length = max(w, h)
-        
-        # Aspect ratio: 0 = very elongated, 1 = square
         aspect = min(w, h) / max(w, h) if max(w, h) > 0 else 1.0
 
-        # Keep if:
-        # 1. Large area (lake/pond), OR
-        # 2. Long AND elongated (river/stream), OR  
-        # 3. Long AND reasonably sized (hybrid case)
         is_large = area >= min_area
         is_elongated_river = length >= min_length and aspect <= aspect_ratio_threshold
         is_substantial_long = length >= min_length and area >= min_area * 0.3
@@ -176,7 +167,6 @@ def main():
 
     mask_hsv = cv2.inRange(hsv, lower, upper)
 
-    # Add a forgiving "blue dominance" mask to catch thin anti-aliased streams
     b, g, r = cv2.split(img)
     blue_dom = (b.astype(np.int16) - np.maximum(r, g).astype(np.int16) >= args.b_dom) & (b >= args.b_min)
     mask_dom = (blue_dom.astype(np.uint8) * 255)
@@ -184,21 +174,17 @@ def main():
     mask = cv2.bitwise_or(mask_hsv, mask_dom)
 
     if args.cleanup:
-        # Closing first to bridge label gaps / tiny discontinuities
         ck = args.close_k if args.close_k % 2 == 1 else args.close_k + 1
         close_kernel = np.ones((ck, ck), np.uint8)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, close_kernel, iterations=args.close_iter)
 
-        # Optional opening (off by default for streams)
         if args.open_iter > 0:
             ok = args.open_k if args.open_k % 2 == 1 else args.open_k + 1
             open_kernel = np.ones((ok, ok), np.uint8)
             mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, open_kernel, iterations=args.open_iter)
 
-    # IMPORTANT: remove icons BEFORE filling holes (prevents junk fills)
     mask = filter_components(mask, min_area=args.min_area, min_length=args.min_length)
 
-    # Fill holes only on remaining "water" components
     if args.fill_holes:
         if args.legacy_fill:
             mask = fill_holes_legacy(mask)

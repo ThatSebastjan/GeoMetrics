@@ -29,7 +29,7 @@ def main():
             "--min_area", "150",
             "--min_length", "25",
             "--fill_holes",
-            "--max_hole_area", "500"  # Only fill small holes to avoid false fills
+            "--max_hole_area", "500"
         ]
 
         print(f"Masking: {base} -> {mask_name}")

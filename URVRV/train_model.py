@@ -53,7 +53,7 @@ def calculate_metrics(pred, target, threshold=0.5):
     return iou.item(), dice.item()
 
 
-def train_one_epoch(model, loader, criterion, optimizer, device):
+def train_one_epoch(model, loader, criterion, optimizer, device, max_grad_norm=None):
     model.train()
     total_loss = 0
     total_iou = 0
@@ -70,6 +70,10 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
         loss = criterion(outputs, masks)
         
         loss.backward()
+        
+        if max_grad_norm is not None:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+        
         optimizer.step()
         
         iou, dice = calculate_metrics(outputs, masks)
@@ -119,6 +123,12 @@ def main():
     parser.add_argument("--val_split", type=float, default=0.15)
     parser.add_argument("--resume", type=str, default=None)
     parser.add_argument("--save_dir", type=str, default="checkpoints")
+    parser.add_argument("--early_stop_patience", type=int, default=15,
+                        help="Early stopping patience (epochs without improvement). Set to 0 to disable.")
+    parser.add_argument("--max_grad_norm", type=float, default=1.0,
+                        help="Maximum gradient norm for clipping. Set to 0 to disable.")
+    parser.add_argument("--num_workers", type=int, default=None,
+                        help="Number of DataLoader workers (default: auto-detect)")
     args = parser.parse_args()
     os.makedirs(args.save_dir, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -140,18 +150,27 @@ def main():
     val_dataset.dataset.augment = False
     print(f"Training samples: {train_size}")
     print(f"Validation samples: {val_size}")
+    
+    if args.num_workers is None:
+        num_workers = min(4, os.cpu_count() or 1)
+    else:
+        num_workers = args.num_workers
+    
     train_loader = DataLoader(
         train_dataset, 
         batch_size=args.batch_size, 
         shuffle=True,
-        num_workers=0,
-        pin_memory=True if device.type == "cuda" else False
+        num_workers=num_workers,
+        pin_memory=True if device.type == "cuda" else False,
+        persistent_workers=True if num_workers > 0 else False
     )
     val_loader = DataLoader(
         val_dataset, 
         batch_size=args.batch_size, 
         shuffle=False,
-        num_workers=0
+        num_workers=num_workers,
+        pin_memory=True if device.type == "cuda" else False,
+        persistent_workers=True if num_workers > 0 else False
     )
     model = UNetSmall(in_channels=3, out_channels=1)
     model = model.to(device)
@@ -163,47 +182,79 @@ def main():
     )
     start_epoch = 0
     best_val_iou = 0
+    epochs_without_improvement = 0
+    
     if args.resume and os.path.exists(args.resume):
         print(f"Resuming from {args.resume}")
         checkpoint = torch.load(args.resume, map_location=device)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if 'scheduler_state_dict' in checkpoint:
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         start_epoch = checkpoint.get('epoch', 0)
         best_val_iou = checkpoint.get('best_val_iou', 0)
+        epochs_without_improvement = checkpoint.get('epochs_without_improvement', 0)
         print(f"Resumed from epoch {start_epoch}, best IoU: {best_val_iou:.4f}")
     print("\n" + "="*50)
     print("Starting training...")
     print("="*50 + "\n")
+    if args.early_stop_patience > 0:
+        print(f"Early stopping enabled (patience: {args.early_stop_patience} epochs)")
+    if args.max_grad_norm > 0:
+        print(f"Gradient clipping enabled (max_norm: {args.max_grad_norm})")
+    print(f"DataLoader workers: {num_workers}")
+    print()
+    
     for epoch in range(start_epoch, args.epochs):
         start_time = time.time()
         train_loss, train_iou, train_dice = train_one_epoch(
-            model, train_loader, criterion, optimizer, device
+            model, train_loader, criterion, optimizer, device,
+            max_grad_norm=args.max_grad_norm if args.max_grad_norm > 0 else None
         )
         val_loss, val_iou, val_dice = validate(model, val_loader, criterion, device)
         scheduler.step(val_loss)
         
         epoch_time = time.time() - start_time
         
+        improved = val_iou > best_val_iou
+        if improved:
+            best_val_iou = val_iou
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
+        
         print(f"\nEpoch {epoch+1}/{args.epochs} ({epoch_time:.1f}s)")
         print(f"  Train - Loss: {train_loss:.4f}, IoU: {train_iou:.4f}, Dice: {train_dice:.4f}")
         print(f"  Val   - Loss: {val_loss:.4f}, IoU: {val_iou:.4f}, Dice: {val_dice:.4f}")
-        if val_iou > best_val_iou:
-            best_val_iou = val_iou
+        print(f"  LR: {optimizer.param_groups[0]['lr']:.2e}")
+        
+        if improved:
             torch.save({
                 'epoch': epoch + 1,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
                 'best_val_iou': best_val_iou,
                 'val_dice': val_dice,
+                'epochs_without_improvement': epochs_without_improvement,
             }, os.path.join(args.save_dir, "best_model.pth"))
             print(f"  ✓ Saved best model (IoU: {best_val_iou:.4f})")
+        else:
+            print(f"  No improvement ({epochs_without_improvement}/{args.early_stop_patience if args.early_stop_patience > 0 else 'N/A'})")
+        
         if (epoch + 1) % 10 == 0:
             torch.save({
                 'epoch': epoch + 1,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
                 'best_val_iou': best_val_iou,
+                'epochs_without_improvement': epochs_without_improvement,
             }, os.path.join(args.save_dir, f"checkpoint_epoch_{epoch+1}.pth"))
+        
+        if args.early_stop_patience > 0 and epochs_without_improvement >= args.early_stop_patience:
+            print(f"\nEarly stopping triggered after {epochs_without_improvement} epochs without improvement")
+            break
     
     print("\n" + "="*50)
     print(f"Training complete! Best validation IoU: {best_val_iou:.4f}")
