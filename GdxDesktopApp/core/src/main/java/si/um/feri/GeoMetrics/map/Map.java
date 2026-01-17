@@ -52,6 +52,7 @@ public class Map implements InputProcessor, Disposable {
     private Vector2 lastTouchPoint = new Vector2();
     private Vector2 lastMousePos = new Vector2();
     private boolean dragged = false;
+    private boolean isLeftDown = false;
 
 
     public interface MapActionCallback {
@@ -376,6 +377,12 @@ public class Map implements InputProcessor, Disposable {
     }
 
 
+    //Screen position to world coordinates
+    public Vector3 unprojectToWorld(Vector2 screenPos){
+        return viewport.unproject(new Vector3(screenPos.x, screenPos.y, 0.f));
+    }
+
+
     public Batch getBatch(){
         return batch;
     }
@@ -449,6 +456,7 @@ public class Map implements InputProcessor, Disposable {
         //Mouse left down
         if(button == Input.Buttons.LEFT){
             lastTouchPoint.set(x, y);
+            isLeftDown = true;
             dragged = false;
             return true;
         }
@@ -462,6 +470,7 @@ public class Map implements InputProcessor, Disposable {
         if(button == Input.Buttons.LEFT){
 
             if(dragged){
+                isLeftDown = false;
                 dragged = false;
                 onViewChanged();
             }
@@ -478,6 +487,11 @@ public class Map implements InputProcessor, Disposable {
 
     @Override
     public boolean touchDragged(int x, int y, int pointer) {
+
+        if(!isLeftDown){
+            return false;
+        }
+
         Vector2 dragDelta = new Vector2(x, y).sub(lastTouchPoint);
         lastTouchPoint.add(dragDelta);
 

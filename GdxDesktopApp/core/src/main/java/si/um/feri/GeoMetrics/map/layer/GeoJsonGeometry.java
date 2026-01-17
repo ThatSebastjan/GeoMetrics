@@ -122,6 +122,10 @@ public class GeoJsonGeometry {
 
         Geometry infillTriangles = null;
 
+
+        //TODO: triangulate can throw an exception if geometry is weird! CATCH EXCEPTION TO PREVENT CRASH AND HANDLE STUFF!
+
+
         //Normal polygon
         if(!cutout){
             infillTriangles = PolygonTriangulator.triangulate(infillPolygon);

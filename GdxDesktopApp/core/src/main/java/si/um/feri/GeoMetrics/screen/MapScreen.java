@@ -9,6 +9,7 @@ import si.um.feri.GeoMetrics.map.*;
 import si.um.feri.GeoMetrics.map.layer.LandLotLayer;
 import si.um.feri.GeoMetrics.map.layer.MapDebugLayer;
 import si.um.feri.GeoMetrics.map.layer.MapGeoJsonLayer;
+import si.um.feri.GeoMetrics.map.layer.MapHeatMapLayer;
 import si.um.feri.GeoMetrics.map.tile.MapTileManager;
 
 
@@ -39,8 +40,9 @@ public class MapScreen extends ScreenAdapter {
 
         //Add map layers
         map.addLayer(new MapGeoJsonLayer(Gdx.files.internal("assets/static/si_border.json").path()));
-        map.addLayer(new LandLotLayer());
-        map.addLayer(new MapDebugLayer());
+        //map.addLayer(new LandLotLayer());
+        //map.addLayer(new MapDebugLayer());
+        map.addLayer(new MapHeatMapLayer());
     }
 
 
