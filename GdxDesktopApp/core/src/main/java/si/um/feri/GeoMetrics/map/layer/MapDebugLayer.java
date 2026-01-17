@@ -71,6 +71,8 @@ public class MapDebugLayer extends MapLayer {
             return;
         }
 
+        map.getViewport().apply();
+
         mapSr.setProjectionMatrix(map.getCamera().combined);
         mapSr.begin(ShapeRenderer.ShapeType.Line);
 

@@ -24,6 +24,8 @@ public class AppConfig {
 
     public static final String BACKEND_URL = "http://localhost:3001";
 
-    //THIS HERE IS TEMPORARY!
     public static final String TILE_DATA_PATH = "C:/Users/Rok/Desktop/tile_grabber/data/";
+
+    public static final int TILE_MAP_MIN_ZOOM = 9;
+    public static final int TILE_MAP_MAX_ZOOM = 15;
 }

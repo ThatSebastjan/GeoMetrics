@@ -7,8 +7,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Logger;
-import si.um.feri.GeoMetrics.Navigation.HeatMapScreen;
-import si.um.feri.GeoMetrics.screen.MapScreen;
+import si.um.feri.GeoMetrics.navigation.HeatMapScreen;
 
 
 public class GdxMap extends Game {

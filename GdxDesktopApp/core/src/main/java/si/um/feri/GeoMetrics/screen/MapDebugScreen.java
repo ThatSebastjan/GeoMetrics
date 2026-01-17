@@ -9,20 +9,18 @@ import si.um.feri.GeoMetrics.map.*;
 import si.um.feri.GeoMetrics.map.layer.LandLotLayer;
 import si.um.feri.GeoMetrics.map.layer.MapDebugLayer;
 import si.um.feri.GeoMetrics.map.layer.MapGeoJsonLayer;
-import si.um.feri.GeoMetrics.map.layer.MapHeatMapLayer;
 import si.um.feri.GeoMetrics.map.tile.MapTileManager;
 
 
-public class MapScreen extends ScreenAdapter {
+public class MapDebugScreen extends ScreenAdapter {
 
     private final GdxMap mainInstance;
     private final AssetManager assetManager;
 
     private Map map;
-    private Bbox previousViewBounds;
 
 
-    public MapScreen(GdxMap mainInstance){
+    public MapDebugScreen(GdxMap mainInstance){
         this.mainInstance = mainInstance;
         assetManager = mainInstance.getAssetManager();
     }
@@ -33,16 +31,14 @@ public class MapScreen extends ScreenAdapter {
         MapTileManager tileManager = new MapTileManager(assetManager, AppConfig.TILE_DATA_PATH, 9, 15);
         map = new Map(mainInstance.getBatch(), tileManager);
 
-        previousViewBounds = null;
-
         //Set map input handling
         Gdx.input.setInputProcessor(map);
 
         //Add map layers
         map.addLayer(new MapGeoJsonLayer(Gdx.files.internal("assets/static/si_border.json").path()));
-        //map.addLayer(new LandLotLayer());
-        //map.addLayer(new MapDebugLayer());
-        map.addLayer(new MapHeatMapLayer());
+        map.addLayer(new LandLotLayer());
+
+        map.addLayer(new MapDebugLayer());
     }
 
 

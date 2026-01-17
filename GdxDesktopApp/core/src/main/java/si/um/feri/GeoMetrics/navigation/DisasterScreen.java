@@ -1,4 +1,4 @@
-package si.um.feri.GeoMetrics.Navigation;
+package si.um.feri.GeoMetrics.navigation;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -12,15 +12,15 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.ScreenAdapter;
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Screen;
+import si.um.feri.GeoMetrics.GdxMap;
 
 public class DisasterScreen extends ScreenAdapter {
-    private final Game game;
+    private final GdxMap game;
     private Stage stage;
     private Skin skin;
 
-    public DisasterScreen(Game game, Skin skin) {
+    public DisasterScreen(GdxMap game, Skin skin) {
         this.game = game;
         this.skin = skin;
         create();
@@ -34,6 +34,7 @@ public class DisasterScreen extends ScreenAdapter {
 
         Label center = new Label("Disaster Screen", skin);
         center.setColor(Color.WHITE);
+        center.setVisible(false);
 
         Table nav = navBar();
 
