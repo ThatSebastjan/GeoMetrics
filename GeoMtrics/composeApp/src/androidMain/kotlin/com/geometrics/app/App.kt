@@ -15,9 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.app.geometrics.AboutScreen
 import com.app.geometrics.AssessScreen
 import com.app.geometrics.MapScreen
-import com.app.geometrics.SettingsScreen
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 private sealed class Screen(val title: String, val icon: @Composable () -> Unit) {
@@ -29,9 +29,9 @@ private sealed class Screen(val title: String, val icon: @Composable () -> Unit)
         painter = painterResource(R.drawable.ic_assess_24),
         contentDescription = "Assess"
     ) })
-    object Settings : Screen("Settings", {
+    object About : Screen("About", {
         Icon(
-        painter = painterResource(R.drawable.ic_settings_24),
+        painter = painterResource(R.drawable.ic_about_24),
             contentDescription = "Settings"
         )
     })
@@ -41,7 +41,7 @@ private sealed class Screen(val title: String, val icon: @Composable () -> Unit)
 @Preview(showBackground = true)
 fun App() {
     var selectedScreen by remember { mutableStateOf<Screen>(Screen.Assess) }
-    val screens = listOf(Screen.Map, Screen.Assess, Screen.Settings)
+    val screens = listOf(Screen.Map, Screen.Assess, Screen.About)
 
     MaterialTheme {
         Scaffold(
@@ -76,7 +76,7 @@ fun App() {
                         .background(MaterialTheme.colorScheme.primaryContainer)
                         .padding(innerPadding)
                 )
-                is Screen.Settings -> SettingsScreen(
+                is Screen.About -> AboutScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.primaryContainer)
