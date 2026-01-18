@@ -10,11 +10,15 @@
 
 namespace mpi_networking {
 
+    static const std::string BACKEND_URL = "http://localhost:3001";
+
     enum mpi_tag {
         MPI_TAG_BLOCK_FOUND = 1,
         MPI_TAG_CHAIN_SYNC = 2,
         MPI_TAG_CHAIN_REQUEST = 3,
-        MPI_TAG_SHUTDOWN = 4
+        MPI_TAG_SHUTDOWN = 4,
+        MPI_TAG_NEW_REQUEST = 5,
+        MPI_TAG_HASH_RATE = 6,
     };
 
     bool init(int* argc, char*** argv);
@@ -30,6 +34,10 @@ namespace mpi_networking {
     bool should_shutdown();
     void process_messages();
     size_t calculate_cumulative_difficulty(const std::vector<block*>& chain);
+
+    void process_backend_requests();
+    void broadcast_backend_request(const std::vector<std::string>& data_list);
+    void broadcast_local_hashrate(double hash_rate);
     
     extern std::atomic<bool> mpi_run_app;
 

@@ -15,7 +15,12 @@ namespace blockchain {
     size_t prev_diff_adjustment_chain_length = 0;
 
     std::mutex pending_list_mtx;
-    std::vector<pending_entry> pending_list;
+    std::vector<pending_entry> pending_list; //List of pending blockchains for validation
+
+    std::list<mining_request> mining_request_list; //Guarded by block_chain_mtx
+    std::atomic<double> local_hash_rate = { 0 };
+    std::atomic<double> global_hash_rate = { 0 };
+
 
     // Frees all blocks in a chain and clears the vector.
     void free_chain(std::vector<block*>& c) {

@@ -97,9 +97,20 @@ namespace mining {
         while (networking::run_app) {
             blockchain::block_chain_mtx.lock();
 
+            //Check if we have data to process
+            if (blockchain::mining_request_list.empty()) {
+                blockchain::block_chain_mtx.unlock();
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
+            }
+
+            const blockchain::mining_request req = blockchain::mining_request_list.front();
+            blockchain::mining_request_list.pop_front();
+
             size_t block_index = blockchain::block_list.size();
             auto block_ts = std::chrono::system_clock::now();
-            std::string block_data = std::format("Block#{}", block_index);
+            std::string block_data = req.data;
             sha256_hash block_previous_hash = (blockchain::block_list.size() > 0) ? blockchain::block_list.back()->hash : sha256_hash{};
             int block_difficulty = blockchain::current_difficulty;
 
@@ -159,9 +170,16 @@ namespace mining {
 
             double hash_rate = (double)total_hash_sum / ((double)elapsed_time * 0.001);
 
+            blockchain::local_hash_rate.store(hash_rate); //Store for sending later
+
             rendering::add_log(std::format("Current hash rate: {:.2f}", hash_rate), { 255, 0, 200, 255 });
             printf("[%d] Current hash rate: %.2f\n", GetCurrentProcessId(), hash_rate);
             std::fflush(stdout);
+
+            //Send local hashrate
+            if (mpi_networking::is_initialized()) {
+                mpi_networking::broadcast_local_hashrate(hash_rate);
+            }
 
 
             mining_result* result = mining_result_ptr.load(std::memory_order_acquire);
