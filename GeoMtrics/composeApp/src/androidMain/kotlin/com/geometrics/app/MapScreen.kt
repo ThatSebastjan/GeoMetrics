@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.geometrics.app.ReportOverlay
+import com.geometrics.app.DetectOverlay
 import com.geometrics.app.components.MapBoxContainer
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import android.Manifest
@@ -26,6 +27,7 @@ import kotlinx.coroutines.tasks.await
 @Composable
 fun MapScreen(modifier: Modifier = Modifier) {
     var showReportScreen by remember { mutableStateOf(false) }
+    var showDetectScreen by remember { mutableStateOf(false) }
     var currentCoordinates by remember { mutableStateOf(Pair(0.0, 0.0)) }
     val context = LocalContext.current
     val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
@@ -60,7 +62,6 @@ fun MapScreen(modifier: Modifier = Modifier) {
         Box(modifier = Modifier.fillMaxSize()) {
             MapBoxContainer(modifier = Modifier.fillMaxSize())
 
-
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -68,8 +69,16 @@ fun MapScreen(modifier: Modifier = Modifier) {
                     .align(Alignment.BottomCenter),
                 contentAlignment = Alignment.Center
             ) {
-                Button(onClick = { showReportScreen = true }) {
-                    Text("Report an Incident")
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(onClick = { showReportScreen = true }) {
+                        Text("Report an Incident")
+                    }
+                    Button(onClick = { showDetectScreen = true }) {
+                        Text("Nearest body of water")
+                    }
                 }
             }
 
@@ -79,6 +88,15 @@ fun MapScreen(modifier: Modifier = Modifier) {
                     modifier = Modifier.fillMaxSize(),
                     currentCoordinates = currentCoordinates,
                     onClose = { showReportScreen = false }
+                )
+            }
+
+            // Overlay the Detect screen when requested, passing current coordinates
+            if (showDetectScreen) {
+                DetectOverlay(
+                    modifier = Modifier.fillMaxSize(),
+                    currentCoordinates = currentCoordinates,
+                    onClose = { showDetectScreen = false }
                 )
             }
         }
