@@ -45,5 +45,9 @@ module.exports = {
 			file: "blockchain.js",
 			route: "/blockchain",
 		},
+		{
+			file: "reports.js",
+			route: "/report",
+		},
 	]
 };
