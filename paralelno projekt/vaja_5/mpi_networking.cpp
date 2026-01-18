@@ -1,3 +1,4 @@
+#define _WINSOCKAPI_
 #include "mpi_networking.h"
 #include "blockchain.h"
 #include "rendering.h"
@@ -6,6 +7,11 @@
 #include <cstring>
 #include <thread>
 #include <chrono>
+#include "httplib.h"
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
 
 namespace mpi_networking {
 
@@ -13,10 +19,14 @@ namespace mpi_networking {
     std::atomic<bool> mpi_shutdown_flag{false};
     std::thread mpi_receive_thread;
     std::mutex mpi_mtx;
-    
+    std::thread backend_poll_thread;
+
     static bool mpi_initialized = false;
     static int mpi_rank = -1;
     static int mpi_size = -1;
+
+    std::vector<double> peer_hash_rates;
+
 
     // Initializes the MPI environment with thread support.
     bool init(int* argc, char*** argv) {
@@ -36,6 +46,7 @@ namespace mpi_networking {
         MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
         
         mpi_initialized = true;
+        peer_hash_rates.resize(mpi_size);
         
         std::cout << "MPI initialized: rank " << mpi_rank << " of " << mpi_size << " nodes" << std::endl;
         
@@ -436,6 +447,93 @@ namespace mpi_networking {
                     blockchain::pending_list.push_back(p_entry);
                     blockchain::pending_list_mtx.unlock();
                 }
+                else if (status.MPI_TAG == MPI_TAG_NEW_REQUEST) {
+                    int count = 0;
+                    int count_result = MPI_Get_count(&status, MPI_BYTE, &count);
+
+                    if (count_result != MPI_SUCCESS || count <= 0) {
+                        std::cerr << "MPI_Get_count failed or invalid count for request" << std::endl;
+                        uint8_t dummy;
+                        MPI_Recv(&dummy, 1, MPI_BYTE, status.MPI_SOURCE,
+                            MPI_TAG_NEW_REQUEST, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        continue;
+                    }
+
+                    std::vector<uint8_t> buf(count);
+
+                    int recv_result = MPI_Recv(buf.data(), count, MPI_BYTE,
+                        status.MPI_SOURCE, MPI_TAG_NEW_REQUEST, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+                    if (recv_result != MPI_SUCCESS) {
+                        std::cerr << "MPI_Recv failed for request" << std::endl;
+                        continue;
+                    }
+
+                    
+
+                    if (buf.size() < sizeof(size_t)) {
+                        std::cerr << "Invalid buffer size for request" << std::endl;
+                        continue;
+                    }
+
+                    std::vector<blockchain::mining_request> req_list;
+
+                    size_t offset = 0;
+                    size_t num_entries = 0;
+
+                    memcpy(&num_entries, buf.data() + offset, sizeof(size_t));
+                    offset += sizeof(size_t);
+
+                    for (size_t idx = 0; idx < num_entries; idx++) {
+
+                        size_t data_len = 0;
+                        memcpy(&data_len, buf.data() + offset, sizeof(size_t));
+                        offset += sizeof(size_t);
+
+                        std::string str_data((char*)(buf.data() + offset), data_len);
+                        offset += data_len;
+
+                        req_list.push_back({ str_data });
+                    };
+
+                    if (offset != buf.size()) {
+                        std::cerr << "Expected size mismatch!" << std::endl;
+                        continue;
+                    };
+
+
+                    blockchain::block_chain_mtx.lock();
+                    
+                    for (const blockchain::mining_request& req : req_list) {
+                        blockchain::mining_request_list.push_back(req);
+                    };
+
+                    blockchain::block_chain_mtx.unlock();
+
+                    rendering::add_log(std::format("Received {} mining requests!", req_list.size()));
+                }
+                else if (status.MPI_TAG == MPI_TAG_HASH_RATE) {
+                    
+                    double rate;
+                    int recv_result = MPI_Recv(&rate, 1, MPI_DOUBLE, status.MPI_SOURCE, MPI_TAG_HASH_RATE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+                    if (recv_result != MPI_SUCCESS) {
+                        std::cerr << "MPI_Recv failed for hashrate" << std::endl;
+                        continue;
+                    }
+
+                    peer_hash_rates[status.MPI_SOURCE] = rate;
+                    rendering::add_log(std::format("Received hash rate {:.2f} for peer {}", rate, status.MPI_SOURCE));
+
+                    //Update global hash rate sum
+                    double total_rate = 0;
+
+                    for (double r : peer_hash_rates) {
+                        total_rate += r;
+                    };
+
+                    blockchain::global_hash_rate.store(total_rate);
+                }
             } else {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
@@ -448,6 +546,11 @@ namespace mpi_networking {
         
         mpi_run_app.store(true);
         mpi_receive_thread = std::thread(process_messages);
+
+        //Start backend poll thread on master
+        if (mpi_rank == 0) {
+            backend_poll_thread = std::thread(process_backend_requests);
+        }
     }
 
     // Stops the MPI message receiving thread and waits for it to complete.
@@ -455,6 +558,12 @@ namespace mpi_networking {
         mpi_run_app.store(false);
         if (mpi_receive_thread.joinable()) {
             mpi_receive_thread.join();
+        }
+
+        if (mpi_rank == 0) {
+            if (backend_poll_thread.joinable()) {
+                backend_poll_thread.join();
+            }
         }
     }
 
@@ -483,6 +592,179 @@ namespace mpi_networking {
 
     bool should_shutdown() {
         return mpi_shutdown_flag.load();
+    }
+
+
+    //Poll for pending data to be added into blockchain from back-end
+    void process_backend_requests() {
+        httplib::Client http_client = httplib::Client(BACKEND_URL);
+        size_t last_blockchain_len = 0;
+
+
+        while (mpi_run_app.load()) {
+
+            std::cout << "Poll backend!" << std::endl;
+
+            try {
+                auto res = http_client.Get("/blockchain/poll");
+
+                if (!res) {
+                    std::cout << "Error polling pending blockchain requests: error " << res.error() << std::endl;
+                }
+                else {
+                    json resp = json::parse(res->body);
+                    std::vector<std::string> request_list;
+
+                    for (auto& el : resp) {
+                        const std::string& el_data = el["data"].get<std::string>();
+
+                        request_list.push_back(el_data);
+
+                        std::cout << "Pending request data: " << el_data << std::endl;
+                    };
+
+                    if (request_list.size() != 0) {
+                        broadcast_backend_request(request_list);
+                    };
+                };
+
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Error in process_backend_requests: " << e.what() << std::endl;
+            };
+
+
+            //Send new blockchain to backend if we have any changes
+            blockchain::block_chain_mtx.lock();
+
+            if (last_blockchain_len != blockchain::block_list.size()) {
+               
+                json json_chain = json::array();
+
+                /*
+                size_t index;
+	            std::string data;
+	            std::chrono::system_clock::time_point timestamp;
+	            sha256_hash hash;
+	            sha256_hash previous_hash;
+	            int difficulty;
+	            size_t nonce;
+                */
+
+                for (const block* c_block : blockchain::block_list) {
+                    json obj;
+                    obj["index"] = c_block->index;
+                    obj["data"] = c_block->data;
+                    obj["timestamp"] = c_block->timestamp.time_since_epoch().count();
+                    obj["hash"] = c_block->hash.to_string();
+                    obj["previous_hash"] = c_block->previous_hash.to_string();
+                    obj["difficulty"] = c_block->difficulty;
+                    obj["nonce"] = c_block->nonce;
+
+                    json_chain.push_back(obj);
+                };
+
+                try {
+
+                    auto res = http_client.Post("/blockchain/sync", json_chain.dump(), "application/json");
+
+                    if (!res) {
+                        std::cout << "Failed to send latest blockchain to backend. Error: " << res.error() << std::endl;
+                    }
+                    else {
+
+                        if (res->status != 200) {
+                            std::cout << "Failed to send latest blockchain to backend. Status: " << res->status << std::endl;
+                        }
+                        else {
+                            last_blockchain_len = blockchain::block_list.size();
+                            std::cout << "Synched blockchain to backend!" << std::endl;
+                        };
+                    };
+
+                }
+                catch (const std::exception& e) {
+                    std::cerr << "Error sending chain to backend: " << e.what() << std::endl;
+                };
+            };
+
+            blockchain::block_chain_mtx.unlock();
+        
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+        }
+    }
+
+
+    //Broadcast new backend request to all others
+    void broadcast_backend_request(const std::vector<std::string>& data_list) {
+        if (!mpi_initialized) return;
+
+        try {
+
+            size_t total_len = 0;
+            total_len += sizeof(size_t); //Number of entries
+
+            for (const std::string& s : data_list) {
+                total_len += sizeof(size_t) + s.length();
+            };
+
+
+            size_t offset = 0;
+            std::vector<uint8_t> buf(total_len);
+            
+
+            size_t num_entries = data_list.size();
+            memcpy(buf.data() + offset, &num_entries, sizeof(size_t));
+            offset += sizeof(size_t);
+
+
+            for (const std::string& str_data : data_list) {
+                size_t data_len = str_data.length();
+                memcpy(buf.data() + offset, &data_len, sizeof(size_t));
+                offset += sizeof(size_t);
+
+                memcpy(buf.data() + offset, str_data.data(), data_len);
+                offset += data_len;
+            };
+  
+
+            for (int dest = 0; dest < mpi_size; dest++) {
+                //if (dest != mpi_rank) {
+                    int result = MPI_Send(buf.data(), static_cast<int>(buf.size()),
+                        MPI_BYTE, dest, MPI_TAG_NEW_REQUEST, MPI_COMM_WORLD);
+                    if (result != MPI_SUCCESS) {
+                        std::cerr << "MPI_Send failed for request to rank " << dest << std::endl;
+                    }
+               // }
+            }
+
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Error broadcasting backend request via MPI: " << e.what() << std::endl;
+        }
+    }
+
+
+    void broadcast_local_hashrate(double hash_rate) {
+        if (!mpi_initialized) return;
+
+        try {
+
+            for (int dest = 0; dest < mpi_size; dest++) {
+                //if (dest != mpi_rank) {
+                    int result = MPI_Send(&hash_rate, 1,
+                        MPI_DOUBLE, dest, MPI_TAG_HASH_RATE, MPI_COMM_WORLD);
+                    if (result != MPI_SUCCESS) {
+                        std::cerr << "MPI_Send failed for hashrate to rank " << dest << std::endl;
+                    }
+                //}
+            };
+
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Error broadcasting hashrate via MPI: " << e.what() << std::endl;
+        }
     }
 }
 

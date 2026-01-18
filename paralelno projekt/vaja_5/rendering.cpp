@@ -394,6 +394,8 @@ namespace rendering {
 
         blockchain::block_chain_mtx.lock();
         ImGui::Text(std::format("Difficulty: {}", blockchain::current_difficulty).c_str());
+        ImGui::Text(std::format("Hash rate: {:.2f}", blockchain::global_hash_rate.load()).c_str());
+        ImGui::Text(std::format("Request queue: {}", blockchain::mining_request_list.size()).c_str());
 
         ImGui::BeginListBox("##chain", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y - 50.f));
 

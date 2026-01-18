@@ -37,5 +37,13 @@ module.exports = {
 			file: "manegement.js",
 			route: "/manegement",
 		},
+		{
+			file: "manegement.js",
+			route: "/manegement",
+		},
+		{
+			file: "blockchain.js",
+			route: "/blockchain",
+		},
 	]
 };

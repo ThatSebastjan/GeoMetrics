@@ -2,6 +2,7 @@
 #define BLOCKCHAIN_INCLUDE
 
 #include <vector>
+#include <list>
 #include <mutex>
 #include <chrono>
 #include "block.h"
@@ -24,8 +25,16 @@ namespace blockchain {
         std::string sender;
     };
 
+    struct mining_request {
+        std::string data;
+    };
+
     extern std::mutex pending_list_mtx;
     extern std::vector<pending_entry> pending_list;
+
+    extern std::list<mining_request> mining_request_list; //guarded by block_chain_mtx
+    extern std::atomic<double> local_hash_rate;
+    extern std::atomic<double> global_hash_rate;
 
     void free_chain(std::vector<block*>& c);
     bool is_block_valid(const block* b, const block* previous);
