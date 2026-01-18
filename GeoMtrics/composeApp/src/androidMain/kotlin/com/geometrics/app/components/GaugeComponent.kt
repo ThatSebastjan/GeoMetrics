@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.graphics.drawscope.rotate
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import kotlin.math.cos
@@ -27,7 +28,7 @@ import kotlin.math.sin
 @Composable
 @Preview
 fun GaugeComponent(
-    value: Float = 100f,
+    value: MutableState<Float>,
     modifier: Modifier = Modifier,
     size: Dp = 200.dp,
     strokeWidth: Dp = 20.dp,
@@ -37,7 +38,7 @@ fun GaugeComponent(
     showTicks: Boolean = false,
     tickCount: Int = 10
 ) {
-    val clamped = value.coerceIn(0f, 100f)
+    val clamped = value.value.coerceIn(0f, 100f)
     val fraction = animateFloatAsState(targetValue = clamped / 100f).value
 
     val startAngle = 135f

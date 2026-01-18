@@ -29,11 +29,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import okhttp3.Call
 import okhttp3.Callback
-import okhttp3.FormBody
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONObject
@@ -49,7 +47,6 @@ fun ReportOverlay(
     var selectedDisaster by remember { mutableStateOf("Landslide") }
     var selectedSeverity by remember { mutableStateOf(1) }
     val client = OkHttpClient()
-    val URL = "http://localhost:3001/report"
 
 
     fun sendReportJson(url: String, json: String, onResult: (success: Boolean, responseBody: String?) -> Unit) {
@@ -157,7 +154,7 @@ fun ReportOverlay(
                         put("timestamp", System.currentTimeMillis())
                     }
                     sendReportJson(
-                        URL, json.toString(),
+                        "${Constants.BACKEND_URL}/report", json.toString(),
                         onResult = { success, responseBody ->
                             if (success) {
                                 onClose()

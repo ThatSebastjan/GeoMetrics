@@ -28,6 +28,10 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation("com.mapbox.maps:android-ndk27:11.17.1")
+            implementation("com.mapbox.mapboxsdk:mapbox-sdk-geojson:7.9.0")
+            implementation("com.mapbox.mapboxsdk:mapbox-sdk-services:7.9.0")
+            implementation("com.mapbox.mapboxsdk:mapbox-sdk-turf:7.9.0")
+            implementation("com.mapbox.mapboxsdk:mapbox-sdk-core:7.9.0")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
