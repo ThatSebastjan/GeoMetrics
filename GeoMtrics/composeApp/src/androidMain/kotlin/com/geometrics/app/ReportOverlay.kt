@@ -2,16 +2,43 @@ package com.geometrics.app
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.FormBody
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import org.json.JSONObject
+import java.io.IOException
+
 
 @Composable
 fun ReportOverlay(
@@ -21,6 +48,32 @@ fun ReportOverlay(
 ) {
     var selectedDisaster by remember { mutableStateOf("Landslide") }
     var selectedSeverity by remember { mutableStateOf(1) }
+    val client = OkHttpClient()
+    val URL = "http://localhost:3001/report"
+
+
+    fun sendReportJson(url: String, json: String, onResult: (success: Boolean, responseBody: String?) -> Unit) {
+        val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+        val body = json.toRequestBody(mediaType)
+        val request = Request.Builder()
+            .url(url)
+            .post(body)
+            .build()
+
+        val call = client.newCall(request)
+        call.enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                onResult(false, e.message)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    val respBody = it.body?.string()
+                    onResult(it.isSuccessful, respBody)
+                }
+            }
+        })
+    }
 
     // Fullscreen dimmed background
     Box(
@@ -103,8 +156,18 @@ fun ReportOverlay(
                         put("longitude", lon)
                         put("timestamp", System.currentTimeMillis())
                     }
-                    println(json.toString()) // output to console for now
-                    onClose()
+                    sendReportJson(
+                        URL, json.toString(),
+                        onResult = { success, responseBody ->
+                            if (success) {
+                                onClose()
+                            }
+                            else {
+                                println("Error: $responseBody")
+                                onClose()
+                            }
+                        }
+                    )
                 }) {
                     Text("Submit")
                 }
