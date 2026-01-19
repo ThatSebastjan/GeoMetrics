@@ -114,7 +114,7 @@ public class LandLotLayer extends MapGeoJsonLayer {
 
         List<GeoJsonGeometry> hoveredGeometry = quadtree.query(hoverEnvelope);
 
-        System.out.printf("hoveredGeometry size: %d / %d\n", hoveredGeometry.size(), visibleGeometry.size());
+        //System.out.printf("hoveredGeometry size: %d / %d\n", hoveredGeometry.size(), visibleGeometry.size());
 
 
         //Render infill only on hovered!
@@ -147,11 +147,6 @@ public class LandLotLayer extends MapGeoJsonLayer {
 
 
         //Render labels
-        //TODO: label rendering based on occupied screen area
-
-        //Gdx.gl.glActiveTexture(GL32.GL_TEXTURE0);
-
-
         Viewport mapViewport = map.getViewport();
 
         Matrix4 uiMatrix = mapViewport.getCamera().combined.cpy();
@@ -217,6 +212,10 @@ public class LandLotLayer extends MapGeoJsonLayer {
             //Skip already added
             if(objectIdSet.contains(geomId)){
                 continue;
+            }
+
+            if(geom.infillMesh == null){
+                continue; //Triangulation for some may fail; skip them
             }
 
             objectIdSet.add(geomId);

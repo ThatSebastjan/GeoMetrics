@@ -1,6 +1,8 @@
 package si.um.feri.GeoMetrics.navigation;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -10,19 +12,34 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.Screen;
 import si.um.feri.GeoMetrics.GdxMap;
+import si.um.feri.GeoMetrics.config.AppConfig;
+import si.um.feri.GeoMetrics.map.Map;
+import si.um.feri.GeoMetrics.map.layer.DisasterReportLayer;
+import si.um.feri.GeoMetrics.map.layer.LandLotLayer;
+import si.um.feri.GeoMetrics.map.layer.MapDebugLayer;
+import si.um.feri.GeoMetrics.map.layer.MapGeoJsonLayer;
+import si.um.feri.GeoMetrics.map.tile.MapTileManager;
 
 public class DisasterScreen extends ScreenAdapter {
     private final GdxMap game;
     private Stage stage;
     private Skin skin;
 
+    private final AssetManager assetManager;
+    private Map map;
+
+
     public DisasterScreen(GdxMap game, Skin skin) {
         this.game = game;
         this.skin = skin;
+
+        assetManager = game.getAssetManager();
+
         create();
     }
 
@@ -44,7 +61,18 @@ public class DisasterScreen extends ScreenAdapter {
 
     @Override
     public void show() {
-        Gdx.input.setInputProcessor(stage);
+        MapTileManager tileManager = new MapTileManager(assetManager, AppConfig.TILE_DATA_PATH, AppConfig.TILE_MAP_MIN_ZOOM, AppConfig.TILE_MAP_MAX_ZOOM);
+        map = new Map(game.getBatch(), tileManager);
+
+        //Add map layers
+        map.addLayer(new MapGeoJsonLayer(Gdx.files.internal("assets/static/si_border.json").path()));
+
+        map.addLayer(new DisasterReportLayer());
+        map.addLayer(new MapDebugLayer());
+
+
+        InputMultiplexer m = new InputMultiplexer(stage, map);
+        Gdx.input.setInputProcessor(m);
     }
 
     private Table navBar() {
@@ -99,8 +127,16 @@ public class DisasterScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0f, 0f, 0f, 1f);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        ScreenUtils.clear(0.f, 0.f, 0.f, 1.f);
+
+        //Update map
+        map.update(delta);
+
+        //Render map
+        map.render(delta);
+
+        //Update and render UI
+        stage.getViewport().apply();
         stage.act(delta);
         stage.draw();
     }
@@ -108,6 +144,8 @@ public class DisasterScreen extends ScreenAdapter {
     @Override
     public void resize(int width, int height) {
         stage.getViewport().update(width, height, true);
+
+        map.onResize(width, height);
     }
 
     @Override
@@ -118,5 +156,6 @@ public class DisasterScreen extends ScreenAdapter {
     @Override
     public void dispose() {
         if (stage != null) stage.dispose();
+        map.dispose();
     }
 }

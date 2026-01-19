@@ -125,61 +125,65 @@ public class GeoJsonGeometry {
 
         //TODO: triangulate can throw an exception if geometry is weird! CATCH EXCEPTION TO PREVENT CRASH AND HANDLE STUFF!
 
+        try {
 
-        //Normal polygon
-        if(!cutout){
-            infillTriangles = PolygonTriangulator.triangulate(infillPolygon);
+            //Normal polygon
+            if (!cutout) {
+                infillTriangles = PolygonTriangulator.triangulate(infillPolygon);
+            }
+
+            //Inverse - fill whole world, center is a hole
+            else {
+
+                Coordinate[] worldBoundCoords = {
+                    new Coordinate(0, 0),
+                    new Coordinate(AppConfig.WORLD_WIDTH, 0),
+                    new Coordinate(AppConfig.WORLD_WIDTH, AppConfig.WORLD_HEIGHT),
+                    new Coordinate(0, AppConfig.WORLD_HEIGHT),
+                    new Coordinate(0, 0)
+                };
+
+                Geometry quadGeom = factory.createPolygon(worldBoundCoords);
+                Geometry holed = quadGeom.difference(infillPolygon);
+                infillTriangles = PolygonTriangulator.triangulate(holed);
+            }
+
+            Centroid c = new Centroid(infillPolygon);
+            Coordinate centerCoord = c.getCentroid();
+            center.set((float) centerCoord.x, (float) centerCoord.y);
+
+
+            int numTris = infillTriangles.getNumGeometries();
+            float[] vertices = new float[numTris * 3 * 3]; //3 vertices per triangle * 3 floats per vertex
+
+            for (int i = 0; i < numTris; i++) {
+                Polygon triangle = (Polygon) infillTriangles.getGeometryN(i);
+                Coordinate[] triCoords = triangle.getCoordinates();
+
+                int idx = 3 * 3 * i;
+                vertices[idx] = (float) triCoords[0].x;
+                vertices[idx + 1] = (float) triCoords[0].y;
+                vertices[idx + 2] = 0;
+
+                vertices[idx + 3] = (float) triCoords[1].x;
+                vertices[idx + 4] = (float) triCoords[1].y;
+                vertices[idx + 5] = 0;
+
+                vertices[idx + 6] = (float) triCoords[2].x;
+                vertices[idx + 7] = (float) triCoords[2].y;
+                vertices[idx + 8] = 0;
+            }
+
+
+            VertexAttribute vtxAttributes = new VertexAttribute(VertexAttributes.Usage.Position, 3, "a_position");
+
+            infillMesh = new Mesh(true, 3 * numTris, 0, vtxAttributes);
+            infillMesh.setVertices(vertices);
+
+            //System.out.printf("Created infill mesh with %d triangles (%d vertices)\n", numTris, vertices.length);
+        } catch (Exception e) {
+            System.out.println("Failed to create infill for polygon!");
         }
-
-        //Inverse - fill whole world, center is a hole
-        else {
-
-            Coordinate[] worldBoundCoords = {
-                new Coordinate(0, 0),
-                new Coordinate(AppConfig.WORLD_WIDTH, 0),
-                new Coordinate(AppConfig.WORLD_WIDTH, AppConfig.WORLD_HEIGHT),
-                new Coordinate(0, AppConfig.WORLD_HEIGHT),
-                new Coordinate(0, 0)
-            };
-
-            Geometry quadGeom = factory.createPolygon(worldBoundCoords);
-            Geometry holed = quadGeom.difference(infillPolygon);
-            infillTriangles = PolygonTriangulator.triangulate(holed);
-        }
-
-        Centroid c = new Centroid(infillPolygon);
-        Coordinate centerCoord = c.getCentroid();
-        center.set((float)centerCoord.x, (float)centerCoord.y);
-
-
-        int numTris = infillTriangles.getNumGeometries();
-        float[] vertices = new float[numTris * 3 * 3]; //3 vertices per triangle * 3 floats per vertex
-
-        for (int i = 0; i < numTris; i++) {
-            Polygon triangle = (Polygon) infillTriangles.getGeometryN(i);
-            Coordinate[] triCoords = triangle.getCoordinates();
-
-            int idx = 3 * 3 * i;
-            vertices[idx] = (float) triCoords[0].x;
-            vertices[idx + 1] = (float) triCoords[0].y;
-            vertices[idx + 2] = 0;
-
-            vertices[idx + 3] = (float) triCoords[1].x;
-            vertices[idx + 4] = (float) triCoords[1].y;
-            vertices[idx + 5] = 0;
-
-            vertices[idx + 6] = (float) triCoords[2].x;
-            vertices[idx + 7] = (float) triCoords[2].y;
-            vertices[idx + 8] = 0;
-        }
-
-
-        VertexAttribute vtxAttributes = new VertexAttribute(VertexAttributes.Usage.Position, 3, "a_position");
-
-        infillMesh = new Mesh(true, 3 * numTris, 0, vtxAttributes);
-        infillMesh.setVertices(vertices);
-
-        System.out.printf("Created infill mesh with %d triangles (%d vertices)\n", numTris, vertices.length);
     }
 
 
