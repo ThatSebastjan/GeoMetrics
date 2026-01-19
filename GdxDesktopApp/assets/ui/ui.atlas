@@ -1,0 +1,29 @@
+
+ui.png
+size: 512, 512
+format: RGBA8888
+filter: Linear, Linear
+repeat: none
+Roboto-VariableFont_wdth,wght(1)
+  rotate: false
+  xy: 1, 471
+  size: 504, 32
+  orig: 504, 32
+  offset: 0, 0
+  index: -1
+basic
+  rotate: false
+  xy: 1, 211
+  size: 128, 128
+  split: 32, 32, 32, 32
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
+on
+  rotate: false
+  xy: 1, 341
+  size: 128, 128
+  split: 32, 32, 32, 32
+  orig: 128, 128
+  offset: 0, 0
+  index: -1
