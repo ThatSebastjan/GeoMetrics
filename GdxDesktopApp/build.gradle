@@ -53,6 +53,29 @@ configure(subprojects) {
     options.incremental = true
   }
 
+
+
+  //JCEF related dependencies
+  repositories {
+    flatDir {
+      dirs '../jcef_libs'
+    }
+  }
+
+  dependencies {
+    implementation name: "jogl-all"
+    implementation name: "gluegen-rt"
+    implementation name: "jcef"
+    implementation name: "gluegen-rt-natives-windows-amd64" //TODO: add platform specific natives when we support other platforms...
+    implementation name: "jogl-all-natives-windows-amd64"
+
+    implementation 'org.lwjgl:lwjgl-opengles:3.3.3'
+    implementation 'org.lwjgl:lwjgl-opengl:3.3.3'
+
+    implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion" //Needed to get screen refresh rate
+  }
+
+  //Other library dependencies
   dependencies {
     implementation "org.json:json:20251224"
     implementation "org.locationtech.jts:jts-core:1.20.0"

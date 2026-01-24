@@ -6,3 +6,7 @@ plugins {
 // You can remove Strings from the list and reload the Gradle project
 // if you want to temporarily disable a subproject.
 include 'core', 'lwjgl3'
+
+
+//TODO: change this to your own libgdx custom version directory
+includeBuild "../../../../../libgdx_custom"

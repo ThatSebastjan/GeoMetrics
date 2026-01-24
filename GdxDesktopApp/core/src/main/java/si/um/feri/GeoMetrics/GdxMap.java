@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.Logger;
 import si.um.feri.GeoMetrics.navigation.HeatMapScreen;
+import si.um.feri.GeoMetrics.screen.CefUITestScreen;
 
 
 public class GdxMap extends Game {
@@ -28,7 +29,8 @@ public class GdxMap extends Game {
         assetManager.finishLoading();
 
         skin = assetManager.get("assets/ui/ui.json", Skin.class);
-        setScreen(new HeatMapScreen(this, skin));
+        //setScreen(new HeatMapScreen(this, skin));
+        setScreen(new CefUITestScreen(this));
     }
 
 

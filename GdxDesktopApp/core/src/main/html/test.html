@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: transparent;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+            padding: 40px 20px;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .sidebar-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+        }
+
+        .sidebar-button {
+            width: 100%;
+            padding: 16px 20px;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar-button::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateX(8px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .sidebar-button:hover::before {
+            transform: scaleY(1);
+        }
+
+        .sidebar-button:active {
+            transform: translateX(6px) scale(0.98);
+        }
+
+        /* Demo content area */
+        .content {
+            margin-left: 250px;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body style="background-color: transparent;">
+<div class="sidebar">
+    <div class="sidebar-title">Test Title</div>
+    <button class="sidebar-button" onclick="notifyNative(0);">Button 1</button>
+    <button class="sidebar-button" onclick="notifyNative(1);">Button 2</button>
+    <button class="sidebar-button" onclick="notifyNative(2);">Button 3</button>
+</div>
+
+<div class="content">
+    <!-- Content -->
+</div>
+</body>
+
+<script>
+    function notifyNative(index){
+        window.cefQuery({
+            request: `test:${index}`,
+            persistent: false,
+            onSuccess: function(response) {},
+            onFailure: function(error_code, error_message) {}
+        });
+    }
+</script>
+</html>
