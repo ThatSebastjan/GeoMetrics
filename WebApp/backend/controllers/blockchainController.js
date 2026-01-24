@@ -2,14 +2,22 @@ let blockchain = [];
 let pendingData = []; // [{data: "str data"}, ...]
 
 
-/*
-//Generate test data
-setInterval(() => {
-    pendingData.push({
-        data: `Test blockchain entry#${Date.now().toString(16)}`,
-    });
 
-    console.log(`Inserted data; queue size: ${pendingData.length}`);
+//Generate test data
+/*
+setInterval(() => {
+
+    if(pendingData.length < 100){
+
+        for(let i = pendingData.length; i < 100; i++){
+
+            pendingData.push({
+                data: `Test blockchain entry#${(Date.now() + i).toString(16)}`,
+            });
+        };
+
+        console.log(`Inserted data; queue size: ${pendingData.length}`);
+    }
 }, 500);
 */
 

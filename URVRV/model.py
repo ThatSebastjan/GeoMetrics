@@ -31,7 +31,6 @@ class Down(nn.Module):
 
 
 class Up(nn.Module):
-    """Upscaling then double conv."""
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.up = nn.ConvTranspose2d(in_channels, in_channels // 2, kernel_size=2, stride=2)
@@ -46,37 +45,6 @@ class Up(nn.Module):
         x = torch.cat([x2, x1], dim=1)
         return self.conv(x)
 
-
-class UNet(nn.Module):
-    def __init__(self, in_channels=3, out_channels=1, features=[64, 128, 256, 512]):
-        super().__init__()
-        self.inc = DoubleConv(in_channels, features[0])
-        
-        self.down1 = Down(features[0], features[1])
-        self.down2 = Down(features[1], features[2])
-        self.down3 = Down(features[2], features[3])
-        self.down4 = Down(features[3], features[3] * 2)
-        
-        self.up1 = Up(features[3] * 2, features[3])
-        self.up2 = Up(features[3], features[2])
-        self.up3 = Up(features[2], features[1])
-        self.up4 = Up(features[1], features[0])
-        
-        self.outc = nn.Conv2d(features[0], out_channels, kernel_size=1)
-
-    def forward(self, x):
-        x1 = self.inc(x)
-        x2 = self.down1(x1)
-        x3 = self.down2(x2)
-        x4 = self.down3(x3)
-        x5 = self.down4(x4)
-        x = self.up1(x5, x4)
-        x = self.up2(x, x3)
-        x = self.up3(x, x2)
-        x = self.up4(x, x1)
-        
-        logits = self.outc(x)
-        return logits
 
 
 class UNetSmall(nn.Module):
@@ -110,11 +78,3 @@ class UNetSmall(nn.Module):
         logits = self.outc(x)
         return logits
 
-
-if __name__ == "__main__":
-    model = UNetSmall()
-    x = torch.randn(1, 3, 256, 256)
-    y = model(x)
-    print(f"Input shape: {x.shape}")
-    print(f"Output shape: {y.shape}")
-    print(f"Parameters: {sum(p.numel() for p in model.parameters()):,}")

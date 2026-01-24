@@ -45,7 +45,7 @@ fun DetectOverlay(
     modifier: Modifier = Modifier,
     currentCoordinates: Pair<Double, Double>,
     onClose: () -> Unit,
-    backendUrl: String = "http://localhost:3001/detect"
+    backendUrl: String = "http://172.20.10.14:3001/detect"
 ) {
     var loading by remember { mutableStateOf(true) }
     var distanceMeters by remember { mutableStateOf<Double?>(null) }

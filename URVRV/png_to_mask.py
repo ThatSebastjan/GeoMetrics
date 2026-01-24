@@ -5,21 +5,9 @@ import cv2
 
 
 def fill_holes_per_component(mask: np.ndarray, max_hole_area: int = 500) -> np.ndarray:
-    """
-    Fill holes INSIDE each connected water component, but only if
-    the hole is small enough. This prevents filling large background
-    areas that happen to be enclosed.
-    
-    Args:
-        mask: Binary mask (0/255 uint8)
-        max_hole_area: Maximum hole area to fill (prevents filling large gaps)
-    
-    Returns:
-        Mask with small internal holes filled
-    """
     result = mask.copy()
     
-    # Find contours of water regions (external only)
+    #Find contours of water regions
     contours, hierarchy = cv2.findContours(
         mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
     )
@@ -39,29 +27,9 @@ def fill_holes_per_component(mask: np.ndarray, max_hole_area: int = 500) -> np.n
     return result
 
 
-def fill_holes_legacy(mask: np.ndarray) -> np.ndarray:
-    """
-    Legacy flood-fill approach. DEPRECATED: Can incorrectly fill areas
-    connected to image edges. Use fill_holes_per_component instead.
-    """
-    h, w = mask.shape[:2]
-    flood = mask.copy()
-    ff = np.zeros((h + 2, w + 2), dtype=np.uint8)
-    cv2.floodFill(flood, ff, (0, 0), 255)
-    flood_inv = cv2.bitwise_not(flood)
-    return cv2.bitwise_or(mask, flood_inv)
-
-
 def filter_components(mask: np.ndarray, min_area: int, min_length: int,
                       aspect_ratio_threshold: float = 0.15) -> np.ndarray:
-    """
-    Keep connected components that are either:
-      - large enough by area (lakes), OR
-      - long enough AND elongated (rivers/streams).
     
-    The aspect_ratio_threshold helps distinguish thin rivers from
-    square noise blobs - rivers have low min(w,h)/max(w,h) ratios.
-    """
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
     out = np.zeros_like(mask)
 
@@ -147,8 +115,6 @@ def main():
                     help="Fill small holes inside water regions (improved method)")
     ap.add_argument("--max_hole_area", type=int, default=500,
                     help="Maximum hole area to fill (prevents filling large gaps)")
-    ap.add_argument("--legacy_fill", action="store_true",
-                    help="Use old flood-fill method (not recommended)")
 
     args = ap.parse_args()
 
@@ -186,14 +152,12 @@ def main():
     mask = filter_components(mask, min_area=args.min_area, min_length=args.min_length)
 
     if args.fill_holes:
-        if args.legacy_fill:
-            mask = fill_holes_legacy(mask)
-        else:
-            mask = fill_holes_per_component(mask, max_hole_area=args.max_hole_area)
+        mask = fill_holes_per_component(mask, max_hole_area=args.max_hole_area)
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     cv2.imwrite(args.out, mask)
     print(f"Saved mask: {args.out}")
+
     if args.auto_color:
         print(f"Auto thresholds used: h=[{hmin},{hmax}] smin={smin} vmin={vmin}")
 

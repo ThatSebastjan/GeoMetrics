@@ -37,5 +37,3 @@ def main():
 
     print("Done. Masks saved in .\\masks")
 
-if __name__ == "__main__":
-    main()

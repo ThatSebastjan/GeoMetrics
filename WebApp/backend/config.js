@@ -49,5 +49,9 @@ module.exports = {
 			file: "reports.js",
 			route: "/report",
 		},
+		{
+			file: "detect.js",
+			route: "/detect",
+		},
 	]
 };

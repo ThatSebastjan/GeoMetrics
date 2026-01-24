@@ -16,8 +16,10 @@ def deg2num(lat_deg, lon_deg, zoom):
 
 def download(url, out_path, user_agent):
     req = urllib.request.Request(url, headers={"User-Agent": user_agent})
+
     with urllib.request.urlopen(req, timeout=30) as r:
         data = r.read()
+    
     with open(out_path, "wb") as f:
         f.write(data)
 
@@ -33,7 +35,6 @@ def main():
     ap.add_argument("--outdir", default="images")
     ap.add_argument("--sleep", type=float, default=1.0)
     ap.add_argument("--tile_url", default="https://tile.openstreetmap.org/{z}/{x}/{y}.png")
-    ap.add_argument("--user_agent", default="WaterMaskStudentProject/1.0")
     args = ap.parse_args()
 
     os.makedirs(args.outdir, exist_ok=True)
@@ -46,7 +47,8 @@ def main():
 
     if (xmax - xmin + 1) * (ymax - ymin + 1) > 200000:
         raise SystemExit("Tile range too large. Reduce bbox or zoom.")
-
+    
+    
     for i in range(1, args.count + 1):
         x = random.randint(xmin, xmax)
         y = random.randint(ymin, ymax)

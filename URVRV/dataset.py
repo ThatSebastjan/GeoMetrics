@@ -17,6 +17,7 @@ class WaterDataset(Dataset):
         self.image_size = image_size
         self.augment = augment
         self.image_files = sorted(glob.glob(os.path.join(images_dir, "*.png")))
+
         if len(self.image_files) == 0:
             raise ValueError(f"No images found in {images_dir}")
         
@@ -24,17 +25,18 @@ class WaterDataset(Dataset):
             self.image_files = self._validate_data(self.image_files, masks_dir)
         
         print(f"Found {len(self.image_files)} valid image-mask pairs")
+
         self.normalize = T.Normalize(
             mean=[0.485, 0.456, 0.406],
             std=[0.229, 0.224, 0.225]
         )
     
+
+    #Check image-mask pairs to match...
     def _validate_data(self, image_files, masks_dir):
-        """Validate that masks exist and match image dimensions."""
         valid_files = []
         skipped_count = 0
         
-        print("Validating dataset...")
         for img_path in image_files:
             try:
                 with Image.open(img_path) as img:
@@ -95,131 +97,72 @@ class WaterDataset(Dataset):
             print(f"Warning: Skipped {skipped_count} invalid image-mask pairs")
         
         if len(valid_files) == 0:
-            raise ValueError(
-                f"No valid image-mask pairs found after validation. "
-                f"Please check that masks exist and match image dimensions."
-            )
+            raise ValueError("No valid image and mask pair exists...")
         
         return valid_files
+
 
     def __len__(self):
         return len(self.image_files)
 
+
     def __getitem__(self, idx):
-        """Get item with error handling for corrupt files."""
-        original_idx = idx
-        max_attempts = len(self.image_files)  # Try all samples if needed
+        img_path = self.image_files[idx]
         
-        for attempt in range(max_attempts):
-            try:
-                img_path = self.image_files[idx]
-                
-                try:
-                    image = Image.open(img_path).convert("RGB")
-                except Exception as e:
-                    raise ValueError(f"Failed to load image {img_path}: {str(e)}")
-                
-                base = os.path.basename(img_path)
-                mask_name = base.replace("img_", "mask_", 1) if base.startswith("img_") else f"mask_{base}"
-                mask_path = os.path.join(self.masks_dir, mask_name)
-                
-                if not os.path.exists(mask_path):
-                    raise FileNotFoundError(f"Mask not found: {mask_path}")
-                
-                try:
-                    mask = Image.open(mask_path).convert("L")
-                except Exception as e:
-                    raise ValueError(f"Failed to load mask {mask_path}: {str(e)}")
-                
-                try:
-                    image = image.resize((self.image_size, self.image_size), Image.BILINEAR)
-                    mask = mask.resize((self.image_size, self.image_size), Image.NEAREST)
-                except Exception as e:
-                    raise ValueError(f"Failed to resize image/mask: {str(e)}")
-                
-                if self.augment:
-                    try:
-                        image, mask = self._augment(image, mask)
-                    except Exception as e:
-                        warnings.warn(f"Augmentation failed for {base}: {str(e)}, skipping augmentation")
-                
-                try:
-                    image = TF.to_tensor(image)
-                    image = self.normalize(image)
-                    mask = np.array(mask, dtype=np.float32)
-                    mask = mask / 255.0
-                    mask = torch.from_numpy(mask).unsqueeze(0)
-                except Exception as e:
-                    raise ValueError(f"Failed to convert to tensor: {str(e)}")
-                
-                return image, mask
-                
-            except Exception as e:
-                if attempt < max_attempts - 1:
-                    warnings.warn(
-                        f"Failed to load sample at index {idx} ({os.path.basename(self.image_files[idx])}): "
-                        f"{str(e)}. Trying next sample."
-                    )
-                    idx = (idx + 1) % len(self.image_files)
-                    if idx == original_idx:
-                        raise RuntimeError(
-                            f"Failed to load any valid sample after trying all {len(self.image_files)} samples. "
-                            f"Last error: {str(e)}"
-                        )
-                else:
-                    raise RuntimeError(
-                        f"Failed to load sample after {max_attempts} attempts. "
-                        f"Original index: {original_idx}, Last error: {str(e)}"
-                    )
+        try:
+            image = Image.open(img_path).convert("RGB")
+        except Exception as e:
+            raise ValueError(f"Failed to load image {img_path}: {str(e)}")
         
-        raise RuntimeError(f"Unexpected error in __getitem__ for index {original_idx}")
+        base = os.path.basename(img_path)
+        mask_name = base.replace("img_", "mask_", 1) if base.startswith("img_") else f"mask_{base}"
+        mask_path = os.path.join(self.masks_dir, mask_name)
+        
+        if not os.path.exists(mask_path):
+            raise FileNotFoundError(f"Mask not found: {mask_path}")
+        
+        try:
+            mask = Image.open(mask_path).convert("L")
+        except Exception as e:
+            raise ValueError(f"Failed to load mask {mask_path}: {str(e)}")
+        
+        image = image.resize((self.image_size, self.image_size), Image.BILINEAR)
+        mask = mask.resize((self.image_size, self.image_size), Image.NEAREST)
+        
+        #Augmentation?
+        if self.augment:
+            image, mask = self._augment(image, mask)
+
+            image = TF.to_tensor(image)
+            image = self.normalize(image)
+            mask = np.array(mask, dtype=np.float32)
+            mask = mask / 255.0
+            mask = torch.from_numpy(mask).unsqueeze(0)
+
+        return image, mask
+
 
     def _augment(self, image, mask):
         if random.random() > 0.5:
             image = TF.hflip(image)
             mask = TF.hflip(mask)
+
         if random.random() > 0.5:
             image = TF.vflip(image)
             mask = TF.vflip(mask)
+
         if random.random() > 0.5:
             angle = random.choice([90, 180, 270])
             image = TF.rotate(image, angle)
             mask = TF.rotate(mask, angle)
+
         if random.random() > 0.5:
             image = TF.adjust_brightness(image, random.uniform(0.8, 1.2))
+
         if random.random() > 0.5:
             image = TF.adjust_contrast(image, random.uniform(0.8, 1.2))
+
         if random.random() > 0.5:
             image = TF.adjust_saturation(image, random.uniform(0.8, 1.2))
+
         return image, mask
-
-
-class WaterDatasetInference(Dataset):
-    def __init__(self, image_paths, image_size=256):
-        self.image_paths = image_paths if isinstance(image_paths, list) else [image_paths]
-        self.image_size = image_size
-        self.normalize = T.Normalize(
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225]
-        )
-
-    def __len__(self):
-        return len(self.image_paths)
-
-    def __getitem__(self, idx):
-        img_path = self.image_paths[idx]
-        image = Image.open(img_path).convert("RGB")
-        original_size = image.size
-        image = image.resize((self.image_size, self.image_size), Image.BILINEAR)
-        image = TF.to_tensor(image)
-        image = self.normalize(image)
-        return image, img_path, original_size
-
-
-if __name__ == "__main__":
-    dataset = WaterDataset("images", "masks", image_size=256, augment=False)
-    print(f"Dataset size: {len(dataset)}")
-    img, mask = dataset[0]
-    print(f"Image shape: {img.shape}, dtype: {img.dtype}")
-    print(f"Mask shape: {mask.shape}, dtype: {mask.dtype}")
-    print(f"Mask unique values: {torch.unique(mask)}")
