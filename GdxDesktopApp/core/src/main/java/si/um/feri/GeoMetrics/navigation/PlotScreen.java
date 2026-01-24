@@ -64,7 +64,7 @@ public class PlotScreen extends ScreenAdapter {
         map.addLayer(new MapGeoJsonLayer(Gdx.files.internal("assets/static/si_border.json").path()));
 
         map.addLayer(new LandLotLayer());
-        map.addLayer(new MapDebugLayer());
+        //map.addLayer(new MapDebugLayer());
 
 
         InputMultiplexer m = new InputMultiplexer(stage, map);

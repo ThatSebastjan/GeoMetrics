@@ -133,7 +133,8 @@ public class LandLotLayer extends MapGeoJsonLayer {
 
 
         //Render outlines
-        shaderProgram.setUniformf("u_inColor", new Color(0.5f, 0.313f, 0.f, 1.f));
+        //shaderProgram.setUniformf("u_inColor", new Color(0.5f, 0.313f, 0.f, 1.f));
+        shaderProgram.setUniformf("u_inColor", new Color(1.f, 208.f / 255.f, 0, 1.f));
 
         Gdx.gl.glLineWidth(2.f);
         Gdx.gl.glDisable(GL32.GL_CULL_FACE);
