@@ -2,7 +2,6 @@ package com.geometrics.app.components
 
 import android.Manifest
 import android.content.Context
-import android.graphics.RectF
 import android.location.LocationManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,6 +17,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.geometrics.app.Constants
+import com.geometrics.app.models.Incident
 import com.mapbox.android.gestures.MoveGestureDetector
 import com.mapbox.geojson.Feature
 import com.mapbox.geojson.Point
@@ -29,16 +29,21 @@ import com.mapbox.maps.RenderedQueryGeometry
 import com.mapbox.maps.RenderedQueryOptions
 import com.mapbox.maps.ScreenBox
 import com.mapbox.maps.ScreenCoordinate
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
 import com.mapbox.maps.extension.style.expressions.generated.Expression
+import com.mapbox.maps.extension.style.image.image
 import com.mapbox.maps.extension.style.layers.addLayer
 import com.mapbox.maps.extension.style.layers.generated.fillLayer
 import com.mapbox.maps.extension.style.layers.generated.lineLayer
 import com.mapbox.maps.extension.style.layers.generated.symbolLayer
-import com.mapbox.maps.extension.style.sources.addGeoJSONSourceFeatures
-import com.mapbox.maps.extension.style.sources.addSource
-import com.mapbox.maps.extension.style.sources.generated.GeoJsonSource
+import com.mapbox.maps.extension.style.layers.properties.generated.IconAnchor
 import com.mapbox.maps.extension.style.sources.generated.geoJsonSource
 import com.mapbox.maps.extension.style.sources.getSourceAs
+import com.mapbox.maps.extension.style.sources.generated.GeoJsonSource
+import com.mapbox.maps.extension.style.sources.addGeoJSONSourceFeatures
+import com.mapbox.maps.extension.style.sources.addSource
 import com.mapbox.maps.extension.style.sources.updateGeoJSONSourceFeatures
 import com.mapbox.maps.plugin.gestures.OnMoveListener
 import com.mapbox.maps.plugin.gestures.addOnMapClickListener
@@ -61,6 +66,10 @@ fun MapBoxContainer(
     heightDp: Int = 300,
     zoomLevel: Double = 14.0,
     addLandLotLayer: Boolean = false,
+    showIncidents: Boolean = false,
+    incidents: List<Incident> = emptyList(),
+    refreshTrigger: Int = 0,
+    onIncidentClick: ((Incident) -> Unit)? = null,
     onAssesmentResult: ((floodRisk: Double, landslideRisk: Double, earthquakeRisk: Double) -> Unit)? = null
 ) {
     if (LocalInspectionMode.current) return
@@ -180,6 +189,139 @@ fun MapBoxContainer(
                 return@addOnMapClickListener false
             }
 
+        }
+    }
+
+    // Load incident icons from drawable resources
+    LaunchedEffect(mapView) {
+        if (mapView == null) return@LaunchedEffect
+        
+        // Wait for style to be loaded
+        mapView.mapboxMap.getStyle { style ->
+            try {
+                // Load PNG images from drawable
+                val landslideResId = context.resources.getIdentifier("landslide", "drawable", context.packageName)
+                val earthquakeResId = context.resources.getIdentifier("earthquake", "drawable", context.packageName)
+                val floodResId = context.resources.getIdentifier("flood", "drawable", context.packageName)
+                
+                if (landslideResId != 0) {
+                    val bitmap = BitmapFactory.decodeResource(context.resources, landslideResId)
+                    bitmap?.let { 
+                        style.addImage("icon_landslide", it)
+                        println("MapBox: Loaded landslide icon")
+                    }
+                }
+                if (earthquakeResId != 0) {
+                    val bitmap = BitmapFactory.decodeResource(context.resources, earthquakeResId)
+                    bitmap?.let { 
+                        style.addImage("icon_earthquake", it)
+                        println("MapBox: Loaded earthquake icon")
+                    }
+                }
+                if (floodResId != 0) {
+                    val bitmap = BitmapFactory.decodeResource(context.resources, floodResId)
+                    bitmap?.let { 
+                        style.addImage("icon_flood", it)
+                        println("MapBox: Loaded flood icon")
+                    }
+                }
+            } catch (e: Exception) {
+                println("MapBox: Error loading icons: ${e.message}")
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // Add incident markers when showIncidents is true
+    LaunchedEffect(mapView, showIncidents, incidents, refreshTrigger) {
+        if (mapView == null || !showIncidents) {
+            println("MapBox: LaunchedEffect skipped - mapView=$mapView, showIncidents=$showIncidents")
+            return@LaunchedEffect
+        }
+
+        println("=== MapBox: Adding incident markers ===")
+        println("Incidents to display: ${incidents.size}")
+        incidents.forEach { inc ->
+            println("  - ${inc.type} at (${inc.latitude}, ${inc.longitude})")
+        }
+
+        try {
+            val map = mapView.mapboxMap
+
+            val incidentSource = map.getSourceAs<GeoJsonSource>("incidents")
+            if (incidentSource == null) {
+                println("MapBox: Creating new incidents source")
+                map.addSource(geoJsonSource("incidents") {
+                    featureCollection(com.mapbox.geojson.FeatureCollection.fromFeatures(emptyList()))
+                })
+            } else {
+                println("MapBox: Incidents source already exists")
+            }
+
+            val features = incidents.map { incident ->
+                Feature.fromGeometry(
+                    Point.fromLngLat(incident.longitude, incident.latitude)
+                ).apply {
+                    addStringProperty("id", incident.id)
+                    addStringProperty("type", incident.type)
+                    addNumberProperty("severity", incident.severity)
+                    // Use icon name instead of emoji
+                    addStringProperty("icon", when(incident.type.lowercase()) {
+                        "landslide" -> "icon_landslide"
+                        "earthquake" -> "icon_earthquake"
+                        "flood" -> "icon_flood"
+                        else -> "icon_landslide" // Default fallback
+                    })
+                }
+            }
+
+            println("MapBox: Created ${features.size} features")
+
+            val src = map.getSourceAs<GeoJsonSource>("incidents")
+            src?.featureCollection(com.mapbox.geojson.FeatureCollection.fromFeatures(features))
+            println("MapBox: Updated source with features")
+
+            try {
+                // Remove old layer if it exists
+                try {
+                    map.getStyle()?.removeStyleLayer("incident_layer")
+                } catch (_: Exception) {}
+                
+                // Add new layer with icon images instead of text
+                map.addLayer(symbolLayer("incident_layer", "incidents") {
+                    iconImage(Expression.get("icon"))
+                    iconSize(0.24)
+                    iconAllowOverlap(true)
+                    iconIgnorePlacement(true)
+                    iconAnchor(IconAnchor.CENTER)
+                })
+                println("MapBox: Incident layer added successfully with PNG icons")
+
+                map.addOnMapClickListener { point ->
+                    val screenPoint = map.pixelForCoordinate(point)
+                    val bounds = RenderedQueryGeometry(ScreenBox(
+                        ScreenCoordinate(screenPoint.x - 20, screenPoint.y - 20),
+                        ScreenCoordinate(screenPoint.x + 20, screenPoint.y + 20)
+                    ))
+
+                    map.queryRenderedFeatures(
+                        bounds,
+                        RenderedQueryOptions(mutableListOf("incident_layer"), null)
+                    ) { result ->
+                        result.value?.firstOrNull()?.let { queriedFeature ->
+                            val incidentId = queriedFeature.queriedFeature.feature.getStringProperty("id")
+                            val incident = incidents.find { it.id == incidentId }
+                            incident?.let { onIncidentClick?.invoke(it) }
+                        }
+                    }
+                    false
+                }
+            } catch (e: Exception) {
+                println("MapBox: Layer probably already exists (this is OK): ${e.message}")
+            }
+        } catch (e: Exception) {
+            println("MapBox ERROR: ${e.message}")
+            e.printStackTrace()
         }
     }
 

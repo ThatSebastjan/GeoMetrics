@@ -167,7 +167,7 @@ def main():
                 raise FileNotFoundError(f"Image file not found: {img_path}")
             
             result = detector.detect(img_path)
-            status = "✓ WATER FOUND" if result['found'] else "✗ No water detected"
+            status = "WATER FOUND" if result['found'] else "No water detected"
             
             base_name = os.path.splitext(filename)[0]
             mask_path = os.path.join(args.output, f"{base_name}_mask.png")

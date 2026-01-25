@@ -238,7 +238,7 @@ def main():
                 'val_dice': val_dice,
                 'epochs_without_improvement': epochs_without_improvement,
             }, os.path.join(args.save_dir, "best_model.pth"))
-            print(f"  ✓ Saved best model (IoU: {best_val_iou:.4f})")
+            print(f"  Saved best model (IoU: {best_val_iou:.4f})")
         else:
             print(f"  No improvement ({epochs_without_improvement}/{args.early_stop_patience if args.early_stop_patience > 0 else 'N/A'})")
         

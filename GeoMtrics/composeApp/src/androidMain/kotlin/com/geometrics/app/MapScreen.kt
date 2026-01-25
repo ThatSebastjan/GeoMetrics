@@ -9,8 +9,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.geometrics.app.ReportOverlay
 import com.geometrics.app.DetectOverlay
+import com.geometrics.app.components.IncidentDetailDialog
 import com.geometrics.app.components.MapBoxContainer
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import com.geometrics.app.managers.IncidentManager
+import com.geometrics.app.models.Incident
 import android.Manifest
 import android.Manifest.permission
 import android.content.pm.PackageManager
@@ -29,8 +31,22 @@ fun MapScreen(modifier: Modifier = Modifier) {
     var showReportScreen by remember { mutableStateOf(false) }
     var showDetectScreen by remember { mutableStateOf(false) }
     var currentCoordinates by remember { mutableStateOf(Pair(0.0, 0.0)) }
+    var selectedIncident by remember { mutableStateOf<Incident?>(null) }
+    var refreshIncidents by remember { mutableStateOf(0) }
     val context = LocalContext.current
     val fusedClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    LaunchedEffect(Unit) {
+        IncidentManager.initialize(context)
+        IncidentManager.syncFromBackend { success, count ->
+            if (success) {
+                println("Synced $count incidents from backend/blockchain")
+                refreshIncidents++
+            } else {
+                println("Sync failed, using local incidents only")
+            }
+        }
+    }
 
     LaunchedEffect(context, fusedClient) {
         if (checkSelfPermission(context, permission.ACCESS_FINE_LOCATION) != PERMISSION_GRANTED) return@LaunchedEffect
@@ -60,7 +76,19 @@ fun MapScreen(modifier: Modifier = Modifier) {
         color = MaterialTheme.colorScheme.background
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            MapBoxContainer(modifier = Modifier.fillMaxSize())
+            val currentIncidents = remember(refreshIncidents) { 
+                IncidentManager.getAllIncidents() 
+            }
+            
+            MapBoxContainer(
+                modifier = Modifier.fillMaxSize(),
+                showIncidents = true,
+                incidents = currentIncidents,
+                refreshTrigger = refreshIncidents,
+                onIncidentClick = { incident ->
+                    selectedIncident = incident
+                }
+            )
 
             Box(
                 modifier = Modifier
@@ -82,21 +110,29 @@ fun MapScreen(modifier: Modifier = Modifier) {
                 }
             }
 
-            // Overlay the ReportScreen when requested, passing current coordinates
             if (showReportScreen) {
                 ReportOverlay(
                     modifier = Modifier.fillMaxSize(),
                     currentCoordinates = currentCoordinates,
-                    onClose = { showReportScreen = false }
+                    onClose = {
+                        showReportScreen = false
+                        refreshIncidents++
+                    }
                 )
             }
 
-            // Overlay the Detect screen when requested, passing current coordinates
             if (showDetectScreen) {
                 DetectOverlay(
                     modifier = Modifier.fillMaxSize(),
                     currentCoordinates = currentCoordinates,
                     onClose = { showDetectScreen = false }
+                )
+            }
+
+            selectedIncident?.let { incident ->
+                IncidentDetailDialog(
+                    incident = incident,
+                    onDismiss = { selectedIncident = null }
                 )
             }
         }

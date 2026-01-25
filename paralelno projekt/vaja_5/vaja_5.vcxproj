@@ -104,13 +104,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\libs\nlohmann-json\include;C:\libs\openssl-3.1.4\include;C:\libs\openssl-3.1.4\include\openssl;../imgui/backends;../imgui;../tcp_code;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;C:\libs\cpp-httplib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\libs\nlohmann-json\include;C:\libs\openssl-3.1.4\include;C:\libs\openssl-3.1.4\include\openssl;../imgui/backends;../imgui;../tcp_code;C:\Program Files (x86)\Microsoft SDKs\MPI\Include;C:\libs\cpp-httplib;C:\Program Files\OpenSSL-Win64\include\openssl;C:\Program Files\OpenSSL-Win64\include;E:\libs;E:\libs\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\libs\openssl-3.1.4;C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\libs\openssl-3.1.4;C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64;C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x86;C:\Program Files\OpenSSL-Win64\lib;C:\Program Files\OpenSSL-Win64\lib\VC\x64\MD;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>libcrypto_static.lib;Crypt32.lib;msmpi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

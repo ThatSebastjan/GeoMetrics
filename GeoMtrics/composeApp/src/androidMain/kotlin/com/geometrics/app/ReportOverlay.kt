@@ -26,7 +26,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.geometrics.app.managers.IncidentManager
+import com.geometrics.app.models.Incident
+import java.io.IOException
+import java.util.UUID
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -35,7 +40,6 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import org.json.JSONObject
-import java.io.IOException
 
 
 @Composable
@@ -46,8 +50,14 @@ fun ReportOverlay(
 ) {
     var selectedDisaster by remember { mutableStateOf("Landslide") }
     var selectedSeverity by remember { mutableStateOf(1) }
-    val client = OkHttpClient()
-
+    var isSubmitting by remember { mutableStateOf(false) }
+    var submitError by remember { mutableStateOf<String?>(null) }
+    val client = OkHttpClient.Builder()
+        .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
+    val context = LocalContext.current
 
     fun sendReportJson(url: String, json: String, onResult: (success: Boolean, responseBody: String?) -> Unit) {
         val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
@@ -55,6 +65,7 @@ fun ReportOverlay(
         val request = Request.Builder()
             .url(url)
             .post(body)
+            .addHeader("Content-Type", "application/json")
             .build()
 
         val call = client.newCall(request)
@@ -72,14 +83,12 @@ fun ReportOverlay(
         })
     }
 
-    // Fullscreen dimmed background
     Box(
         modifier = modifier
             .background(Color.Black.copy(alpha = 0.2f))
             .clickable { onClose() },
         contentAlignment = Alignment.Center
     ) {
-        // Card with the reporting options shown immediately
         Card(
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier
@@ -95,7 +104,6 @@ fun ReportOverlay(
             ) {
                 Text("Report an Incident", style = MaterialTheme.typography.titleMedium)
 
-                // Disaster selection
                 Text("Type", style = MaterialTheme.typography.bodyMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val options = listOf("Landslide", "Earthquake", "Flood")
@@ -112,7 +120,6 @@ fun ReportOverlay(
                     }
                 }
 
-                // Severity selection (1..3)
                 Text("Severity", style = MaterialTheme.typography.bodyMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     val severityOptions = listOf(1 to "Low", 2 to "Medium", 3 to "High")
@@ -130,7 +137,6 @@ fun ReportOverlay(
                 }
             }
 
-            // Submit / Cancel
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -143,31 +149,68 @@ fun ReportOverlay(
                     Text("Cancel")
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = {
-                    // Build JSON including coordinates and print to console
-                    val (lat, lon) = currentCoordinates
-                    val json = JSONObject().apply {
-                        put("type", selectedDisaster)
-                        put("severity", selectedSeverity)
-                        put("latitude", lat)
-                        put("longitude", lon)
-                        put("timestamp", System.currentTimeMillis())
-                    }
-                    sendReportJson(
-                        "${Constants.BACKEND_URL}/report", json.toString(),
-                        onResult = { success, responseBody ->
-                            if (success) {
-                                onClose()
-                            }
-                            else {
-                                println("Error: $responseBody")
-                                onClose()
-                            }
+                Button(
+                    onClick = {
+                        if (isSubmitting) return@Button
+                        
+                        val (lat, lon) = currentCoordinates
+                        val incidentId = UUID.randomUUID().toString()
+                        val timestamp = System.currentTimeMillis()
+
+                        val incident = Incident(
+                            id = incidentId,
+                            type = selectedDisaster,
+                            severity = selectedSeverity,
+                            latitude = lat,
+                            longitude = lon,
+                            timestamp = timestamp
+                        )
+
+                        IncidentManager.addIncident(incident)
+
+                        val json = JSONObject().apply {
+                            put("id", incidentId)
+                            put("type", selectedDisaster)
+                            put("severity", selectedSeverity)
+                            put("latitude", lat)
+                            put("longitude", lon)
+                            put("timestamp", timestamp)
                         }
-                    )
-                }) {
-                    Text("Submit")
+
+                        isSubmitting = true
+                        submitError = null
+
+                        sendReportJson(
+                            "${Constants.BACKEND_URL}/report", json.toString(),
+                            onResult = { success, responseBody ->
+                                isSubmitting = false
+                                if (success) {
+                                    IncidentManager.syncFromBackend { syncSuccess, syncCount ->
+                                    }
+                                    onClose()
+                                } else {
+                                    submitError = responseBody ?: "Unknown error"
+                                }
+                            }
+                        )
+                    },
+                    enabled = !isSubmitting
+                ) {
+                    if (isSubmitting) {
+                        Text("Submitting...")
+                    } else {
+                        Text("Submit")
+                    }
                 }
+            }
+            
+            submitError?.let { error ->
+                Text(
+                    text = "Error: $error",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                )
             }
         }
     }

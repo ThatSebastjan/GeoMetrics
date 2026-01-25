@@ -30,12 +30,18 @@ mongoose.connection.on("error", console.error.bind(console, "MongoDB connection 
 app.use(cors({
     credentials: true,
     origin: (origin, callback) => {
-        // Allow requests with no origin (mobile apps, curl)
-        if (!origin) return callback(null, true);
+        // Allow requests with no origin (mobile apps, curl, Android emulator)
+        if (!origin) {
+            console.log("CORS: Allowing request with no origin (mobile app)");
+            return callback(null, true);
+        }
+        console.log("CORS: Checking origin:", origin);
         if (config.allowedOrigins.indexOf(origin) === -1) {
+            console.log("CORS: Origin not in allowed list:", origin);
             const msg = "The CORS policy does not allow access from the specified Origin.";
             return callback(new Error(msg), false);
         }
+        console.log("CORS: Origin allowed:", origin);
         return callback(null, true);
     }
 }));
@@ -46,6 +52,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
+
+// Log all incoming requests for debugging
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    console.log("Headers:", JSON.stringify(req.headers, null, 2));
+    next();
+});
 
 
 
