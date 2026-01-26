@@ -32,6 +32,7 @@ kotlin {
             implementation("com.mapbox.mapboxsdk:mapbox-sdk-services:7.9.0")
             implementation("com.mapbox.mapboxsdk:mapbox-sdk-turf:7.9.0")
             implementation("com.mapbox.mapboxsdk:mapbox-sdk-core:7.9.0")
+            implementation("com.hivemq:hivemq-mqtt-client:1.3.3")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -72,6 +73,12 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/INDEX.LIST"
+            excludes += "/META-INF/DEPENDENCIES"
+            excludes += "/META-INF/*.SF"
+            excludes += "/META-INF/*.DSA"
+            excludes += "/META-INF/*.RSA"
+            merges += "/META-INF/io.netty.versions.properties"
         }
     }
     buildTypes {
@@ -92,4 +99,3 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.6.4")
     implementation("com.squareup.okhttp3:okhttp:5.3.0")
 }
-

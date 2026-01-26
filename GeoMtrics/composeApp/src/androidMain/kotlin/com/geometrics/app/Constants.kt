@@ -20,12 +20,20 @@ class Constants {
 
         val BACKEND_URL: String
             get() = if (isEmulator) {
-                // Android emulator - use local network IP (192.168.1.11) to access host machine
-                // Note: 10.0.2.2 doesn't always work on Windows, so use actual local IP
                 "http://192.168.1.11:3001"
             } else {
-                // Real device - use actual server IP
                 "http://192.168.1.11:3001"
             }
+
+        val MQTT_BROKER_HOST: String
+            get() = if (isEmulator) {
+                "192.168.1.11"
+            } else {
+                "192.168.1.11"
+            }
+
+        const val MQTT_BROKER_PORT = 1883
+        const val MQTT_TOPIC = "incidents/nearby"
+        const val NEARBY_RADIUS_KM = 5.0
     }
 }

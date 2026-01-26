@@ -21,6 +21,13 @@ module.exports = {
 		"http://89.168.88.70:3000",
 		"http://89.168.88.70:3001",
 	],
+
+	//MQTT config
+	mqttBroker: {
+		host: "localhost",
+		port: 1883,
+		topic: "incidents/nearby"
+	},
 	
 	
 	//Routers and API paths

@@ -1,5 +1,6 @@
 const ReportModel = require("../models/disasterReportModel.js");
 const blockchainContext = require("../utils/blockchainContext.js");
+const mqttService = require("../utils/mqttService.js");
 
 module.exports = {
     report: async (req, res) => {
@@ -43,6 +44,18 @@ module.exports = {
 
                 blockchainContext.addPendingData(blockchainData);
             } catch (blockchainErr) {
+            }
+
+            try {
+                mqttService.publishIncident({
+                    id: obj.id || report._id.toString(),
+                    type: obj.type,
+                    severity: obj.severity,
+                    latitude: obj.latitude,
+                    longitude: obj.longitude,
+                    timestamp: obj.timestamp
+                });
+            } catch (mqttErr) {
             }
 
             return res.status(200).end();
