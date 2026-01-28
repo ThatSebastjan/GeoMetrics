@@ -56,7 +56,7 @@ public class CefUITestScreen extends ScreenAdapter implements CefMessageRouterHa
 
 
         //Create map
-        MapTileManager tileManager = new MapTileManager(assetManager, AppConfig.TILE_DATA_PATH, 9, 15);
+        MapTileManager tileManager = new MapTileManager(assetManager, AppConfig.TILE_DATA_PATH, AppConfig.TILE_MAP_MIN_ZOOM, AppConfig.TILE_MAP_MAX_ZOOM);
         map = new Map(mainInstance.getBatch(), tileManager);
 
 

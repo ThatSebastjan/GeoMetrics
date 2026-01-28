@@ -28,7 +28,7 @@ public class MapDebugScreen extends ScreenAdapter {
 
     @Override
     public void show(){
-        MapTileManager tileManager = new MapTileManager(assetManager, AppConfig.TILE_DATA_PATH, 9, 15);
+        MapTileManager tileManager = new MapTileManager(assetManager, AppConfig.TILE_DATA_PATH, 9, 14);
         map = new Map(mainInstance.getBatch(), tileManager);
 
         //Set map input handling

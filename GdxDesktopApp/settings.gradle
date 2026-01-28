@@ -9,4 +9,5 @@ include 'core', 'lwjgl3'
 
 
 //TODO: change this to your own libgdx custom version directory
-includeBuild "../../../../../libgdx_custom"
+includeBuild "C:\\Users\\lipic\\Desktop\\RRInekaj\\libgdx_custom"
+
