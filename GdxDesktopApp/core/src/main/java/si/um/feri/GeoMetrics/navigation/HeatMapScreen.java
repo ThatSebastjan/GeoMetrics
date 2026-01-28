@@ -20,13 +20,13 @@ import si.um.feri.GeoMetrics.map.tile.MapTileManager;
 
 
 public class HeatMapScreen extends ScreenAdapter {
-    public enum DisasterType { LANDSILDE, FLOOD, EARTHQUAKE }
+    public enum DisasterType { LANDSLIDE, FLOOD, EARTHQUAKE, NONE }
 
     private final GdxMap game;
     private Stage stage;
     private Skin skin;
     private Label centerLabel;
-    private DisasterType current = DisasterType.LANDSILDE;
+    private DisasterType current = DisasterType.NONE;
 
     private final AssetManager assetManager;
     private Map map;
@@ -34,6 +34,12 @@ public class HeatMapScreen extends ScreenAdapter {
     private FloodHeatMapLayer floodHeatmap;
     private LandslideHeatMapLayer landslideHeatmap;
     private EarthquakeHeatMapLayer earthquakeHeatmap;
+
+    // Track buttons for highlighting
+    private TextButton bLandslide;
+    private TextButton bFlood;
+    private TextButton bEarth;
+    private TextButton bNone;
 
     public HeatMapScreen(GdxMap game, Skin skin) {
         this.game = game;
@@ -44,6 +50,8 @@ public class HeatMapScreen extends ScreenAdapter {
         floodHeatmap = new FloodHeatMapLayer();
         landslideHeatmap = new LandslideHeatMapLayer();
         earthquakeHeatmap = new EarthquakeHeatMapLayer();
+        // Start with all disabled
+        floodHeatmap.setEnabled(false);
         landslideHeatmap.setEnabled(false);
         earthquakeHeatmap.setEnabled(false);
 
@@ -66,12 +74,13 @@ public class HeatMapScreen extends ScreenAdapter {
         Table bottom = new Table();
         // sensible defaults for bottom buttons
         bottom.defaults().pad(8).width(160).height(44);
-        TextButton bLandslide = new TextButton("LANDSILDE", skin);
-        TextButton bFlood = new TextButton("FLOOD", skin);
-        TextButton bEarth = new TextButton("EARTHQUAKE", skin);
+        bLandslide = new TextButton("LANDSLIDE", skin);
+        bFlood = new TextButton("FLOOD", skin);
+        bEarth = new TextButton("EARTHQUAKE", skin);
+        bNone = new TextButton("NONE", skin);
 
         bLandslide.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent event, float x, float y) { setType(DisasterType.LANDSILDE); }
+            @Override public void clicked(InputEvent event, float x, float y) { setType(DisasterType.LANDSLIDE); }
         });
         bFlood.addListener(new ClickListener() {
             @Override public void clicked(InputEvent event, float x, float y) { setType(DisasterType.FLOOD); }
@@ -79,15 +88,22 @@ public class HeatMapScreen extends ScreenAdapter {
         bEarth.addListener(new ClickListener() {
             @Override public void clicked(InputEvent event, float x, float y) { setType(DisasterType.EARTHQUAKE); }
         });
+        bNone.addListener(new ClickListener() {
+            @Override public void clicked(InputEvent event, float x, float y) { setType(DisasterType.NONE); }
+        });
 
         bottom.add(bLandslide).padRight(8);
         bottom.add(bFlood).padRight(8);
-        bottom.add(bEarth);
+        bottom.add(bEarth).padRight(8);
+        bottom.add(bNone);
 
         root.add(centerLabel).expand().center();
         root.add(nav).width(160).center().padRight(20);
         root.row();
         root.add(bottom).colspan(2).center().bottom().padBottom(20);
+
+        // Set initial button state
+        updateButtonStates();
     }
 
     @Override
@@ -120,16 +136,48 @@ public class HeatMapScreen extends ScreenAdapter {
                 earthquakeHeatmap.setEnabled(false);
                 break;
 
-            case LANDSILDE:
+            case LANDSLIDE:
                 floodHeatmap.setEnabled(false);
                 landslideHeatmap.setEnabled(true);
                 earthquakeHeatmap.setEnabled(false);
-                 break;
+                break;
 
             case EARTHQUAKE:
                 floodHeatmap.setEnabled(false);
                 landslideHeatmap.setEnabled(false);
                 earthquakeHeatmap.setEnabled(true);
+                break;
+
+            case NONE:
+                floodHeatmap.setEnabled(false);
+                landslideHeatmap.setEnabled(false);
+                earthquakeHeatmap.setEnabled(false);
+                break;
+        }
+
+        updateButtonStates();
+    }
+
+    private void updateButtonStates() {
+        // Reset all buttons to default state
+        bLandslide.setChecked(false);
+        bFlood.setChecked(false);
+        bEarth.setChecked(false);
+        bNone.setChecked(false);
+
+        // Highlight the currently selected button
+        switch (current) {
+            case LANDSLIDE:
+                bLandslide.setChecked(true);
+                break;
+            case FLOOD:
+                bFlood.setChecked(true);
+                break;
+            case EARTHQUAKE:
+                bEarth.setChecked(true);
+                break;
+            case NONE:
+                bNone.setChecked(true);
                 break;
         }
     }

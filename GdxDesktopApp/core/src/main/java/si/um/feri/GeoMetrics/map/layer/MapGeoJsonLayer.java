@@ -24,17 +24,14 @@ import java.util.List;
 import java.util.Objects;
 
 
-
 public class MapGeoJsonLayer extends MapLayer {
 
     protected Batch mapBatch;
-    //private ShapeRenderer mapSr;
 
     private final String dataPath;
     protected final ArrayList<GeoJsonGeometry> geometryList;
     protected final Quadtree quadtree;
 
-    //Static test shader
     static ShaderProgram geoJsonShader = null;
 
 
@@ -51,10 +48,7 @@ public class MapGeoJsonLayer extends MapLayer {
     public void onAddedToMap(Map map) {
 
         mapBatch = map.getBatch();
-        //mapSr = map.getShapeRenderer();
 
-
-        //Load geometry from file
         JSONObject data = readData();
 
         if(data == null){
@@ -79,9 +73,14 @@ public class MapGeoJsonLayer extends MapLayer {
                 }
             }
 
-            GeoJsonGeometry geom = GeoJsonGeometry.fromJson(feature, -1, cutout); //NOTE: same default id (-1)
-            geometryList.add(geom);
+            GeoJsonGeometry geom = GeoJsonGeometry.fromJson(feature, -1, cutout);
 
+            if (!geom.createMeshes()) {
+                System.err.println("Failed to create meshes for geometry " + i + ", skipping");
+                continue;
+            }
+
+            geometryList.add(geom);
             quadtree.insert(geom.getEnvelopeBounds(), geom);
         }
 
@@ -130,32 +129,25 @@ public class MapGeoJsonLayer extends MapLayer {
         Gdx.gl.glEnable(GL32.GL_BLEND);
         Gdx.gl.glBlendFunc(GL32.GL_SRC_ALPHA, GL32.GL_ONE_MINUS_SRC_ALPHA);
 
-
-        //Set shader constants
         ShaderProgram shaderProgram = getGeoJsonShader();
         shaderProgram.bind();
         shaderProgram.setUniformMatrix("u_projTrans", mapBatch.getProjectionMatrix());
         shaderProgram.setUniformf("u_inColor", new Color(0.f, 0.f, 0.f, 0.4f));
 
-
-        //Query visible items
         Envelope visibleEnvelope = new Envelope(viewBounds.xMin, viewBounds.xMax, viewBounds.yMin, viewBounds.yMax);
 
-        //long startTime = System.nanoTime();
         List<GeoJsonGeometry> visibleGeometry = quadtree.query(visibleEnvelope);
 
-        //long endTime = System.nanoTime();
-        //long duration = (endTime - startTime);
-
-        //System.out.printf("Num visible: %d (%d)\n", visibleGeometry.size(), duration);
-
-        //Render infill
         for(GeoJsonGeometry geom : visibleGeometry) {
-            geom.infillMesh.render(shaderProgram, GL32.GL_TRIANGLES);
+            if (geom.infillMesh != null && geom.infillMesh.getNumVertices() > 0) {
+                try {
+                    geom.infillMesh.render(shaderProgram, GL32.GL_TRIANGLES);
+                } catch (Exception e) {
+                    System.err.println("Error rendering infill mesh: " + e.getMessage());
+                }
+            }
         }
 
-
-        //Render outlines
         shaderProgram.setUniformf("u_inColor", new Color(0.f, 0.f, 0.f, 0.7f));
 
         Gdx.gl.glLineWidth(5.f);
@@ -163,7 +155,13 @@ public class MapGeoJsonLayer extends MapLayer {
         Gdx.gl.glDisable(GL32.GL_DEPTH_TEST);
 
         for(GeoJsonGeometry geom : visibleGeometry) {
-            geom.outlineMesh.render(shaderProgram, GL32.GL_LINE_STRIP);
+            if (geom.outlineMesh != null && geom.outlineMesh.getNumVertices() > 0) {
+                try {
+                    geom.outlineMesh.render(shaderProgram, GL32.GL_LINE_STRIP);
+                } catch (Exception e) {
+                    System.err.println("Error rendering outline mesh: " + e.getMessage());
+                }
+            }
         }
 
         Gdx.gl.glLineWidth(1.f);
@@ -180,17 +178,30 @@ public class MapGeoJsonLayer extends MapLayer {
 
 
     @Override
-    public void dispose() {}
-
+    public void dispose() {
+        for (GeoJsonGeometry geom : geometryList) {
+            if (geom != null) {
+                geom.dispose();
+            }
+        }
+        geometryList.clear();
+    }
 
 
     static ShaderProgram getGeoJsonShader(){
 
-        //Load on first call
         if(geoJsonShader == null){
             String vertexShader = Gdx.files.internal("assets/shaders/geojson_vertex.glsl").readString();
             String fragmentShader = Gdx.files.internal("assets/shaders/geojson_fragment.glsl").readString();
             geoJsonShader = new ShaderProgram(vertexShader, fragmentShader);
+
+            if(!geoJsonShader.isCompiled()){
+                System.err.println("GeoJSON Shader compilation failed!");
+                System.err.println(geoJsonShader.getLog());
+                throw new RuntimeException("Failed to compile GeoJSON shader: " + geoJsonShader.getLog());
+            }
+
+            System.out.println("GeoJSON Shader compiled successfully");
         }
 
         return geoJsonShader;

@@ -2,55 +2,23 @@ package si.um.feri.GeoMetrics.map.layer;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL32;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
-import com.badlogic.gdx.graphics.glutils.ShaderProgram;
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Envelope;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.PrecisionModel;
 import si.um.feri.GeoMetrics.config.AppConfig;
-import si.um.feri.GeoMetrics.map.Bbox;
 import si.um.feri.GeoMetrics.map.GeoPoint;
 import si.um.feri.GeoMetrics.map.Map;
 import si.um.feri.GeoMetrics.map.tile.MapTileRegion;
 
-import javax.swing.text.View;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-
-
-
-class DisasterReport {
-    public final String type;
-    public final int severity;
-    public final GeoPoint location;
-
-    public DisasterReport(String type, int severity, GeoPoint location){
-        this.type = type;
-        this.severity = severity;
-        this.location = location;
-    }
-}
-
 
 
 public class DisasterReportLayer extends MapLayer {
@@ -59,7 +27,6 @@ public class DisasterReportLayer extends MapLayer {
 
     private Map owner;
     private Batch mapBatch;
-    private ShapeRenderer mapSr;
 
     private ArrayList<DisasterReport> reports;
     private OkHttpClient httpClient;
@@ -67,6 +34,8 @@ public class DisasterReportLayer extends MapLayer {
     Texture floodMarker;
     Texture landslideMarker;
     Texture earthquakeMarker;
+
+    private DisasterClickListener clickListener;
 
 
     public DisasterReportLayer() {
@@ -84,9 +53,7 @@ public class DisasterReportLayer extends MapLayer {
     public void onAddedToMap(Map map) {
         owner = map;
         mapBatch = map.getBatch();
-        mapSr = map.getShapeRenderer();
 
-        //Get reports
         reports = new ArrayList<>();
 
         if(!queryReports(reports)){
@@ -96,7 +63,30 @@ public class DisasterReportLayer extends MapLayer {
 
 
     @Override
-    public void update(Map map, float dt) {}
+    public void update(Map map, float dt) {
+        if(Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)){
+            float mouseX = Gdx.input.getX();
+            float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
+            Vector2 clickPos = new Vector2(mouseX, mouseY);
+
+            for(DisasterReport report : reports){
+                Vector2 screenLoc = owner.project(report.location);
+
+                float left = screenLoc.x - iconSize * 0.5f;
+                float right = screenLoc.x + iconSize * 0.5f;
+                float bottom = screenLoc.y;
+                float top = screenLoc.y + iconSize;
+
+                if(clickPos.x >= left && clickPos.x <= right &&
+                   clickPos.y >= bottom && clickPos.y <= top){
+                    if(clickListener != null){
+                        clickListener.onDisasterClicked(report);
+                    }
+                    break;
+                }
+            }
+        }
+    }
 
 
     @Override
@@ -106,47 +96,8 @@ public class DisasterReportLayer extends MapLayer {
             return;
         }
 
-        /*
-        if(Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT)){
-            Vector2 mPos = new Vector2(Gdx.input.getX(), Gdx.input.getY());
-
-            GeoPoint mapPoint = map.unproject(mPos);
-
-            System.out.printf("%.4f, %.4f\n", mapPoint.longitude, mapPoint.latitude);
-        }
-        */
-
         map.getViewport().apply();
 
-        mapSr.setProjectionMatrix(map.getCamera().combined);
-        mapSr.begin(ShapeRenderer.ShapeType.Filled);
-
-        for(DisasterReport report : reports){
-            Texture tx = getReportTexture(report.type);
-            Vector2 worldLoc = GeoPoint.toWorldCoordinates(report.location);
-
-            mapSr.setColor(1.f, 0.f, 0.f, report.severity / 6.f);
-            mapSr.circle(worldLoc.x, worldLoc.y, 0.1f, 32);
-        }
-
-        mapSr.end();
-
-
-        mapSr.begin(ShapeRenderer.ShapeType.Line);
-
-        for(DisasterReport report : reports){
-            Texture tx = getReportTexture(report.type);
-            Vector2 worldLoc = GeoPoint.toWorldCoordinates(report.location);
-
-            mapSr.setColor(1.f, 0.f, 0.f, report.severity / 4.f);
-            mapSr.circle(worldLoc.x, worldLoc.y, 0.1f, 32);
-        }
-
-        mapSr.end();
-
-
-
-        //Render icons in screen space to preserve dimensions regardless of zoom
         Viewport mapViewPort = map.getViewport();
         Matrix4 uiMatrix = mapViewPort.getCamera().combined.cpy();
         uiMatrix.setToOrtho2D(mapViewPort.getScreenX(), mapViewPort.getScreenY(), mapViewPort.getScreenWidth(), mapViewPort.getScreenHeight());
@@ -160,7 +111,6 @@ public class DisasterReportLayer extends MapLayer {
         }
 
         mapBatch.end();
-
     }
 
 
@@ -178,6 +128,14 @@ public class DisasterReportLayer extends MapLayer {
             default:
                 throw new RuntimeException("Invalid report type: " + type);
         }
+    }
+
+    public void setDisasterClickListener(DisasterClickListener listener){
+        this.clickListener = listener;
+    }
+
+    public interface DisasterClickListener {
+        void onDisasterClicked(DisasterReport report);
     }
 
 

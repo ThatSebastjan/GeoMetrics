@@ -13,6 +13,7 @@ import org.cef.browser.*;
 import org.cef.handler.CefAppHandlerAdapter;
 import org.cef.handler.CefMessageRouterHandler;
 import org.lwjgl.opengl.WGL;
+import si.um.feri.GeoMetrics.util.AppLogger;
 
 import java.awt.*;
 
@@ -48,66 +49,109 @@ public class GdxCefInstance {
     //Must be called on start-up before usage!
     public static void init(String startUrl, CefMessageRouterHandler msgHandler, int frameRate){
 
+        AppLogger.info("GdxCefInstance.init() called");
+        AppLogger.info("Start URL: " + startUrl);
+        AppLogger.info("Frame rate: " + frameRate);
+
         if(!init_once){
+            AppLogger.error("GdxCefInstance::init() already called!");
             throw new RuntimeException("GdxCefInstance::init() already called!");
         }
 
         init_once = false;
 
+        try {
+            //Create screen quad mesh and shaders
+            AppLogger.info("Creating mesh...");
+            createMesh();
+            AppLogger.info("Mesh created successfully");
 
-        //Create screen quad mesh and shaders
-        createMesh();
+            AppLogger.info("Loading shaders...");
+            shaderProgram = new ShaderProgram(
+                Gdx.files.internal("assets/shaders/cef/vertex.glsl").readString(),
+                Gdx.files.internal("assets/shaders/cef/fragment.glsl").readString()
+            );
 
-        shaderProgram = new ShaderProgram(
-            Gdx.files.internal("assets/shaders/cef/vertex.glsl").readString(),
-            Gdx.files.internal("assets/shaders/cef/fragment.glsl").readString()
-        );
-
-
-        String[] args = new String[]{
-            "--off-screen-rendering-enabled",
-            "--shared-texture-enabled"
-        };
-
-        CefApp.startup(args);
-
-        CefApp.addAppHandler(new CefAppHandlerAdapter(null) {
-            @Override
-            public void stateHasChanged(org.cef.CefApp.CefAppState state) {
-                if (state == CefApp.CefAppState.TERMINATED){
-                    System.exit(0); //Terminate if CEF exists
-                }
+            if (!shaderProgram.isCompiled()) {
+                AppLogger.error("Shader compilation failed: " + shaderProgram.getLog());
+                throw new RuntimeException("Shader compilation failed: " + shaderProgram.getLog());
             }
-        });
+            AppLogger.info("Shaders loaded successfully");
 
 
-        CefSettings settings = new CefSettings();
-        settings.windowless_rendering_enabled = true;
+            String[] args = new String[]{
+                "--off-screen-rendering-enabled",
+                "--shared-texture-enabled"
+            };
 
-        cefApp = CefApp.getInstance(args, settings);
-        cefClient = cefApp.createClient();
+            AppLogger.info("Starting CEF with args: " + String.join(", ", args));
+            CefApp.startup(args);
+            AppLogger.info("CefApp.startup() completed");
 
-
-        //Create and register message router for handling js communication
-        CefMessageRouter.CefMessageRouterConfig config = new CefMessageRouter.CefMessageRouterConfig();
-        config.jsQueryFunction = MSG_ROUTER_QUERY;
-        config.jsCancelFunction = MSG_ROUTER_CANCEL;
-
-        messageRouter = CefMessageRouter.create(config);
-        messageRouter.addHandler(msgHandler, true);
-
-        cefClient.addMessageRouter(messageRouter);
-
-
-        //Create browser
-        CefBrowserSettings browserSettings = new CefBrowserSettings();
-        browserSettings.shared_texture_enabled = true;
-        browserSettings.external_begin_frame_enabled = true;
-        browserSettings.windowless_frame_rate = frameRate;
+            AppLogger.info("Adding CEF app handler...");
+            CefApp.addAppHandler(new CefAppHandlerAdapter(null) {
+                @Override
+                public void stateHasChanged(org.cef.CefApp.CefAppState state) {
+                    AppLogger.info("CEF state changed to: " + state);
+                    if (state == CefApp.CefAppState.TERMINATED){
+                        AppLogger.info("CEF terminated, exiting application");
+                        System.exit(0); //Terminate if CEF exists
+                    }
+                }
+            });
+            AppLogger.info("CEF app handler added");
 
 
-        browser = new CefBrowserOsrGdx(cefClient, startUrl, true, CefRequestContext.getGlobalContext(), browserSettings);
-        browser.createImmediately();
+            AppLogger.info("Creating CEF settings...");
+            CefSettings settings = new CefSettings();
+            settings.windowless_rendering_enabled = true;
+            AppLogger.info("CEF settings configured");
+
+            AppLogger.info("Getting CEF instance...");
+            cefApp = CefApp.getInstance(args, settings);
+            AppLogger.info("CEF instance obtained");
+
+            AppLogger.info("Creating CEF client...");
+            cefClient = cefApp.createClient();
+            AppLogger.info("CEF client created");
+
+
+            //Create and register message router for handling js communication
+            AppLogger.info("Creating message router...");
+            CefMessageRouter.CefMessageRouterConfig config = new CefMessageRouter.CefMessageRouterConfig();
+            config.jsQueryFunction = MSG_ROUTER_QUERY;
+            config.jsCancelFunction = MSG_ROUTER_CANCEL;
+
+            messageRouter = CefMessageRouter.create(config);
+            messageRouter.addHandler(msgHandler, true);
+
+            cefClient.addMessageRouter(messageRouter);
+            AppLogger.info("Message router registered");
+
+
+            //Create browser
+            AppLogger.info("Creating browser settings...");
+            CefBrowserSettings browserSettings = new CefBrowserSettings();
+            browserSettings.shared_texture_enabled = true;
+            browserSettings.external_begin_frame_enabled = true;
+            browserSettings.windowless_frame_rate = frameRate;
+            AppLogger.info("Browser settings configured");
+
+
+            AppLogger.info("Creating CEF browser...");
+            browser = new CefBrowserOsrGdx(cefClient, startUrl, true, CefRequestContext.getGlobalContext(), browserSettings);
+            AppLogger.info("Browser instance created");
+
+            AppLogger.info("Calling browser.createImmediately()...");
+            browser.createImmediately();
+            AppLogger.info("Browser initialized successfully");
+
+            AppLogger.info("GdxCefInstance initialization completed successfully");
+
+        } catch (Exception e) {
+            AppLogger.error("Fatal error during GdxCefInstance initialization", e);
+            throw e;
+        }
     }
 
 
@@ -116,42 +160,36 @@ public class GdxCefInstance {
         int i = 0;
 
 
-        //Top Left Vertex Triangle 1
         verts[i++] = -1.f;
         verts[i++] = 1.f;
         verts[i++] = 0;
         verts[i++] = 0f;
         verts[i++] = 0f;
 
-        //Top Right Vertex Triangle 1
         verts[i++] = 1.f;
         verts[i++] = 1.f;
         verts[i++] = 0;
         verts[i++] = 1f;
         verts[i++] = 0f;
 
-        //Bottom Left Vertex Triangle 1
         verts[i++] = -1.f;
         verts[i++] = -1.f;
         verts[i++] = 0;
         verts[i++] = 0f;
         verts[i++] = 1f;
 
-        //Top Right Vertex Triangle 2
         verts[i++] = 1.f;
         verts[i++] = 1.f;
         verts[i++] = 0;
         verts[i++] = 1f;
         verts[i++] = 0f;
 
-        //Bottom Right Vertex Triangle 2
         verts[i++] = 1.f;
         verts[i++] = -1.f;
         verts[i++] = 0;
         verts[i++] = 1f;
         verts[i++] = 1f;
 
-        //Bottom Left Vertex Triangle 2
         verts[i++] = -1.f;
         verts[i++] = -1.f;
         verts[i++] = 0;
@@ -267,9 +305,23 @@ public class GdxCefInstance {
 
     //Must be called on app shutdown, otherwise cef helper instances remain running and the program doesn't exit
     public static void dispose(){
-        cefClient.dispose();
-        cefApp.dispose();
-        System.exit(0);
+        AppLogger.info("Disposing GdxCefInstance...");
+        try {
+            if (cefClient != null) {
+                AppLogger.info("Disposing CEF client...");
+                cefClient.dispose();
+            }
+            if (cefApp != null) {
+                AppLogger.info("Disposing CEF app...");
+                cefApp.dispose();
+            }
+            AppLogger.info("GdxCefInstance disposed successfully");
+        } catch (Exception e) {
+            AppLogger.error("Error during GdxCefInstance disposal", e);
+        } finally {
+            AppLogger.close();
+            System.exit(0);
+        }
     }
 
 

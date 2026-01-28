@@ -28,6 +28,7 @@ public class GeoJsonGeometry {
     public Mesh infillMesh = null;
     public Mesh outlineMesh = null;
     private boolean cutout;
+    private boolean meshesCreated = false;
 
     public Polygon infillPolygon = null;
 
@@ -41,10 +42,27 @@ public class GeoJsonGeometry {
         this.cutout = cutout;
         this.properties = properties;
 
-        this.center = new Vector2(); //Set in createInfillMesh...
+        this.center = new Vector2();
+    }
 
-        createInfillMesh();
-        createOutlineMesh();
+    /**
+     * Create meshes. MUST be called on the OpenGL thread (during render).
+     */
+    public boolean createMeshes(){
+        if (meshesCreated) {
+            return infillMesh != null && outlineMesh != null;
+        }
+
+        try {
+            createInfillMesh();
+            createOutlineMesh();
+            meshesCreated = true;
+            return infillMesh != null && outlineMesh != null;
+        } catch (Exception e) {
+            System.err.println("Error creating meshes for geometry " + id + ": " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 
 
@@ -122,17 +140,12 @@ public class GeoJsonGeometry {
 
         Geometry infillTriangles = null;
 
-
-        //TODO: triangulate can throw an exception if geometry is weird! CATCH EXCEPTION TO PREVENT CRASH AND HANDLE STUFF!
-
         try {
 
-            //Normal polygon
             if (!cutout) {
                 infillTriangles = PolygonTriangulator.triangulate(infillPolygon);
             }
 
-            //Inverse - fill whole world, center is a hole
             else {
 
                 Coordinate[] worldBoundCoords = {
@@ -154,7 +167,7 @@ public class GeoJsonGeometry {
 
 
             int numTris = infillTriangles.getNumGeometries();
-            float[] vertices = new float[numTris * 3 * 3]; //3 vertices per triangle * 3 floats per vertex
+            float[] vertices = new float[numTris * 3 * 3];
 
             for (int i = 0; i < numTris; i++) {
                 Polygon triangle = (Polygon) infillTriangles.getGeometryN(i);
@@ -180,7 +193,6 @@ public class GeoJsonGeometry {
             infillMesh = new Mesh(true, 3 * numTris, 0, vtxAttributes);
             infillMesh.setVertices(vertices);
 
-            //System.out.printf("Created infill mesh with %d triangles (%d vertices)\n", numTris, vertices.length);
         } catch (Exception e) {
             System.out.println("Failed to create infill for polygon!");
         }
@@ -190,7 +202,7 @@ public class GeoJsonGeometry {
     private void createOutlineMesh(){
         Vector2[] worldPoints = getWorldCoordinates();
 
-        float[] vertices = new float[worldPoints.length * 3]; //3 vertices per point
+        float[] vertices = new float[worldPoints.length * 3];
 
         for (int i = 0; i < worldPoints.length; i++) {
             Vector2 point = worldPoints[i];
@@ -210,8 +222,25 @@ public class GeoJsonGeometry {
         System.out.printf("Created outline mesh with %d lines (%d vertices)\n", worldPoints.length, vertices.length);
     }
 
+    public void dispose() {
+        if (infillMesh != null) {
+            infillMesh.dispose();
+            infillMesh = null;
+        }
+        if (outlineMesh != null) {
+            outlineMesh.dispose();
+            outlineMesh = null;
+        }
+        infillPolygon = null;
+        worldCoordinates = null;
+        meshesCreated = false;
+    }
 
-    //TODO: support for other features?
+    public boolean areMeshesCreated() {
+        return meshesCreated && infillMesh != null && outlineMesh != null;
+    }
+
+
     public static GeoJsonGeometry fromJson(JSONObject feature, int id, boolean cutout){
         JSONObject geometry = feature.getJSONObject("geometry");
         String geometryType = geometry.getString("type");
@@ -223,12 +252,6 @@ public class GeoJsonGeometry {
         JSONObject properties = feature.getJSONObject("properties");
         JSONArray coordinates = geometry.getJSONArray("coordinates");
 
-        //TODO: add support for holes! JTS supports it, we just need to handle mesh generation differently here
-        /*
-        if(coordinates.length() != 1){
-            throw new IllegalArgumentException("Only polygons with single ring are supported for now!");
-        }
-        */
 
         JSONArray ring = coordinates.getJSONArray(0);
         GeoPoint[] cList = new GeoPoint[ring.length()];
