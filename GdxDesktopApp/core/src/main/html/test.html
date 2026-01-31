@@ -218,7 +218,7 @@
             </div>
 
             <div class="sidebar-section">
-                <h2>Plot Information</h2>
+                <h2 id="infoTitle">Plot Information</h2>
                 <div class="info-panel">
                     <p id="plotInfo">Click on a plot on the map to view its data.</p>
                 </div>
@@ -235,6 +235,7 @@
         const toggleButton = document.getElementById('toggleButton');
         const riskButtons = document.querySelectorAll('.risk-button[data-risk]');
         const plotInfo = document.getElementById('plotInfo');
+        const infoTitle = document.getElementById('infoTitle');
 
         // Toggle sidebar function
         function toggleSidebar() {
@@ -301,8 +302,10 @@
                     <strong>Area:</strong> ${area}<br>
                     <strong>Cadastral Area ID:</strong> ${plotData.cadastralArea || 'N/A'}
                 `;
+                infoTitle.innerText = 'Plot Information';
             } else {
                 plotInfo.innerHTML = 'Click on a plot on the map to view its data.';
+                infoTitle.innerText = 'Plot Information';
             }
         }
 
@@ -339,8 +342,10 @@
                         <strong style="color: #F44336;">⚠ Disaster Alert</strong><br>
                     </div>
                 `;
+                infoTitle.innerText = 'Disaster Report';
             } else {
                 plotInfo.innerHTML = 'Click on a disaster marker to view its details.';
+                infoTitle.innerText = 'Plot Information';
             }
         }
 
